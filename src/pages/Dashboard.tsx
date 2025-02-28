@@ -1,16 +1,39 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApi } from '../context/ApiContext';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { AlertCircle, CheckCircle2, Clock, ArrowUpRight } from 'lucide-react';
 
 export const Dashboard = () => {
-  const { isConnected, isLoading, error, projects, issues, refreshData } = useApi();
+  const { isConnected, isLoading, error, projects, issues, refreshData, fetchIssues } = useApi();
+  const [resolvedIssuesCount, setResolvedIssuesCount] = useState(0);
+  const [loadingResolvedIssues, setLoadingResolvedIssues] = useState(false);
 
   useEffect(() => {
     if (isConnected && projects.length === 0 && issues.length === 0) {
       refreshData();
     }
   }, [isConnected]);
+
+  useEffect(() => {
+    const getResolvedIssuesCount = async () => {
+      if (!isConnected) return;
+      
+      setLoadingResolvedIssues(true);
+      try {
+        // Fetch issues with status "resolved"
+        const resolvedIssues = await fetchIssues({ status: 'closed' });
+        setResolvedIssuesCount(resolvedIssues.length);
+      } catch (err) {
+        console.error('Error fetching resolved issues:', err);
+      } finally {
+        setLoadingResolvedIssues(false);
+      }
+    };
+
+    if (isConnected) {
+      getResolvedIssuesCount();
+    }
+  }, [isConnected, fetchIssues]);
 
   if (!isConnected) {
     return (
@@ -89,7 +112,7 @@ export const Dashboard = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-500">Total Projects</p>
-              <p className="text-3xl font-bold text-gray-800">{projects.length || 8}</p>
+              <p className="text-3xl font-bold text-gray-800">{projects.length || "-"}</p>
             </div>
             <div className="bg-blue-100 p-3 rounded-full">
               <FolderKanban size={24} className="text-blue-600" />
@@ -106,7 +129,7 @@ export const Dashboard = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-500">Open Issues</p>
-              <p className="text-3xl font-bold text-gray-800">{issues.length || 25}</p>
+              <p className="text-3xl font-bold text-gray-800">{issues.length || "-"}</p>
             </div>
             <div className="bg-yellow-100 p-3 rounded-full">
               <CheckSquare size={24} className="text-yellow-600" />
@@ -123,7 +146,13 @@ export const Dashboard = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-500">Resolved Issues</p>
-              <p className="text-3xl font-bold text-gray-800">40</p>
+              <p className="text-3xl font-bold text-gray-800">
+                {loadingResolvedIssues ? (
+                  <span className="text-xl">Loading...</span>
+                ) : (
+                  resolvedIssuesCount
+                )}
+              </p>
             </div>
             <div className="bg-green-100 p-3 rounded-full">
               <CheckCircle2 size={24} className="text-green-600" />
