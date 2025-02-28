@@ -4,6 +4,7 @@ import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { Dashboard } from './pages/Dashboard';
 import { Projects } from './pages/Projects';
+import { ProjectDetails } from './pages/ProjectDetails';
 import { Issues } from './pages/Issues';
 import { TeamPerformance } from './pages/TeamPerformance';
 import { Settings } from './pages/Settings';
@@ -21,6 +22,7 @@ function App() {
               <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/projects" element={<Projects />} />
+                <Route path="/projects/:id" element={<ProjectDetails />} />
                 <Route path="/issues" element={<Issues />} />
                 <Route path="/team" element={<TeamPerformance />} />
                 <Route path="/settings" element={<Settings />} />

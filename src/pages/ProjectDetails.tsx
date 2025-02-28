@@ -1,0 +1,628 @@
+import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useApi } from '../context/ApiContext';
+import { AlertCircle, Download, ExternalLink } from 'lucide-react';
+import { ProjectHeader } from '../components/project/ProjectHeader';
+import { ProjectTabs } from '../components/project/ProjectTabs';
+import { OverviewTab } from '../components/project/tabs/OverviewTab';
+import { IssuesTab } from '../components/project/tabs/IssuesTab';
+import { AnalyticsTab } from '../components/project/tabs/AnalyticsTab';
+import { SettingsTab } from '../components/project/tabs/SettingsTab';
+import { CreateIssueModal } from '../components/project/modals/CreateIssueModal';
+import { EditIssueModal } from '../components/project/modals/EditIssueModal';
+import { DeleteConfirmModal } from '../components/project/modals/DeleteConfirmModal';
+import { ArchiveConfirmModal } from '../components/project/modals/ArchiveConfirmModal';
+
+export const ProjectDetails = () => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { 
+    isConnected, 
+    apiKey, 
+    redmineUrl,
+    fetchProjectDetails, 
+    fetchIssues,
+    createIssue,
+    updateIssue,
+    deleteIssue,
+    archiveProject,
+    unarchiveProject,
+    deleteProject
+  } = useApi();
+
+  // State
+  const [project, setProject] = useState<any>(null);
+  const [issues, setIssues] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingAction, setLoadingAction] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [projectProgress, setProjectProgress] = useState(0);
+  const [issueStats, setIssueStats] = useState({ total: 0, open: 0, closed: 0 });
+  
+  // Modals state
+  const [isCreatingIssue, setIsCreatingIssue] = useState(false);
+  const [selectedIssue, setSelectedIssue] = useState<any>(null);
+  const [isEditingProject, setIsEditingProject] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
+  
+  // New issue form state
+  const [newIssue, setNewIssue] = useState({
+    subject: '',
+    description: '',
+    project_id: parseInt(id || '0'),
+    status_id: 1,
+    priority_id: 2,
+    assigned_to_id: ''
+  });
+  
+  // Chart data
+  const [issueStatusData, setIssueStatusData] = useState<any[]>([]);
+  const [priorityData, setPriorityData] = useState<any[]>([]);
+  const [issuesOverTimeData, setIssuesOverTimeData] = useState<any[]>([]);
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+
+  // Load project details and issues
+  useEffect(() => {
+    if (!isConnected || !id) return;
+    
+    const loadProjectData = async () => {
+      setLoading(true);
+      setError(null);
+      
+      try {
+        // Fetch project details
+        const projectData = await fetchProjectDetails(parseInt(id));
+        if (!projectData) {
+          setError('Project not found');
+          setLoading(false);
+          return;
+        }
+        
+        setProject(projectData);
+        
+        // Fetch issues for this project
+        const projectIssues = await fetchIssues({ projectId: id });
+        setIssues(projectIssues);
+        
+        // Calculate project progress and stats
+        const totalIssues = projectIssues.length;
+        const closedIssues = projectIssues.filter(issue => 
+          issue.status && (issue.status.name.toLowerCase() === 'closed' || issue.status.name.toLowerCase() === 'resolved')
+        ).length;
+        const openIssues = totalIssues - closedIssues;
+        
+        setIssueStats({
+          total: totalIssues,
+          open: openIssues,
+          closed: closedIssues
+        });
+        
+        // Calculate progress percentage
+        const progress = totalIssues > 0 ? Math.round((closedIssues / totalIssues) * 100) : 0;
+        setProjectProgress(progress);
+        
+        // Process data for charts
+        processChartData(projectIssues);
+        
+        // Process recent activity
+        const activity = projectIssues
+          .sort((a, b) => new Date(b.updated_on).getTime() - new Date(a.updated_on).getTime())
+          .slice(0, 5)
+          .map(issue => ({
+            id: issue.id,
+            title: issue.subject,
+            status: issue.status.name,
+            date: formatRelativeTime(new Date(issue.updated_on))
+          }));
+        
+        setRecentActivity(activity);
+      } catch (err: any) {
+        console.error('Error loading project data:', err);
+        setError('Failed to load project data. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadProjectData();
+  }, [id, isConnected, fetchProjectDetails, fetchIssues]);
+
+  // Process chart data
+  const processChartData = (projectIssues: any[]) => {
+    // Process status data for pie chart
+    const statusCounts: Record<string, number> = {};
+    const statusColors: Record<string, string> = {
+      'New': '#3B82F6',
+      'In Progress': '#FBBF24',
+      'Resolved': '#10B981',
+      'Feedback': '#8B5CF6',
+      'Closed': '#6B7280',
+      'Rejected': '#EF4444'
+    };
+    
+    projectIssues.forEach(issue => {
+      const statusName = issue.status.name;
+      statusCounts[statusName] = (statusCounts[statusName] || 0) + 1;
+    });
+    
+    const statusData = Object.entries(statusCounts).map(([name, value]) => ({
+      name,
+      value,
+      color: statusColors[name as keyof typeof statusColors] || '#9CA3AF'
+    }));
+    
+    setIssueStatusData(statusData);
+    
+    // Process priority data for bar chart
+    const priorityCounts: Record<string, number> = {};
+    
+    projectIssues.forEach(issue => {
+      const priorityName = issue.priority.name;
+      priorityCounts[priorityName] = (priorityCounts[priorityName] || 0) + 1;
+    });
+    
+    const priorityData = Object.entries(priorityCounts).map(([name, count]) => ({
+      name,
+      count
+    }));
+    
+    setPriorityData(priorityData);
+    
+    // Generate issues over time data (last 30 days)
+    const today = new Date();
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    
+    const timeData = [];
+    for (let i = 0; i < 30; i++) {
+      const date = new Date(thirtyDaysAgo);
+      date.setDate(date.getDate() + i);
+      
+      // Count open and closed issues as of this date
+      const openCount = projectIssues.filter(issue => 
+        new Date(issue.created_on) <= date && 
+        (
+          !issue.closed_on || 
+          new Date(issue.closed_on) > date
+        )
+      ).length;
+      
+      const closedCount = projectIssues.filter(issue => 
+        new Date(issue.created_on) <= date && 
+        issue.closed_on && 
+        new Date(issue.closed_on) <= date
+      ).length;
+      
+      timeData.push({
+        date: date.toISOString().split('T')[0],
+        open: openCount,
+        closed: closedCount
+      });
+    }
+    
+    setIssuesOverTimeData(timeData);
+  };
+
+  // Format date to a readable format
+  const formatDate = (dateString: string) => {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  // Format relative time for activity feed
+  const formatRelativeTime = (date: Date) => {
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffSecs = Math.floor(diffMs / 1000);
+    const diffMins = Math.floor(diffSecs / 60);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+    
+    if (diffDays > 0) {
+      return diffDays === 1 ? '1 day ago' : `${diffDays} days ago`;
+    } else if (diffHours > 0) {
+      return diffHours === 1 ? '1 hour ago' : `${diffHours} hours ago`;
+    } else if (diffMins > 0) {
+      return diffMins === 1 ? '1 minute ago' : `${diffMins} minutes ago`;
+    } else {
+      return 'just now';
+    }
+  };
+
+  // Get color class for status badge
+  const getStatusColorClass = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'new':
+        return 'bg-blue-100 text-blue-800';
+      case 'in progress':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'resolved':
+        return 'bg-green-100 text-green-800';
+      case 'feedback':
+        return 'bg-purple-100 text-purple-800';
+      case 'closed':
+        return 'bg-gray-100 text-gray-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  // Get color class for priority badge
+  const getPriorityColorClass = (priority: string) => {
+    switch (priority.toLowerCase()) {
+      case 'low':
+        return 'bg-gray-100 text-gray-800';
+      case 'normal':
+        return 'bg-blue-100 text-blue-800';
+      case 'high':
+        return 'bg-orange-100 text-orange-800';
+      case 'urgent':
+        return 'bg-red-100 text-red-800';
+      case 'immediate':
+        return 'bg-red-100 text-red-800 font-bold';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  // Custom label renderer for pie chart to prevent overlap
+  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, name }: any) => {
+    const RADIAN = Math.PI / 180;
+    const radius = outerRadius + 30;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+    return (
+      <text 
+        x={x} 
+        y={y} 
+        fill={issueStatusData[index]?.color || '#000'} 
+        textAnchor={x > cx ? 'start' : 'end'} 
+        dominantBaseline="central"
+        fontSize={12}
+        fontWeight="bold"
+      >
+        {`${name} (${(percent * 100).toFixed(0)}%)`}
+      </text>
+    );
+  };
+
+  // Handle creating a new issue
+  const handleCreateIssue = async () => {
+    if (!isConnected || !newIssue.subject) return;
+    
+    setLoadingAction(true);
+    
+    try {
+      const issueData = {
+        issue: {
+          ...newIssue,
+          project_id: parseInt(id || '0')
+        }
+      };
+      
+      await createIssue(issueData);
+      
+      // Refresh issues
+      const updatedIssues = await fetchIssues({ projectId: id });
+      setIssues(updatedIssues);
+      
+      // Recalculate project progress and stats
+      const totalIssues = updatedIssues.length;
+      const closedIssues = updatedIssues.filter(issue => 
+        issue.status && (issue.status.name.toLowerCase() === 'closed' || issue.status.name.toLowerCase() === 'resolved')
+      ).length;
+      const openIssues = totalIssues - closedIssues;
+      
+      setIssueStats({
+        total: totalIssues,
+        open: openIssues,
+        closed: closedIssues
+      });
+      
+      // Calculate progress percentage
+      const progress = totalIssues > 0 ? Math.round((closedIssues / totalIssues) * 100) : 0;
+      setProjectProgress(progress);
+      
+      // Process data for charts
+      processChartData(updatedIssues);
+      
+      // Reset form
+      setNewIssue({
+        subject: '',
+        description: '',
+        project_id: parseInt(id || '0'),
+        status_id: 1,
+        priority_id: 2,
+        assigned_to_id: ''
+      });
+      
+      setIsCreatingIssue(false);
+    } catch (err: any) {
+      console.error('Error creating issue:', err);
+      alert('Failed to create issue. Please try again.');
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
+  // Handle updating an issue
+  const handleUpdateIssue = async () => {
+    if (!isConnected || !selectedIssue || !selectedIssue.subject) return;
+    
+    setLoadingAction(true);
+    
+    try {
+      const issueData = {
+        issue: {
+          subject: selectedIssue.subject,
+          description: selectedIssue.description,
+          status_id: selectedIssue.status.id,
+          priority_id: selectedIssue.priority.id,
+          assigned_to_id: selectedIssue.assigned_to?.id || null
+        }
+      };
+      
+      await updateIssue(selectedIssue.id, issueData);
+      
+      // Refresh issues
+      const updatedIssues = await fetchIssues({ projectId: id });
+      setIssues(updatedIssues);
+      
+      // Recalculate project progress and stats
+      const totalIssues = updatedIssues.length;
+      const closedIssues = updatedIssues.filter(issue => 
+        issue.status && (issue.status.name.toLowerCase() === 'closed' || issue.status.name.toLowerCase() === 'resolved')
+      ).length;
+      const openIssues = totalIssues - closedIssues;
+      
+      setIssueStats({
+        total: totalIssues,
+        open: openIssues,
+        closed: closedIssues
+      });
+      
+      // Calculate progress percentage
+      const progress = totalIssues > 0 ? Math.round((closedIssues / totalIssues) * 100) : 0;
+      setProjectProgress(progress);
+      
+      // Process data for charts
+      processChartData(updatedIssues);
+      
+      setSelectedIssue(null);
+    } catch (err: any) {
+      console.error('Error updating issue:', err);
+      alert('Failed to update issue. Please try again.');
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
+  // Handle deleting an issue
+  const handleDeleteIssue = async (issueId: number) => {
+    if (!isConnected) return;
+    
+    if (!confirm('Are you sure you want to delete this issue? This action cannot be undone.')) {
+      return;
+    }
+    
+    setLoadingAction(true);
+    
+    try {
+      await deleteIssue(issueId);
+      
+      // Refresh issues
+      const updatedIssues = await fetchIssues({ projectId: id });
+      setIssues(updatedIssues);
+      
+      // Recalculate project progress and stats
+      const totalIssues = updatedIssues.length;
+      const closedIssues = updatedIssues.filter(issue => 
+        issue.status && (issue.status.name.toLowerCase() === 'closed' || issue.status.name.toLowerCase() === 'resolved')
+      ).length;
+      const openIssues = totalIssues - closedIssues;
+      
+      setIssueStats({
+        total: totalIssues,
+        open: openIssues,
+        closed: closedIssues
+      });
+      
+      // Calculate progress percentage
+      const progress = totalIssues > 0 ? Math.round((closedIssues / totalIssues) * 100) : 0;
+      setProjectProgress(progress);
+      
+      // Process data for charts
+      processChartData(updatedIssues);
+    } catch (err: any) {
+      console.error('Error deleting issue:', err);
+      alert('Failed to delete issue. Please try again.');
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
+  // Handle archiving/unarchiving a project
+  const handleArchiveProject = async () => {
+    if (!isConnected || !project) return;
+    
+    setLoadingAction(true);
+    
+    try {
+      if (project.status === 9) {
+        // Unarchive
+        await unarchiveProject(project.id);
+      } else {
+        // Archive
+        await archiveProject(project.id);
+      }
+      
+      // Refresh project details
+      const updatedProject = await fetchProjectDetails(parseInt(id || '0'));
+      setProject(updatedProject);
+      
+      setShowArchiveConfirm(false);
+    } catch (err: any) {
+      console.error('Error archiving/unarchiving project:', err);
+      alert('Failed to archive/unarchive project. Please try again.');
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
+  // Handle deleting a project
+  const handleDeleteProject = async () => {
+    if (!isConnected || !project) return;
+    
+    setLoadingAction(true);
+    
+    try {
+      await deleteProject(project.id);
+      
+      // Redirect to projects list
+      navigate('/projects');
+    } catch (err: any) {
+      console.error('Error deleting project:', err);
+      alert('Failed to delete project. Please try again.');
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
+  if (!isConnected) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full">
+        <AlertCircle size={48} className="text-yellow-500 mb-4" />
+        <h2 className="text-2xl font-bold mb-2">Not Connected to Redmine</h2>
+        <p className="text-gray-600 mb-4">Please configure your Redmine API settings to get started.</p>
+        <a href="/settings" className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors">
+          Go to Settings
+        </a>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-full">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+      </div>
+    );
+  }
+
+  if (error || !project) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full">
+        <AlertCircle size={48} className="text-red-500 mb-4" />
+        <h2 className="text-2xl font-bold mb-2">Error Loading Project</h2>
+        <p className="text-gray-600 mb-4">{error || 'Project not found'}</p>
+        <a href="/projects" className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors">
+          Back to Projects
+        </a>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Project Header */}
+      <ProjectHeader 
+        project={project} 
+        projectProgress={projectProgress} 
+        issueStats={issueStats} 
+        formatDate={formatDate} 
+      />
+      
+      {/* Tabs */}
+      <ProjectTabs activeTab={activeTab} setActiveTab={setActiveTab} />
+      
+      {/* Tab Content */}
+      <div className="bg-white rounded-lg shadow p-6">
+        {/* Overview Tab */}
+        {activeTab === 'overview' && (
+          <OverviewTab 
+            project={project} 
+            issueStats={issueStats} 
+            recentActivity={recentActivity} 
+            formatDate={formatDate} 
+          />
+        )}
+
+        {/* Issues Tab */}
+        {activeTab === 'issues' && (
+          <IssuesTab 
+            projectId={parseInt(id || '0')}
+            issues={issues}
+            loading={loading}
+            getStatusColorClass={getStatusColorClass}
+            getPriorityColorClass={getPriorityColorClass}
+            formatDate={formatDate}
+            handleDeleteIssue={handleDeleteIssue}
+            setSelectedIssue={setSelectedIssue}
+            setIsCreatingIssue={setIsCreatingIssue}
+          />
+        )}
+
+        {/* Analytics Tab */}
+        {activeTab === 'analytics' && (
+          <AnalyticsTab 
+            issuesOverTimeData={issuesOverTimeData}
+            issueStatusData={issueStatusData}
+            priorityData={priorityData}
+            renderCustomizedLabel={renderCustomizedLabel}
+          />
+        )}
+
+        {/* Settings Tab */}
+        {activeTab === 'settings' && (
+          <SettingsTab 
+            project={project}
+            formatDate={formatDate}
+            setIsEditingProject={setIsEditingProject}
+            setShowArchiveConfirm={setShowArchiveConfirm}
+            setShowDeleteConfirm={setShowDeleteConfirm}
+          />
+        )}
+      </div>
+
+      {/* Modals */}
+      {isCreatingIssue && (
+        <CreateIssueModal 
+          newIssue={newIssue}
+          setNewIssue={setNewIssue}
+          handleCreateIssue={handleCreateIssue}
+          setIsCreatingIssue={setIsCreatingIssue}
+          loadingAction={loadingAction}
+        />
+      )}
+
+      {selectedIssue && (
+        <EditIssueModal 
+          selectedIssue={selectedIssue}
+          setSelectedIssue={setSelectedIssue}
+          handleUpdateIssue={handleUpdateIssue}
+          loadingAction={loadingAction}
+        />
+      )}
+
+      {showDeleteConfirm && (
+        <DeleteConfirmModal 
+          handleDeleteProject={handleDeleteProject}
+          setShowDeleteConfirm={setShowDeleteConfirm}
+          loadingAction={loadingAction}
+        />
+      )}
+
+      {showArchiveConfirm && (
+        <ArchiveConfirmModal 
+          project={project}
+          handleArchiveProject={handleArchiveProject}
+          setShowArchiveConfirm={setShowArchiveConfirm}
+          loadingAction={loadingAction}
+        />
+      )}
+    </div>
+  );
+};
