@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import axios from 'axios';
 
+// Use environment variable with fallback
+const SERVER_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
 interface ApiContextType {
   apiKey: string;
   redmineUrl: string;
@@ -72,7 +75,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       // Use the proxy server to avoid CORS issues
-      const response = await axios.get('/api/test-connection', {
+      const response = await axios.get(`${SERVER_URL}/api/test-connection`, {
         params: { apiKey, redmineUrl }
       });
       
@@ -99,37 +102,37 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       // Fetch projects
-      const projectsResponse = await axios.get('/api/projects', {
+      const projectsResponse = await axios.get(`${SERVER_URL}/api/projects`, {
         params: { apiKey, redmineUrl }
       });
       setProjects(projectsResponse.data.projects || []);
 
       // Fetch issues
-      const issuesResponse = await axios.get('/api/issues', {
+      const issuesResponse = await axios.get(`${SERVER_URL}/api/issues`, {
         params: { apiKey, redmineUrl }
       });
       setIssues(issuesResponse.data.issues || []);
 
       // Fetch users
-      const usersResponse = await axios.get('/api/users', {
+      const usersResponse = await axios.get(`${SERVER_URL}/api/users`, {
         params: { apiKey, redmineUrl }
       });
       setUsers(usersResponse.data.users || []);
 
       // Fetch issue statuses
-      const statusesResponse = await axios.get('/api/issue_statuses', {
+      const statusesResponse = await axios.get(`${SERVER_URL}/api/issue_statuses`, {
         params: { apiKey, redmineUrl }
       });
       setIssueStatuses(statusesResponse.data.issue_statuses || []);
 
       // Fetch trackers
-      const trackersResponse = await axios.get('/api/trackers', {
+      const trackersResponse = await axios.get(`${SERVER_URL}/api/trackers`, {
         params: { apiKey, redmineUrl }
       });
       setTrackers(trackersResponse.data.trackers || []);
 
       // Fetch priorities
-      const prioritiesResponse = await axios.get('/api/enumerations/issue_priorities', {
+      const prioritiesResponse = await axios.get(`${SERVER_URL}/api/enumerations/issue_priorities`, {
         params: { apiKey, redmineUrl }
       });
       setPriorities(prioritiesResponse.data.issue_priorities || []);
@@ -149,7 +152,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      const response = await axios.get('/api/issues', {
+      const response = await axios.get(`${SERVER_URL}/api/issues`, {
         params: { 
           apiKey, 
           redmineUrl,
@@ -171,7 +174,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      const response = await axios.get('/api/projects', {
+      const response = await axios.get(`${SERVER_URL}/api/projects`, {
         params: { 
           apiKey, 
           redmineUrl,
@@ -193,7 +196,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      const response = await axios.get(`/api/issues/${id}`, {
+      const response = await axios.get(`${SERVER_URL}/api/issues/${id}`, {
         params: { apiKey, redmineUrl }
       });
       return response.data.issue || null;
@@ -211,7 +214,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      const response = await axios.get(`/api/projects/${id}`, {
+      const response = await axios.get(`${SERVER_URL}/api/projects/${id}`, {
         params: { apiKey, redmineUrl }
       });
       return response.data.project || null;
@@ -229,7 +232,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      const response = await axios.post('/api/issues', issueData, {
+      const response = await axios.post(`${SERVER_URL}/api/issues`, issueData, {
         params: { apiKey, redmineUrl }
       });
       return response.data.issue || null;
@@ -247,7 +250,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      await axios.put(`/api/issues/${id}`, issueData, {
+      await axios.put(`${SERVER_URL}/api/issues/${id}`, issueData, {
         params: { apiKey, redmineUrl }
       });
       return true;
@@ -265,7 +268,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      await axios.delete(`/api/issues/${id}`, {
+      await axios.delete(`${SERVER_URL}/api/issues/${id}`, {
         params: { apiKey, redmineUrl }
       });
       return true;
@@ -283,7 +286,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      await axios.post(`/api/issues/${issueId}/watchers`, { user_id: userId }, {
+      await axios.post(`${SERVER_URL}/api/issues/${issueId}/watchers`, { user_id: userId }, {
         params: { apiKey, redmineUrl }
       });
       return true;
@@ -301,7 +304,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      await axios.delete(`/api/issues/${issueId}/watchers/${userId}`, {
+      await axios.delete(`${SERVER_URL}/api/issues/${issueId}/watchers/${userId}`, {
         params: { apiKey, redmineUrl }
       });
       return true;
@@ -319,7 +322,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      const response = await axios.get(`/api/projects/${projectId}/versions`, {
+      const response = await axios.get(`${SERVER_URL}/api/projects/${projectId}/versions`, {
         params: { apiKey, redmineUrl }
       });
       return response.data.versions || [];
@@ -337,7 +340,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      const response = await axios.post('/api/projects', projectData, {
+      const response = await axios.post(`${SERVER_URL}/api/projects`, projectData, {
         params: { apiKey, redmineUrl }
       });
       return response.data.project || null;
@@ -355,7 +358,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      await axios.put(`/api/projects/${id}`, projectData, {
+      await axios.put(`${SERVER_URL}/api/projects/${id}`, projectData, {
         params: { apiKey, redmineUrl }
       });
       return true;
@@ -373,7 +376,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      await axios.put(`/api/projects/${id}/archive`, {}, {
+      await axios.put(`${SERVER_URL}/api/projects/${id}/archive`, {}, {
         params: { apiKey, redmineUrl }
       });
       return true;
@@ -391,7 +394,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      await axios.put(`/api/projects/${id}/unarchive`, {}, {
+      await axios.put(`${SERVER_URL}/api/projects/${id}/unarchive`, {}, {
         params: { apiKey, redmineUrl }
       });
       return true;
@@ -409,7 +412,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      await axios.delete(`/api/projects/${id}`, {
+      await axios.delete(`${SERVER_URL}/api/projects/${id}`, {
         params: { apiKey, redmineUrl }
       });
       return true;
