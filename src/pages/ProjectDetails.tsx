@@ -147,11 +147,14 @@ export const ProjectDetails = () => {
       statusCounts[statusName] = (statusCounts[statusName] || 0) + 1;
     });
     
-    const statusData = Object.entries(statusCounts).map(([name, value]) => ({
-      name,
-      value,
-      color: statusColors[name as keyof typeof statusColors] || '#9CA3AF'
-    }));
+    // Filter out statuses with zero issues and convert to array format for chart
+    const statusData = Object.entries(statusCounts)
+      .filter(([_, value]) => value > 0) // Only include statuses with at least one issue
+      .map(([name, value]) => ({
+        name,
+        value,
+        color: statusColors[name as keyof typeof statusColors] || '#9CA3AF'
+      }));
     
     setIssueStatusData(statusData);
     
@@ -163,10 +166,13 @@ export const ProjectDetails = () => {
       priorityCounts[priorityName] = (priorityCounts[priorityName] || 0) + 1;
     });
     
-    const priorityData = Object.entries(priorityCounts).map(([name, count]) => ({
-      name,
-      count
-    }));
+    // Filter out priorities with zero issues and convert to array format for chart
+    const priorityData = Object.entries(priorityCounts)
+      .filter(([_, count]) => count > 0) // Only include priorities with at least one issue
+      .map(([name, count]) => ({
+        name,
+        count
+      }));
     
     setPriorityData(priorityData);
     
