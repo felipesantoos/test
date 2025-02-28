@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
-import { Search, Filter, Plus } from 'lucide-react';
+import { Search, Filter, Plus, Edit, Trash2, ChevronUp, ChevronDown, X, Clock, ArrowUpDown } from 'lucide-react';
+
+// Interface for sort configuration
+interface SortConfig {
+  key: string;
+  direction: 'asc' | 'desc';
+}
 
 interface IssuesTabProps {
   projectId: number;
@@ -27,25 +33,236 @@ export const IssuesTab = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
+  const [assigneeFilter, setAssigneeFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState('all');
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [sortConfig, setSortConfig] = useState<SortConfig[]>([]);
+  
+  // Get unique statuses from issues
+  const getUniqueStatuses = () => {
+    const statuses = new Set();
+    
+    issues.forEach(issue => {
+      if (issue.status) {
+        statuses.add(issue.status.name.toLowerCase());
+      }
+    });
+    
+    return Array.from(statuses) as string[];
+  };
+  
+  // Get unique priorities from issues
+  const getUniquePriorities = () => {
+    const priorities = new Set();
+    
+    issues.forEach(issue => {
+      if (issue.priority) {
+        priorities.add(issue.priority.name.toLowerCase());
+      }
+    });
+    
+    return Array.from(priorities) as string[];
+  };
+  
+  // Get unique assignees from issues
+  const getUniqueAssignees = () => {
+    const assignees = new Map();
+    
+    issues.forEach(issue => {
+      if (issue.assigned_to) {
+        assignees.set(issue.assigned_to.id, issue.assigned_to);
+      }
+    });
+    
+    return Array.from(assignees.values());
+  };
   
   // Filter issues based on search query and filters
-  const filteredIssues = issues.filter(issue => 
-    issue.subject.toLowerCase().includes(searchQuery.toLowerCase()) &&
-    (statusFilter === 'all' || issue.status.name.toLowerCase() === statusFilter.toLowerCase()) &&
-    (priorityFilter === 'all' || issue.priority.name.toLowerCase() === priorityFilter.toLowerCase())
-  );
+  const filteredIssues = issues.filter(issue => {
+    // Apply search filter
+    if (searchQuery && !issue.subject.toLowerCase().includes(searchQuery.toLowerCase())) {
+      return false;
+    }
+    
+    // Apply status filter
+    if (statusFilter !== 'all' && issue.status.name.toLowerCase() !== statusFilter) {
+      return false;
+    }
+    
+    // Apply priority filter
+    if (priorityFilter !== 'all' && issue.priority.name.toLowerCase() !== priorityFilter) {
+      return false;
+    }
+    
+    // Apply assignee filter
+    if (assigneeFilter !== 'all') {
+      if (assigneeFilter === 'unassigned' && issue.assigned_to) {
+        return false;
+      } else if (assigneeFilter !== 'unassigned' && 
+                (!issue.assigned_to || issue.assigned_to.id.toString() !== assigneeFilter)) {
+        return false;
+      }
+    }
+    
+    // Apply date filter
+    if (dateFilter !== 'all') {
+      const now = new Date();
+      let compareDate = new Date();
+      
+      if (dateFilter === 'today') {
+        compareDate.setDate(now.getDate() - 1);
+      } else if (dateFilter === 'week') {
+        compareDate.setDate(now.getDate() - 7);
+      } else if (dateFilter === 'month') {
+        compareDate.setDate(now.getDate() - 30);
+      }
+      
+      if (new Date(issue.updated_on) <= compareDate) {
+        return false;
+      }
+    }
+    
+    return true;
+  }).sort((a, b) => {
+    // Apply sorting
+    if (sortConfig.length > 0) {
+      for (const sort of sortConfig) {
+        let aValue, bValue;
+        
+        // Extract values based on sort key
+        switch (sort.key) {
+          case 'id':
+            aValue = a.id;
+            bValue = b.id;
+            break;
+          case 'subject':
+            aValue = a.subject;
+            bValue = b.subject;
+            break;
+          case 'status':
+            aValue = a.status.name;
+            bValue = b.status.name;
+            break;
+          case 'priority':
+            aValue = a.priority.id; // Sort by priority ID for correct ordering
+            bValue = b.priority.id;
+            break;
+          case 'assignedTo':
+            aValue = a.assigned_to ? a.assigned_to.name : '';
+            bValue = b.assigned_to ? b.assigned_to.name : '';
+            break;
+          case 'updated':
+            aValue = new Date(a.updated_on).getTime();
+            bValue = new Date(b.updated_on).getTime();
+            break;
+          default:
+            aValue = a[sort.key];
+            bValue = b[sort.key];
+        }
+        
+        // Compare values
+        if (aValue < bValue) {
+          return sort.direction === 'asc' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sort.direction === 'asc' ? 1 : -1;
+        }
+      }
+    }
+    
+    // Default sort by ID if no sort config
+    return a.id - b.id;
+  });
+
+  // Reset all filters to default values
+  const resetFilters = () => {
+    setSearchQuery('');
+    setStatusFilter('all');
+    setPriorityFilter('all');
+    setAssigneeFilter('all');
+    setDateFilter('all');
+    setSortConfig([]);
+  };
+
+  // Handle column sorting
+  const handleSort = (columnId: string) => {
+    // Find the column in the current sort config
+    const currentSortIndex = sortConfig.findIndex(sort => sort.key === columnId);
+    
+    // Create a new sort config array
+    let newSortConfig = [...sortConfig];
+    
+    if (currentSortIndex >= 0) {
+      // Column is already in sort config
+      const currentSort = sortConfig[currentSortIndex];
+      
+      if (currentSort.direction === 'asc') {
+        // Change direction to desc
+        newSortConfig[currentSortIndex] = { key: columnId, direction: 'desc' };
+      } else {
+        // Remove this sort criteria
+        newSortConfig.splice(currentSortIndex, 1);
+      }
+    } else {
+      // Add new sort criteria
+      newSortConfig.push({ key: columnId, direction: 'asc' });
+    }
+    
+    setSortConfig(newSortConfig);
+  };
+
+  // Get the current sort direction for a column
+  const getSortDirection = (columnId: string): 'asc' | 'desc' | null => {
+    const sort = sortConfig.find(s => s.key === columnId);
+    return sort ? sort.direction : null;
+  };
+
+  // Get sort indicator for column header
+  const getSortIndicator = (columnId: string) => {
+    const direction = getSortDirection(columnId);
+    const sortIndex = sortConfig.findIndex(s => s.key === columnId);
+    
+    if (direction === 'asc') {
+      return (
+        <div className="flex items-center">
+          <ChevronUp size={14} />
+          {sortIndex > 0 && <span className="text-xs ml-1">{sortIndex + 1}</span>}
+        </div>
+      );
+    } else if (direction === 'desc') {
+      return (
+        <div className="flex items-center">
+          <ChevronDown size={14} />
+          {sortIndex > 0 && <span className="text-xs ml-1">{sortIndex + 1}</span>}
+        </div>
+      );
+    }
+    
+    return null;
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <h2 className="text-lg font-semibold text-gray-800">Project Issues</h2>
-        <button
-          onClick={() => setIsCreatingIssue(true)}
-          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-        >
-          <Plus size={16} className="mr-2" />
-          Create Issue
-        </button>
+        <div className="flex gap-2">
+          {(searchQuery || statusFilter !== 'all' || priorityFilter !== 'all' || 
+            assigneeFilter !== 'all' || dateFilter !== 'all' || sortConfig.length > 0) && (
+            <button
+              onClick={resetFilters}
+              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              Reset Filters
+            </button>
+          )}
+          <button
+            onClick={() => setIsCreatingIssue(true)}
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            <Plus size={16} className="mr-2" />
+            Create Issue
+          </button>
+        </div>
       </div>
       
       {/* Search and Filters */}
@@ -71,11 +288,11 @@ export const IssuesTab = ({
               className="border border-gray-300 rounded-md text-sm text-gray-700 py-2 pl-3 pr-8 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
             >
               <option value="all">All Statuses</option>
-              <option value="new">New</option>
-              <option value="in progress">In Progress</option>
-              <option value="resolved">Resolved</option>
-              <option value="feedback">Feedback</option>
-              <option value="closed">Closed</option>
+              {getUniqueStatuses().map(status => (
+                <option key={status} value={status}>
+                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                </option>
+              ))}
             </select>
             
             <select
@@ -84,19 +301,124 @@ export const IssuesTab = ({
               className="border border-gray-300 rounded-md text-sm text-gray-700 py-2 pl-3 pr-8 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
             >
               <option value="all">All Priorities</option>
-              <option value="low">Low</option>
-              <option value="normal">Normal</option>
-              <option value="high">High</option>
-              <option value="urgent">Urgent</option>
-              <option value="immediate">Immediate</option>
+              {getUniquePriorities().map(priority => (
+                <option key={priority} value={priority}>
+                  {priority.charAt(0).toUpperCase() + priority.slice(1)}
+                </option>
+              ))}
             </select>
             
-            <button className="flex items-center space-x-1 px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50">
+            <button 
+              className="flex items-center space-x-1 px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50"
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+            >
               <Filter size={16} />
-              <span>More Filters</span>
+              <span>{showAdvancedFilters ? 'Hide Filters' : 'More Filters'}</span>
+            </button>
+            
+            <button 
+              className="flex items-center space-x-1 px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50"
+              onClick={() => setSortConfig([])}
+              disabled={sortConfig.length === 0}
+            >
+              <ArrowUpDown size={16} />
+              <span>Clear Sort</span>
             </button>
           </div>
         </div>
+        
+        {/* Advanced Filters */}
+        {showAdvancedFilters && (
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="assigneeFilter" className="block text-sm font-medium text-gray-700 mb-1">
+                  Assigned To
+                </label>
+                <select
+                  id="assigneeFilter"
+                  value={assigneeFilter}
+                  onChange={(e) => setAssigneeFilter(e.target.value)}
+                  className="block w-full border border-gray-300 rounded-md text-sm text-gray-700 py-2 pl-3 pr-8 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                  <option value="all">All Assignees</option>
+                  <option value="unassigned">Unassigned</option>
+                  {getUniqueAssignees().map(assignee => (
+                    <option key={assignee.id} value={assignee.id}>
+                      {assignee.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label htmlFor="dateFilter" className="block text-sm font-medium text-gray-700 mb-1">
+                  Updated
+                </label>
+                <select
+                  id="dateFilter"
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                  className="block w-full border border-gray-300 rounded-md text-sm text-gray-700 py-2 pl-3 pr-8 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                  <option value="all">Any Time</option>
+                  <option value="today">Last 24 Hours</option>
+                  <option value="week">Last 7 Days</option>
+                  <option value="month">Last 30 Days</option>
+                </select>
+              </div>
+            </div>
+            
+            {/* Active Filters */}
+            {(statusFilter !== 'all' || priorityFilter !== 'all' || 
+              assigneeFilter !== 'all' || dateFilter !== 'all' || sortConfig.length > 0) && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="text-sm font-medium text-gray-700">Active filters:</span>
+                
+                {statusFilter !== 'all' && (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    Status: {statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
+                    <X size={14} className="ml-1 cursor-pointer" onClick={() => setStatusFilter('all')} />
+                  </span>
+                )}
+                
+                {priorityFilter !== 'all' && (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                    Priority: {priorityFilter.charAt(0).toUpperCase() + priorityFilter.slice(1)}
+                    <X size={14} className="ml-1 cursor-pointer" onClick={() => setPriorityFilter('all')} />
+                  </span>
+                )}
+                
+                {assigneeFilter !== 'all' && (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                    Assignee: {assigneeFilter === 'unassigned' ? 'Unassigned' : 
+                      getUniqueAssignees().find(a => a.id.toString() === assigneeFilter)?.name || assigneeFilter}
+                    <X size={14} className="ml-1 cursor-pointer" onClick={() => setAssigneeFilter('all')} />
+                  </span>
+                )}
+                
+                {dateFilter !== 'all' && (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                    Updated: {dateFilter === 'today' ? 'Last 24 Hours' : 
+                      dateFilter === 'week' ? 'Last 7 Days' : 'Last 30 Days'}
+                    <X size={14} className="ml-1 cursor-pointer" onClick={() => setDateFilter('all')} />
+                  </span>
+                )}
+                
+                {sortConfig.length > 0 && (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                    Sorted by: {sortConfig.map((sort, index) => {
+                      let fieldName = sort.key;
+                      if (fieldName === 'assignedTo') fieldName = 'Assigned To';
+                      return `${fieldName} (${sort.direction})${index < sortConfig.length - 1 ? ', ' : ''}`;
+                    })}
+                    <X size={14} className="ml-1 cursor-pointer" onClick={() => setSortConfig([])} />
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
       
       {/* Issues Table */}
@@ -114,23 +436,65 @@ export const IssuesTab = ({
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    ID
+                  <th 
+                    scope="col" 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                    onClick={() => handleSort('id')}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>ID</span>
+                      <span className="text-gray-400">{getSortIndicator('id')}</span>
+                    </div>
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Subject
+                  <th 
+                    scope="col" 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                    onClick={() => handleSort('subject')}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>Subject</span>
+                      <span className="text-gray-400">{getSortIndicator('subject')}</span>
+                    </div>
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
+                  <th 
+                    scope="col" 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                    onClick={() => handleSort('status')}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>Status</span>
+                      <span className="text-gray-400">{getSortIndicator('status')}</span>
+                    </div>
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Priority
+                  <th 
+                    scope="col" 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                    onClick={() => handleSort('priority')}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>Priority</span>
+                      <span className="text-gray-400">{getSortIndicator('priority')}</span>
+                    </div>
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Assigned To
+                  <th 
+                    scope="col" 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                    onClick={() => handleSort('assignedTo')}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>Assigned To</span>
+                      <span className="text-gray-400">{getSortIndicator('assignedTo')}</span>
+                    </div>
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Updated
+                  <th 
+                    scope="col" 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                    onClick={() => handleSort('updated')}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>Updated</span>
+                      <span className="text-gray-400">{getSortIndicator('updated')}</span>
+                    </div>
                   </th>
                   <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
@@ -170,18 +534,20 @@ export const IssuesTab = ({
                       {formatDate(issue.updated_on)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex justify-end space-x-2">
+                      <div className="flex justify-end space-x-3">
                         <button
                           onClick={() => setSelectedIssue(issue)}
                           className="text-indigo-600 hover:text-indigo-900"
+                          title="Edit Issue"
                         >
-                          Edit
+                          <Edit size={16} />
                         </button>
                         <button
                           onClick={() => handleDeleteIssue(issue.id)}
                           className="text-red-600 hover:text-red-900"
+                          title="Delete Issue"
                         >
-                          Delete
+                          <Trash2 size={16} />
                         </button>
                       </div>
                     </td>

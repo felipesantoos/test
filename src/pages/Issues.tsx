@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApi } from '../context/ApiContext';
 import { 
   Search, 
@@ -16,14 +16,6 @@ import {
   X
 } from 'lucide-react';
 import { format } from 'date-fns';
-
-// Interface for column definition
-interface Column {
-  id: string;
-  label: string;
-  width: number;
-  sortable: boolean;
-}
 
 // Interface for sort configuration
 interface SortConfig {
@@ -62,28 +54,8 @@ export const Issues = () => {
   // State for sorting
   const [sortConfig, setSortConfig] = useState<SortConfig[]>([]);
   
-  // State for column resizing
-  const [columns, setColumns] = useState<Column[]>([
-    { id: 'id', label: 'ID', width: 80, sortable: true },
-    { id: 'subject', label: 'Subject', width: 300, sortable: true },
-    { id: 'project', label: 'Project', width: 150, sortable: true },
-    { id: 'status', label: 'Status', width: 120, sortable: true },
-    { id: 'priority', label: 'Priority', width: 120, sortable: true },
-    { id: 'assignedTo', label: 'Assigned To', width: 150, sortable: true },
-    { id: 'updated', label: 'Updated', width: 120, sortable: true },
-    { id: 'actions', label: 'Actions', width: 120, sortable: false }
-  ]);
-  
-  // State for column being resized
-  const [resizingColumnId, setResizingColumnId] = useState<string | null>(null);
-  const [resizeStartX, setResizeStartX] = useState<number>(0);
-  const [resizeStartWidth, setResizeStartWidth] = useState<number>(0);
-  
   // State for selected issue (for editing)
   const [selectedIssue, setSelectedIssue] = useState<any>(null);
-  
-  // Refs for resize handling
-  const tableRef = useRef<HTMLTableElement>(null);
 
   // Load issues on initial render
   useEffect(() => {
@@ -383,36 +355,6 @@ export const Issues = () => {
     return null;
   };
 
-  // Handle column resize start
-  const handleResizeStart = (e: React.MouseEvent, columnId: string, initialWidth: number) => {
-    e.preventDefault();
-    setResizingColumnId(columnId);
-    setResizeStartX(e.clientX);
-    setResizeStartWidth(initialWidth);
-    
-    document.addEventListener('mousemove', handleResizeMove);
-    document.addEventListener('mouseup', handleResizeEnd);
-  };
-
-  // Handle column resize move
-  const handleResizeMove = (e: MouseEvent) => {
-    if (!resizingColumnId) return;
-    
-    const deltaX = e.clientX - resizeStartX;
-    const newWidth = Math.max(50, resizeStartWidth + deltaX); // Minimum width of 50px
-    
-    setColumns(columns.map(col => 
-      col.id === resizingColumnId ? { ...col, width: newWidth } : col
-    ));
-  };
-
-  // Handle column resize end
-  const handleResizeEnd = () => {
-    setResizingColumnId(null);
-    document.removeEventListener('mousemove', handleResizeMove);
-    document.removeEventListener('mouseup', handleResizeEnd);
-  };
-
   // Get color class for status badge
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -632,7 +574,7 @@ export const Issues = () => {
                   <option value="unassigned">Unassigned</option>
                   {getUniqueAssignees().map(assignee => (
                     <option key={assignee.id} value={assignee.id}>
-                      {assignee.name}
+                      {assignee.name }
                     </option>
                   ))}
                 </select>
@@ -733,43 +675,82 @@ export const Issues = () => {
       ) : (
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="overflow-x-auto">
-            <table ref={tableRef} className="min-w-full divide-y divide-gray-200">
+            <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  {columns.map((column) => (
-                    <th 
-                      key={column.id}
-                      scope="col" 
-                      className="relative px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      style={{ width: `${column.width}px`, minWidth: `${column.width}px` }}
-                    >
-                      <div className="flex items-center justify-between">
-                        {column.sortable ? (
-                          <button 
-                            className="group flex items-center space-x-1 hover:text-gray-700"
-                            onClick={() => handleSort(column.id)}
-                          >
-                            <span>{column.label}</span>
-                            <span className="text-gray-400 group-hover:text-gray-700">
-                              {getSortIndicator(column.id)}
-                            </span>
-                          </button>
-                        ) : (
-                          <span>{column.label}</span>
-                        )}
-                        
-                        {/* Resizer handle */}
-                        {column.id !== 'actions' && (
-                          <div
-                            className="absolute right-0 top-0 h-full w-4 cursor-col-resize flex items-center justify-center group"
-                            onMouseDown={(e) => handleResizeStart(e, column.id, column.width)}
-                          >
-                            <div className="h-4/5 w-0.5 bg-gray-300 group-hover:bg-indigo-500"></div>
-                          </div>
-                        )}
-                      </div>
-                    </th>
-                  ))}
+                  <th 
+                    scope="col" 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                    onClick={() => handleSort('id')}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>ID</span>
+                      <span className="text-gray-400">{getSortIndicator('id')}</span>
+                    </div>
+                  </th>
+                  <th 
+                    scope="col" 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                    onClick={() => handleSort('subject')}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>Subject</span>
+                      <span className="text-gray-400">{getSortIndicator('subject')}</span>
+                    </div>
+                  </th>
+                  <th 
+                    scope="col" 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                    onClick={() => handleSort('project')}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>Project</span>
+                      <span className="text-gray-400">{getSortIndicator('project')}</span>
+                    </div>
+                  </th>
+                  <th 
+                    scope="col" 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                    onClick={() => handleSort('status')}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>Status</span>
+                      <span className="text-gray-400">{getSortIndicator('status')}</span>
+                    </div>
+                  </th>
+                  <th 
+                    scope="col" 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                    onClick={() => handleSort('priority')}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>Priority</span>
+                      <span className="text-gray-400">{getSortIndicator('priority')}</span>
+                    </div>
+                  </th>
+                  <th 
+                    scope="col" 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                    onClick={() => handleSort('assignedTo')}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>Assigned To</span>
+                      <span className="text-gray-400">{getSortIndicator('assignedTo')}</span>
+                    </div>
+                  </th>
+                  <th 
+                    scope="col" 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                    onClick={() => handleSort('updated')}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>Updated</span>
+                      <span className="text-gray-400">{getSortIndicator('updated')}</span>
+                    </div>
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -805,7 +786,7 @@ export const Issues = () => {
                       {formatDate(issue.updated_on)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex space-x-3">
+                      <div className="flex justify-end space-x-3">
                         <button
                           onClick={() => handleEditIssue(issue)}
                           className="text-indigo-600 hover:text-indigo-900"
