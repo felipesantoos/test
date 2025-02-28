@@ -12,6 +12,7 @@ import { CreateIssueModal } from '../components/project/modals/CreateIssueModal'
 import { EditIssueModal } from '../components/project/modals/EditIssueModal';
 import { DeleteConfirmModal } from '../components/project/modals/DeleteConfirmModal';
 import { ArchiveConfirmModal } from '../components/project/modals/ArchiveConfirmModal';
+import { EditProjectModal } from '../components/project/modals/EditProjectModal';
 
 export const ProjectDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -27,7 +28,8 @@ export const ProjectDetails = () => {
     deleteIssue,
     archiveProject,
     unarchiveProject,
-    deleteProject
+    deleteProject,
+    updateProject
   } = useApi();
 
   // State
@@ -44,6 +46,7 @@ export const ProjectDetails = () => {
   const [isCreatingIssue, setIsCreatingIssue] = useState(false);
   const [selectedIssue, setSelectedIssue] = useState<any>(null);
   const [isEditingProject, setIsEditingProject] = useState(false);
+  const [editedProject, setEditedProject] = useState<any>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   
@@ -81,6 +84,12 @@ export const ProjectDetails = () => {
         }
         
         setProject(projectData);
+        setEditedProject({
+          name: projectData.name,
+          identifier: projectData.identifier,
+          description: projectData.description || '',
+          is_public: projectData.is_public
+        });
         
         // Fetch issues for this project
         const projectIssues = await fetchIssues({ projectId: id });
@@ -406,6 +415,37 @@ export const ProjectDetails = () => {
     }
   };
 
+  // Handle updating a project
+  const handleUpdateProject = async () => {
+    if (!isConnected || !editedProject || !editedProject.name || !editedProject.identifier) return;
+    
+    setLoadingAction(true);
+    
+    try {
+      const projectData = {
+        project: {
+          name: editedProject.name,
+          identifier: editedProject.identifier,
+          description: editedProject.description,
+          is_public: editedProject.is_public
+        }
+      };
+      
+      await updateProject(parseInt(id || '0'), projectData);
+      
+      // Refresh project details
+      const updatedProject = await fetchProjectDetails(parseInt(id || '0'));
+      setProject(updatedProject);
+      
+      setIsEditingProject(false);
+    } catch (err: any) {
+      console.error('Error updating project:', err);
+      alert('Failed to update project. Please try again.');
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
   // Handle deleting an issue
   const handleDeleteIssue = async (issueId: number) => {
     if (!isConnected) return;
@@ -609,6 +649,17 @@ export const ProjectDetails = () => {
           selectedIssue={selectedIssue}
           setSelectedIssue={setSelectedIssue}
           handleUpdateIssue={handleUpdateIssue}
+          loadingAction={loadingAction}
+        />
+      )}
+
+      {isEditingProject && editedProject && (
+        <EditProjectModal
+          project={project}
+          editedProject={editedProject}
+          setEditedProject={setEditedProject}
+          handleUpdateProject={handleUpdateProject}
+          setIsEditingProject={setIsEditingProject}
           loadingAction={loadingAction}
         />
       )}
