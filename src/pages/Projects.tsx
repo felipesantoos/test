@@ -3,9 +3,10 @@ import { useApi } from '../context/ApiContext';
 import { Search, Filter, ArrowUpDown, Calendar, Users, CheckSquare } from 'lucide-react';
 
 export const Projects = () => {
-  const { isConnected, isLoading, error, projects, refreshData, fetchProjects } = useApi();
+  const { isConnected, isLoading, error, projects, issues, refreshData, fetchProjects, fetchIssues } = useApi();
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredProjects, setFilteredProjects] = useState<any[]>([]);
+  const [projectsWithProgress, setProjectsWithProgress] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -14,79 +15,71 @@ export const Projects = () => {
     }
   }, [isConnected]);
 
+  // Calculate progress for each project based on issues
   useEffect(() => {
-    if (projects.length > 0) {
+    const calculateProjectProgress = async () => {
+      if (!isConnected || projects.length === 0) return;
+      
+      setLoading(true);
+      
+      try {
+        const enhancedProjects = await Promise.all(
+          projects.map(async (project) => {
+            // Fetch all issues for this project
+            const projectIssues = await fetchIssues({ projectId: project.id });
+            
+            // Count total and closed/resolved issues
+            const totalIssues = projectIssues.length;
+            const closedIssues = projectIssues.filter(issue => 
+              issue.status && (issue.status.name.toLowerCase() === 'closed' || issue.status.name.toLowerCase() === 'resolved')
+            ).length;
+            
+            // Calculate progress percentage
+            const progress = totalIssues > 0 ? Math.round((closedIssues / totalIssues) * 100) : 0;
+            
+            return {
+              ...project,
+              issues_count: totalIssues,
+              open_issues: totalIssues - closedIssues,
+              closed_issues: closedIssues,
+              progress: progress,
+              members_count: project.members?.length || 0
+            };
+          })
+        );
+        
+        setProjectsWithProgress(enhancedProjects);
+        
+        // Apply search filter if needed
+        if (searchQuery) {
+          setFilteredProjects(
+            enhancedProjects.filter(project => 
+              project.name.toLowerCase().includes(searchQuery.toLowerCase())
+            )
+          );
+        } else {
+          setFilteredProjects(enhancedProjects);
+        }
+      } catch (err) {
+        console.error('Error calculating project progress:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    calculateProjectProgress();
+  }, [projects, isConnected]);
+
+  // Handle search query changes
+  useEffect(() => {
+    if (projectsWithProgress.length > 0) {
       setFilteredProjects(
-        projects.filter(project => 
+        projectsWithProgress.filter(project => 
           project.name.toLowerCase().includes(searchQuery.toLowerCase())
         )
       );
-    } else {
-      // Mock data for demonstration
-      setFilteredProjects([
-        { 
-          id: 1, 
-          name: 'Website Redesign', 
-          description: 'Complete overhaul of the company website with new design and features',
-          created_on: '2023-01-15',
-          updated_on: '2023-06-20',
-          status: 'active',
-          issues_count: 24,
-          open_issues: 8,
-          members_count: 6,
-          progress: 65
-        },
-        { 
-          id: 2, 
-          name: 'Mobile App Development', 
-          description: 'Creating a new mobile application for both iOS and Android platforms',
-          created_on: '2023-03-10',
-          updated_on: '2023-06-18',
-          status: 'active',
-          issues_count: 42,
-          open_issues: 15,
-          members_count: 8,
-          progress: 40
-        },
-        { 
-          id: 3, 
-          name: 'API Integration', 
-          description: 'Integrating third-party APIs and services into our platform',
-          created_on: '2023-02-05',
-          updated_on: '2023-06-15',
-          status: 'active',
-          issues_count: 18,
-          open_issues: 3,
-          members_count: 4,
-          progress: 85
-        },
-        { 
-          id: 4, 
-          name: 'Database Migration', 
-          description: 'Migrating from legacy database to new cloud-based solution',
-          created_on: '2023-04-20',
-          updated_on: '2023-06-10',
-          status: 'active',
-          issues_count: 12,
-          open_issues: 5,
-          members_count: 3,
-          progress: 50
-        },
-        { 
-          id: 5, 
-          name: 'Security Audit', 
-          description: 'Comprehensive security review and implementation of best practices',
-          created_on: '2023-05-15',
-          updated_on: '2023-06-05',
-          status: 'active',
-          issues_count: 8,
-          open_issues: 2,
-          members_count: 2,
-          progress: 75
-        }
-      ]);
     }
-  }, [projects, searchQuery]);
+  }, [searchQuery, projectsWithProgress]);
 
   const handleSearch = async () => {
     if (!isConnected) return;
@@ -111,6 +104,12 @@ export const Projects = () => {
     }
   };
 
+  // Format date to a readable format
+  const formatDate = (dateString: string) => {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString();
+  };
+
   if (!isConnected) {
     return (
       <div className="flex flex-col items-center justify-center h-full">
@@ -131,10 +130,10 @@ export const Projects = () => {
         <h1 className="text-2xl font-bold text-gray-800">Projects</h1>
         <button 
           onClick={refreshData}
-          disabled={isLoading}
+          disabled={isLoading || loading}
           className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors disabled:bg-indigo-400"
         >
-          {isLoading ? 'Refreshing...' : 'Refresh Projects'}
+          {isLoading || loading ? 'Refreshing...' : 'Refresh Projects'}
         </button>
       </div>
 
@@ -189,17 +188,17 @@ export const Projects = () => {
             <div key={project.id} className="bg-white rounded-lg shadow overflow-hidden">
               <div className="p-6">
                 <h3 className="text-lg font-semibold text-gray-800 mb-2">{project.name}</h3>
-                <p className="text-gray-600 text-sm mb-4 line-clamp-2">{project.description}</p>
+                <p className="text-gray-600 text-sm mb-4 line-clamp-2">{project.description || 'No description available'}</p>
                 
                 <div className="mb-4">
                   <div className="flex justify-between text-sm text-gray-500 mb-1">
                     <span>Progress</span>
-                    <span>{project.progress}%</span>
+                    <span>{project.progress || 0}%</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div 
                       className="bg-indigo-600 h-2 rounded-full" 
-                      style={{ width: `${project.progress}%` }}
+                      style={{ width: `${project.progress || 0}%` }}
                     ></div>
                   </div>
                 </div>
@@ -208,20 +207,20 @@ export const Projects = () => {
                   <div className="flex items-center">
                     <Calendar size={16} className="text-gray-400 mr-2" />
                     <span className="text-gray-600">
-                      {new Date(project.updated_on).toLocaleDateString()}
+                      {formatDate(project.updated_on)}
                     </span>
                   </div>
                   <div className="flex items-center">
                     <Users size={16} className="text-gray-400 mr-2" />
-                    <span className="text-gray-600">{project.members_count} members</span>
+                    <span className="text-gray-600">{project.members_count || 0} members</span>
                   </div>
                   <div className="flex items-center">
                     <CheckSquare size={16} className="text-gray-400 mr-2" />
-                    <span className="text-gray-600">{project.issues_count} issues</span>
+                    <span className="text-gray-600">{project.issues_count || 0} issues</span>
                   </div>
                   <div className="flex items-center">
                     <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
-                    <span className="text-gray-600">{project.open_issues} open</span>
+                    <span className="text-gray-600">{project.open_issues || 0} open</span>
                   </div>
                 </div>
               </div>
