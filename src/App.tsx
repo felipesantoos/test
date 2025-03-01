@@ -20,21 +20,79 @@ function App() {
         <ApiProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/*" element={
+            <Route path="/" element={
               <ProtectedRoute>
                 <div className="flex h-screen bg-gray-100">
                   <Sidebar />
                   <div className="flex-1 flex flex-col overflow-hidden">
                     <Header />
                     <main className="flex-1 overflow-y-auto p-4">
-                      <Routes>
-                        <Route path="/" element={<Dashboard />} />
-                        <Route path="/projects" element={<Projects />} />
-                        <Route path="/projects/:id" element={<ProjectDetails />} />
-                        <Route path="/issues" element={<Issues />} />
-                        <Route path="/team" element={<TeamPerformance />} />
-                        <Route path="/settings" element={<Settings />} />
-                      </Routes>
+                      <Dashboard />
+                    </main>
+                  </div>
+                </div>
+              </ProtectedRoute>
+            } />
+            <Route path="/projects" element={
+              <ProtectedRoute>
+                <div className="flex h-screen bg-gray-100">
+                  <Sidebar />
+                  <div className="flex-1 flex flex-col overflow-hidden">
+                    <Header />
+                    <main className="flex-1 overflow-y-auto p-4">
+                      <Projects />
+                    </main>
+                  </div>
+                </div>
+              </ProtectedRoute>
+            } />
+            <Route path="/projects/:id" element={
+              <ProtectedRoute>
+                <div className="flex h-screen bg-gray-100">
+                  <Sidebar />
+                  <div className="flex-1 flex flex-col overflow-hidden">
+                    <Header />
+                    <main className="flex-1 overflow-y-auto p-4">
+                      <ProjectDetails />
+                    </main>
+                  </div>
+                </div>
+              </ProtectedRoute>
+            } />
+            <Route path="/issues" element={
+              <ProtectedRoute>
+                <div className="flex h-screen bg-gray-100">
+                  <Sidebar />
+                  <div className="flex-1 flex flex-col overflow-hidden">
+                    <Header />
+                    <main className="flex-1 overflow-y-auto p-4">
+                      <Issues />
+                    </main>
+                  </div>
+                </div>
+              </ProtectedRoute>
+            } />
+            <Route path="/team" element={
+              <ProtectedRoute>
+                <div className="flex h-screen bg-gray-100">
+                  <Sidebar />
+                  <div className="flex-1 flex flex-col overflow-hidden">
+                    <Header />
+                    <main className="flex-1 overflow-y-auto p-4">
+                      <TeamPerformance />
+                    </main>
+                  </div>
+                </div>
+              </ProtectedRoute>
+            } />
+            <Route path="/settings" element={
+              <ProtectedRoute>
+                <div className="flex h-screen bg-gray-100">
+                  <Sidebar />
+                  <div className="flex-1 flex flex-col overflow-hidden">
+                    <Header />
+                    <main className="flex-1 overflow-y-auto p-4">
+                      <Settings />
                     </main>
                   </div>
                 </div>

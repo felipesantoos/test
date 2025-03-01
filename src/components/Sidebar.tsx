@@ -8,8 +8,11 @@ import {
   Settings,
   BarChart3
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export const Sidebar = () => {
+  const { username } = useAuth();
+  
   return (
     <div className="bg-indigo-800 text-white w-64 flex flex-col h-full">
       <div className="p-5 border-b border-indigo-700">
@@ -101,11 +104,11 @@ export const Sidebar = () => {
       <div className="p-4 border-t border-indigo-700">
         <div className="flex items-center space-x-3">
           <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center">
-            <span className="font-medium">JD</span>
+            <span className="font-medium">{username ? username.substring(0, 2).toUpperCase() : 'JD'}</span>
           </div>
           <div>
-            <p className="text-sm font-medium">John Doe</p>
-            <p className="text-xs text-indigo-300">Project Manager</p>
+            <p className="text-sm font-medium">{username || 'John Doe'}</p>
+            <p className="text-xs text-indigo-300">Redmine User</p>
           </div>
         </div>
       </div>

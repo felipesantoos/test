@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useApi } from '../context/ApiContext';
 import { Search, Filter, ArrowUpDown, Calendar, Users, CheckSquare } from 'lucide-react';
 
@@ -225,12 +226,12 @@ export const Projects = () => {
                 </div>
               </div>
               <div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
-                <a 
-                  href={`/projects/${project.id}`} 
+                <Link 
+                  to={`/projects/${project.id}`} 
                   className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
                 >
                   View Details
-                </a>
+                </Link>
               </div>
             </div>
           ))}
