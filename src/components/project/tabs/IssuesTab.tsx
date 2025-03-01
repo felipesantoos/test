@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Search, Filter, Plus, Edit, Trash2, ChevronUp, ChevronDown, X, Clock, ArrowUpDown } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Search, Filter, Plus, Edit, Trash2, ChevronUp, ChevronDown, X, Clock, ArrowUpDown, Eye } from 'lucide-react';
 
 // Interface for sort configuration
 interface SortConfig {
@@ -509,12 +510,9 @@ export const IssuesTab = ({
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        <a 
-                          href={`/issues/${issue.id}`} 
-                          className="hover:text-indigo-600"
-                        >
+                        <Link to={`/issues/${issue.id}`} className="hover:text-indigo-600">
                           {issue.subject}
-                        </a>
+                        </Link>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -535,6 +533,13 @@ export const IssuesTab = ({
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end space-x-3">
+                        <Link
+                          to={`/issues/${issue.id}`}
+                          className="text-indigo-600 hover:text-indigo-900"
+                          title="View Issue"
+                        >
+                          <Eye size={16} />
+                        </Link>
                         <button
                           onClick={() => setSelectedIssue(issue)}
                           className="text-indigo-600 hover:text-indigo-900"
