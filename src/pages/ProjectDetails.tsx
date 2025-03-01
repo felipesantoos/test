@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useApi } from '../context/ApiContext';
-import { AlertCircle, Download, ExternalLink } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { ProjectHeader } from '../components/project/ProjectHeader';
 import { ProjectTabs } from '../components/project/ProjectTabs';
 import { OverviewTab } from '../components/project/tabs/OverviewTab';
@@ -19,8 +19,6 @@ export const ProjectDetails = () => {
   const navigate = useNavigate();
   const { 
     isConnected, 
-    apiKey, 
-    redmineUrl,
     fetchProjectDetails, 
     fetchIssues,
     createIssue,
@@ -29,7 +27,10 @@ export const ProjectDetails = () => {
     archiveProject,
     unarchiveProject,
     deleteProject,
-    updateProject
+    updateProject,
+    issueStatuses,
+    priorities,
+    trackers
   } = useApi();
 
   // State
@@ -363,6 +364,65 @@ export const ProjectDetails = () => {
     }
   };
 
+  // Handle bulk creating issues
+  const handleBulkCreateIssues = async (issues: any[]): Promise<{success: any[], failed: any[]}> => {
+    if (!isConnected || issues.length === 0) return { success: [], failed: [] };
+    
+    setLoadingAction(true);
+    
+    const successfulIssues: any[] = [];
+    const failedIssues: any[] = [];
+    
+    try {
+      // Process issues one by one to track which ones fail
+      for (const issueData of issues) {
+        try {
+          const result = await createIssue({ issue: issueData });
+          successfulIssues.push(result);
+        } catch (err: any) {
+          // Add error information to the failed issue
+          failedIssues.push({
+            ...issueData,
+            error: err.message || 'Failed to create issue'
+          });
+        }
+      }
+      
+      // Refresh issues if any were created successfully
+      if (successfulIssues.length > 0) {
+        const updatedIssues = await fetchIssues({ projectId: id });
+        setIssues(updatedIssues);
+        
+        // Recalculate project progress and stats
+        const totalIssues = updatedIssues.length;
+        const closedIssues = updatedIssues.filter(issue => 
+          issue.status && (issue.status.name.toLowerCase() === 'closed' || issue.status.name.toLowerCase() === 'resolved')
+        ).length;
+        const openIssues = totalIssues - closedIssues;
+        
+        setIssueStats({
+          total: totalIssues,
+          open: openIssues,
+          closed: closedIssues
+        });
+        
+        // Calculate progress percentage
+        const progress = totalIssues > 0 ? Math.round((closedIssues / totalIssues) * 100) : 0;
+        setProjectProgress(progress);
+        
+        // Process data for charts
+        processChartData(updatedIssues);
+      }
+      
+      return { success: successfulIssues, failed: failedIssues };
+    } catch (err: any) {
+      console.error('Error in bulk issue creation:', err);
+      throw new Error('Failed to process bulk issue creation');
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
   // Handle updating an issue
   const handleUpdateIssue = async () => {
     if (!isConnected || !selectedIssue || !selectedIssue.subject) return;
@@ -543,9 +603,9 @@ export const ProjectDetails = () => {
         <AlertCircle size={48} className="text-yellow-500 mb-4" />
         <h2 className="text-2xl font-bold mb-2">Not Connected to Redmine</h2>
         <p className="text-gray-600 mb-4">Please configure your Redmine API settings to get started.</p>
-        <a href="/settings" className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors">
+        <Link to="/settings" className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors">
           Go to Settings
-        </a>
+        </Link>
       </div>
     );
   }
@@ -564,9 +624,9 @@ export const ProjectDetails = () => {
         <AlertCircle size={48} className="text-red-500 mb-4" />
         <h2 className="text-2xl font-bold mb-2">Error Loading Project</h2>
         <p className="text-gray-600 mb-4">{error || 'Project not found'}</p>
-        <a href="/projects" className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors">
+        <Link to="/projects" className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors">
           Back to Projects
-        </a>
+        </Link>
       </div>
     );
   }
@@ -608,6 +668,10 @@ export const ProjectDetails = () => {
             handleDeleteIssue={handleDeleteIssue}
             setSelectedIssue={setSelectedIssue}
             setIsCreatingIssue={setIsCreatingIssue}
+            trackers={trackers}
+            statuses={issueStatuses}
+            priorities={priorities}
+            handleBulkCreateIssues={handleBulkCreateIssues}
           />
         )}
 
