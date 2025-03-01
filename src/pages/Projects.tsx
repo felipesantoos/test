@@ -186,8 +186,8 @@ export const Projects = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProjects.map((project) => (
-            <div key={project.id} className="bg-white rounded-lg shadow overflow-hidden">
-              <div className="p-6">
+            <div key={project.id} className="bg-white rounded-lg shadow overflow-hidden flex flex-col h-full">
+              <div className="p-6 flex-grow">
                 <h3 className="text-lg font-semibold text-gray-800 mb-2">{project.name}</h3>
                 <p className="text-gray-600 text-sm mb-4 line-clamp-2">{project.description || 'No description available'}</p>
                 
@@ -225,7 +225,7 @@ export const Projects = () => {
                   </div>
                 </div>
               </div>
-              <div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
+              <div className="bg-gray-50 px-6 py-3 border-t border-gray-200 mt-auto">
                 <Link 
                   to={`/projects/${project.id}`} 
                   className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
