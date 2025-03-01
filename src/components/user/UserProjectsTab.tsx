@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApi } from '../../context/ApiContext';
 import { Link } from 'react-router-dom';
-import { AlertCircle, FolderKanban, Edit, Trash2, Plus, Search } from 'lucide-react';
+import { AlertCircle, FolderKanban, Edit, Plus, Search } from 'lucide-react';
 import { EditUserProjectsModal } from './modals/EditUserProjectsModal';
 
 interface UserProjectsTabProps {
@@ -18,63 +18,61 @@ export const UserProjectsTab: React.FC<UserProjectsTabProps> = ({ userId, userNa
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredMemberships, setFilteredMemberships] = useState<any[]>([]);
   
-  // Modal states
+  // Modal state
   const [isEditingProjects, setIsEditingProjects] = useState(false);
   const [loadingAction, setLoadingAction] = useState(false);
   
   // Refresh trigger
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  
+  // Server URL from environment variable
+  const SERVER_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-  // Load user's project memberships
+  // Load user memberships
   useEffect(() => {
-    const loadUserMemberships = async () => {
+    const loadMemberships = async () => {
+      if (!userId) return;
+      
       setLoading(true);
       setError(null);
       
       try {
-        // This is a placeholder - we would need to implement an API endpoint to get all memberships for a user
-        // For now, we'll simulate it by fetching memberships for each project and filtering by user
-        const allMemberships: any[] = [];
+        // Fetch user details with memberships
+        const redmineUrl = localStorage.getItem('redmine_url') || '';
         
-        for (const project of projects) {
-          try {
-            const projectMemberships = await fetchProjectMemberships(project.id);
-            const userMembershipsInProject = projectMemberships.filter(
-              (membership: any) => membership.user && membership.user.id === userId
-            );
-            
-            // Add project information to each membership
-            userMembershipsInProject.forEach((membership: any) => {
-              membership.project = project;
-            });
-            
-            allMemberships.push(...userMembershipsInProject);
-          } catch (err) {
-            console.error(`Error fetching memberships for project ${project.id}:`, err);
-          }
+        const response = await fetch(`${SERVER_URL}/api/users/${userId}?redmineUrl=${encodeURIComponent(redmineUrl)}&include=memberships`);
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch user memberships');
         }
         
-        setUserMemberships(allMemberships);
-        setFilteredMemberships(allMemberships);
+        const data = await response.json();
+        
+        if (data.user && data.user.memberships) {
+          setUserMemberships(data.user.memberships);
+          setFilteredMemberships(data.user.memberships);
+        } else {
+          setUserMemberships([]);
+          setFilteredMemberships([]);
+        }
       } catch (err: any) {
-        console.error('Error loading user memberships:', err);
+        console.error('Error fetching user memberships:', err);
         setError(err.message || 'Failed to load user memberships');
       } finally {
         setLoading(false);
       }
     };
     
-    if (projects.length > 0) {
-      loadUserMemberships();
-    }
-  }, [userId, projects, fetchProjectMemberships, refreshTrigger]);
+    loadMemberships();
+  }, [userId, refreshTrigger, SERVER_URL]);
 
   // Filter memberships when search query changes
   useEffect(() => {
     if (userMemberships.length > 0) {
       if (searchQuery) {
         const filtered = userMemberships.filter(membership => {
-          const projectName = membership.project ? membership.project.name.toLowerCase() : '';
+          const projectName = membership.project?.name?.toLowerCase() || '';
+          
           return projectName.includes(searchQuery.toLowerCase());
         });
         setFilteredMemberships(filtered);
@@ -84,14 +82,48 @@ export const UserProjectsTab: React.FC<UserProjectsTabProps> = ({ userId, userNa
     }
   }, [searchQuery, userMemberships]);
 
-  // Handle updating user's project memberships
+  // Handle updating user projects
   const handleUpdateUserProjects = async (updatedMemberships: any[]) => {
     setLoadingAction(true);
     
     try {
-      // This would need to be implemented based on your API
-      // For now, we'll just simulate success
-      console.log('Updated memberships:', updatedMemberships);
+      // Process each membership update
+      for (const membership of updatedMemberships) {
+        const redmineUrl = localStorage.getItem('redmine_url') || '';
+        
+        if (membership.membershipId) {
+          // Update existing membership
+          const membershipData = {
+            membership: {
+              role_ids: membership.roleIds
+            }
+          };
+          
+          await fetch(`${SERVER_URL}/api/memberships/${membership.membershipId}?redmineUrl=${encodeURIComponent(redmineUrl)}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(membershipData)
+          });
+        } else {
+          // Add new membership
+          const membershipData = {
+            membership: {
+              user_id: userId,
+              role_ids: membership.roleIds
+            }
+          };
+          
+          await fetch(`${SERVER_URL}/api/projects/${membership.projectId}/memberships?redmineUrl=${encodeURIComponent(redmineUrl)}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(membershipData)
+          });
+        }
+      }
       
       // Refresh memberships
       setRefreshTrigger(prev => prev + 1);
@@ -104,28 +136,30 @@ export const UserProjectsTab: React.FC<UserProjectsTabProps> = ({ userId, userNa
     }
   };
 
-  // Check if a role is inherited
-  const isRoleInherited = (role: any) => {
-    return role.inherited === true;
+  // Get role names for a membership
+  const getRoleNames = (membership: any) => {
+    if (!membership.roles || membership.roles.length === 0) {
+      return 'No roles';
+    }
+    
+    return membership.roles.map((role: any) => role.name).join(', ');
   };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-800">User Projects</h2>
-        <div className="flex gap-2">
-          <button 
-            onClick={() => setIsEditingProjects(true)}
-            className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors flex items-center"
-          >
-            <Edit size={16} className="mr-2" />
-            Edit Projects
-          </button>
-        </div>
+        <button 
+          onClick={() => setIsEditingProjects(true)}
+          className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors flex items-center"
+        >
+          <Edit size={16} className="mr-2" />
+          Edit Projects
+        </button>
       </div>
 
       {/* Search */}
-      <div className="bg-white rounded-lg shadow p-4">
+      <div className="bg-white rounded-lg shadow-sm border p-4">
         <div className="relative w-full md:w-96">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Search size={18} className="text-gray-400" />
@@ -155,99 +189,66 @@ export const UserProjectsTab: React.FC<UserProjectsTabProps> = ({ userId, userNa
           <div className="flex flex-col items-center">
             <FolderKanban size={48} className="text-gray-400 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-1">No projects found</h3>
-            <p className="text-gray-500 mb-4">
-              {searchQuery 
-                ? `No projects matching "${searchQuery}" found for this user.` 
-                : `${userName} is not a member of any projects.`}
-            </p>
+            <p className="text-gray-500 mb-4">This user is not a member of any projects or none match your search criteria</p>
             <button 
               onClick={() => setIsEditingProjects(true)}
               className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors flex items-center"
             >
               <Plus size={16} className="mr-2" />
-              Add to Projects
+              Add Projects
             </button>
           </div>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Project
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Roles
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredMemberships.map((membership) => (
-                  <tr key={membership.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
-                          <FolderKanban size={20} className="text-indigo-600" />
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">
-                            <Link to={`/projects/${membership.project.id}`} className="hover:text-indigo-600">
-                              {membership.project.name}
-                            </Link>
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {membership.project.identifier}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex flex-wrap gap-1">
-                        {membership.roles && membership.roles.map((role: any) => (
-                          <span 
-                            key={role.id} 
-                            className={`px-2 py-1 text-xs rounded-full ${
-                              isRoleInherited(role) 
-                                ? 'bg-gray-100 text-gray-800 border border-gray-300' 
-                                : 'bg-indigo-100 text-indigo-800'
-                            }`}
-                          >
-                            {role.name}
-                            {isRoleInherited(role) && (
-                              <span className="ml-1 text-gray-500">(inherited)</span>
-                            )}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-right">
-                      <div className="flex justify-end space-x-3">
-                        <Link
-                          to={`/projects/${membership.project.id}`}
-                          className="text-indigo-600 hover:text-indigo-900"
-                          title="View Project"
-                        >
-                          <FolderKanban size={16} />
-                        </Link>
-                        <button
-                          onClick={() => setIsEditingProjects(true)}
-                          className="text-indigo-600 hover:text-indigo-900"
-                          title="Edit Roles"
-                        >
-                          <Edit size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredMemberships.map((membership) => (
+            <div key={membership.id} className="bg-white rounded-lg shadow overflow-hidden">
+              <div className="p-4">
+                <div className="flex items-center mb-2">
+                  <div className="flex-shrink-0 h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                    <FolderKanban size={20} className="text-indigo-600" />
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-gray-900">
+                      {membership.project?.name || 'Unknown Project'}
+                    </h3>
+                    <p className="text-xs text-gray-500">
+                      {membership.project?.identifier || ''}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="mt-3">
+                  <h4 className="text-xs font-medium text-gray-500 mb-1">Roles:</h4>
+                  <div className="flex flex-wrap gap-1">
+                    {membership.roles && membership.roles.map((role: any) => (
+                      <span 
+                        key={role.id} 
+                        className={`px-2 py-0.5 text-xs rounded-full ${
+                          role.inherited 
+                            ? 'bg-gray-100 text-gray-800 border border-gray-300' 
+                            : 'bg-indigo-100 text-indigo-800'
+                        }`}
+                      >
+                        {role.name}
+                        {role.inherited && (
+                          <span className="ml-1 text-gray-500">(inherited)</span>
+                        )}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-50 px-4 py-2 border-t border-gray-200">
+                <Link 
+                  to={`/projects/${membership.project?.id}`} 
+                  className="text-indigo-600 hover:text-indigo-800 text-xs font-medium"
+                >
+                  View Project
+                </Link>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

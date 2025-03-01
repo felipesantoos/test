@@ -220,44 +220,30 @@ export const UserDetails = () => {
                   <p className="text-sm text-gray-900">{user.mail || 'No email provided'}</p>
                 </div>
               </div>
-              
               <div className="space-y-4">
                 <div>
                   <h3 className="text-sm font-medium text-gray-500 mb-1">Status</h3>
                   <p className="text-sm text-gray-900">{getStatusLabel(user.status)}</p>
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-1">Administrator</h3>
-                  <p className="text-sm text-gray-900">{user.admin ? 'Yes' : 'No'}</p>
-                </div>
-                <div>
                   <h3 className="text-sm font-medium text-gray-500 mb-1">Last Login</h3>
                   <p className="text-sm text-gray-900">{user.last_login_on ? formatDate(user.last_login_on) : 'Never'}</p>
                 </div>
-              </div>
-            </div>
-            
-            <div className="border-t border-gray-200 pt-4">
-              <h3 className="text-sm font-medium text-gray-500 mb-2">Custom Fields</h3>
-              {user.custom_fields && user.custom_fields.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {user.custom_fields.map((field: any) => (
-                    <div key={field.id}>
-                      <h4 className="text-xs font-medium text-gray-500">{field.name}</h4>
-                      <p className="text-sm text-gray-900">{field.value || '-'}</p>
-                    </div>
-                  ))}
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500 mb-1">Created On</h3>
+                  <p className="text-sm text-gray-900">{formatDate(user.created_on)}</p>
                 </div>
-              ) : (
-                <p className="text-sm text-gray-500">No custom fields available</p>
-              )}
+              </div>
             </div>
           </div>
         )}
         
         {/* Projects Tab */}
         {activeTab === 'projects' && (
-          <UserProjectsTab userId={parseInt(id || '0')} userName={`${user.firstname} ${user.lastname}`} />
+          <UserProjectsTab 
+            userId={parseInt(id || '0')} 
+            userName={`${user.firstname} ${user.lastname}`} 
+          />
         )}
         
         {/* Groups Tab */}
@@ -266,52 +252,26 @@ export const UserDetails = () => {
             <h2 className="text-lg font-semibold text-gray-800">User Groups</h2>
             
             {user.groups && user.groups.length > 0 ? (
-              <div className="bg-white rounded-lg shadow overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Group Name
-                        </th>
-                        <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {user.groups.map((group: any) => (
-                        <tr key={group.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
-                                <Shield size={20} className="text-indigo-600" />
-                              </div>
-                              <div className="ml-4">
-                                <div className="text-sm font-medium text-gray-900">{group.name}</div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-right">
-                            <button
-                              className="text-red-600 hover:text-red-900"
-                              title="Remove from Group"
-                            >
-                              Remove
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {user.groups.map((group: any) => (
+                  <div key={group.id} className="bg-white rounded-lg shadow-sm border p-4">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0 h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                        <Shield size={20} className="text-indigo-600" />
+                      </div>
+                      <div className="ml-3">
+                        <h3 className="text-sm font-medium text-gray-900">{group.name}</h3>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : (
-              <div className="bg-white rounded-lg shadow p-8 text-center">
+              <div className="bg-white rounded-lg shadow-sm border p-8 text-center">
                 <div className="flex flex-col items-center">
                   <Shield size={48} className="text-gray-400 mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-1">No groups found</h3>
-                  <p className="text-gray-500 mb-4">This user is not a member of any groups</p>
+                  <p className="text-gray-500">This user is not a member of any groups</p>
                 </div>
               </div>
             )}

@@ -10,6 +10,7 @@ import { IssueDetails } from './pages/IssueDetails';
 import { KanbanBoard } from './pages/KanbanBoard';
 import { TeamPerformance } from './pages/TeamPerformance';
 import { UserManagement } from './pages/UserManagement';
+import { UserDetails } from './pages/UserDetails';
 import { Settings } from './pages/Settings';
 import { Login } from './pages/Login';
 import { ApiProvider } from './context/ApiContext';
@@ -123,6 +124,19 @@ function App() {
                     <Header />
                     <main className="flex-1 overflow-y-auto p-4">
                       <UserManagement />
+                    </main>
+                  </div>
+                </div>
+              </AdminRoute>
+            } />
+            <Route path="/users/:id" element={
+              <AdminRoute>
+                <div className="flex h-screen bg-gray-100">
+                  <Sidebar />
+                  <div className="flex-1 flex flex-col overflow-hidden">
+                    <Header />
+                    <main className="flex-1 overflow-y-auto p-4">
+                      <UserDetails />
                     </main>
                   </div>
                 </div>

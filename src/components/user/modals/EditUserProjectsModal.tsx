@@ -99,7 +99,7 @@ export const EditUserProjectsModal: React.FC<EditUserProjectsModalProps> = ({
       
       if (roleIds.includes(roleId)) {
         // If role is already selected, remove it
-        newSelected[projectId].roleIds = roleIds.filter(id => id !== roleId);
+        newSelected[projectId].roleIds = roleIds.filter((id: number) => id !== roleId);
       } else {
         // If role is not selected, add it
         newSelected[projectId].roleIds = [...roleIds, roleId];
