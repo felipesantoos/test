@@ -69,6 +69,9 @@ export const KanbanBoard = () => {
   
   // State for viewing issue details
   const [viewingIssueId, setViewingIssueId] = useState<number | null>(null);
+  
+  // State to track when to refresh data
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Set up sensors for drag and drop
   const sensors = useSensors(
@@ -82,12 +85,12 @@ export const KanbanBoard = () => {
     })
   );
 
-  // Load issues on initial render
+  // Load issues on initial render or when refresh is triggered
   useEffect(() => {
-    if (isConnected && issues.length === 0) {
+    if (isConnected) {
       refreshData();
     }
-  }, [isConnected]);
+  }, [isConnected, refreshTrigger]);
 
   // Update new issue project when selected project changes
   useEffect(() => {
@@ -217,7 +220,8 @@ export const KanbanBoard = () => {
       
       await updateIssue(parseInt(issueId), issueData);
       
-      // No need to refresh all issues, we've already updated our local state
+      // Trigger a refresh to ensure data consistency
+      setRefreshTrigger(prev => prev + 1);
     } catch (err) {
       console.error('Error updating issue status:', err);
       
@@ -261,8 +265,8 @@ export const KanbanBoard = () => {
       
       await createIssue(issueData);
       
-      // Refresh issues
-      await refreshData();
+      // Trigger a refresh to update the board with the new issue
+      setRefreshTrigger(prev => prev + 1);
       
       // Reset form
       setNewIssue({
@@ -302,8 +306,8 @@ export const KanbanBoard = () => {
       
       await updateIssue(selectedIssue.id, issueData);
       
-      // Refresh issues
-      await refreshData();
+      // Trigger a refresh to update the board with the modified issue
+      setRefreshTrigger(prev => prev + 1);
       
       setSelectedIssue(null);
     } catch (err: any) {
@@ -312,6 +316,11 @@ export const KanbanBoard = () => {
     } finally {
       setLoadingAction(false);
     }
+  };
+
+  // Handle manual refresh
+  const handleManualRefresh = () => {
+    setRefreshTrigger(prev => prev + 1);
   };
 
   // Get color class for priority badge
@@ -351,7 +360,7 @@ export const KanbanBoard = () => {
         <h1 className="text-2xl font-bold text-gray-800">Kanban Board</h1>
         <div className="flex gap-2">
           <button 
-            onClick={refreshData}
+            onClick={handleManualRefresh}
             disabled={isLoading || loading}
             className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-50 transition-colors disabled:bg-gray-100 disabled:text-gray-400 flex items-center"
           >

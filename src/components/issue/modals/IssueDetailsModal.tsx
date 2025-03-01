@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { format } from 'date-fns';
-import { X, Paperclip, Link2, Eye, MessageSquare, Clock, Tag, AlertCircle } from 'lucide-react';
+import { X, Paperclip, Link2, Eye, MessageSquare, Clock, Tag, AlertCircle, Edit } from 'lucide-react';
 import { useApi } from '../../../context/ApiContext';
+import { EditIssueModal } from '../../project/modals/EditIssueModal';
 
 interface IssueDetailsModalProps {
   issueId: number;
@@ -9,11 +10,14 @@ interface IssueDetailsModalProps {
 }
 
 export const IssueDetailsModal: React.FC<IssueDetailsModalProps> = ({ issueId, onClose }) => {
-  const { fetchIssueDetails } = useApi();
+  const { fetchIssueDetails, updateIssue, refreshData } = useApi();
   const [issue, setIssue] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'details' | 'history' | 'relations'>('details');
+  const [isEditing, setIsEditing] = useState(false);
+  const [loadingAction, setLoadingAction] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
     const loadIssueDetails = async () => {
@@ -32,7 +36,39 @@ export const IssueDetailsModal: React.FC<IssueDetailsModalProps> = ({ issueId, o
     };
     
     loadIssueDetails();
-  }, [issueId, fetchIssueDetails]);
+  }, [issueId, fetchIssueDetails, refreshTrigger]);
+
+  // Handle updating an issue
+  const handleUpdateIssue = async () => {
+    if (!issue || !issue.subject) return;
+    
+    setLoadingAction(true);
+    
+    try {
+      const issueData = {
+        issue: {
+          subject: issue.subject,
+          description: issue.description,
+          status_id: issue.status.id,
+          priority_id: issue.priority.id,
+          assigned_to_id: issue.assigned_to?.id || null
+        }
+      };
+      
+      await updateIssue(issue.id, issueData);
+      
+      // Refresh the issue details and the main data
+      setRefreshTrigger(prev => prev + 1);
+      refreshData();
+      
+      setIsEditing(false);
+    } catch (err: any) {
+      console.error('Error updating issue:', err);
+      alert('Failed to update issue. Please try again.');
+    } finally {
+      setLoadingAction(false);
+    }
+  };
 
   // Format date for display
   const formatDate = (dateString: string) => {
@@ -82,6 +118,18 @@ export const IssueDetailsModal: React.FC<IssueDetailsModalProps> = ({ issueId, o
     }
   };
 
+  if (isEditing && issue) {
+    return (
+      <EditIssueModal
+        selectedIssue={issue}
+        setSelectedIssue={setIssue}
+        handleUpdateIssue={handleUpdateIssue}
+        loadingAction={loadingAction}
+        onCancel={() => setIsEditing(false)}
+      />
+    );
+  }
+
   return (
     <div className="fixed inset-0 overflow-y-auto z-50">
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
@@ -122,12 +170,20 @@ export const IssueDetailsModal: React.FC<IssueDetailsModalProps> = ({ issueId, o
                       <h3 className="text-lg leading-6 font-medium text-gray-900 mb-2">
                         #{issue.id}: {issue.subject}
                       </h3>
-                      <button
-                        onClick={onClose}
-                        className="text-gray-400 hover:text-gray-500"
-                      >
-                        <X size={20} />
-                      </button>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => setIsEditing(true)}
+                          className="text-indigo-600 hover:text-indigo-800"
+                        >
+                          <Edit size={20} />
+                        </button>
+                        <button
+                          onClick={onClose}
+                          className="text-gray-400 hover:text-gray-500"
+                        >
+                          <X size={20} />
+                        </button>
+                      </div>
                     </div>
                     
                     <div className="flex flex-wrap gap-2 mb-4">

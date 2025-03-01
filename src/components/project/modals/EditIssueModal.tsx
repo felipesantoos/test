@@ -5,13 +5,15 @@ interface EditIssueModalProps {
   setSelectedIssue: (issue: any) => void;
   handleUpdateIssue: () => void;
   loadingAction: boolean;
+  onCancel?: () => void;
 }
 
 export const EditIssueModal = ({ 
   selectedIssue, 
   setSelectedIssue, 
   handleUpdateIssue, 
-  loadingAction 
+  loadingAction,
+  onCancel
 }: EditIssueModalProps) => {
   return (
     <div className="fixed inset-0 overflow-y-auto z-50">
@@ -140,7 +142,7 @@ export const EditIssueModal = ({
             </button>
             <button
               type="button"
-              onClick={() => setSelectedIssue(null)}
+              onClick={onCancel || (() => setSelectedIssue(null))}
               className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
             >
               Cancel
