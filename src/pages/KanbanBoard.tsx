@@ -23,6 +23,7 @@ import { KanbanColumn } from '../components/kanban/KanbanColumn';
 import { KanbanCard } from '../components/kanban/KanbanCard';
 import { CreateIssueModal } from '../components/project/modals/CreateIssueModal';
 import { EditIssueModal } from '../components/project/modals/EditIssueModal';
+import { IssueDetailsModal } from '../components/issue/modals/IssueDetailsModal';
 
 export const KanbanBoard = () => {
   const { 
@@ -65,6 +66,9 @@ export const KanbanBoard = () => {
   // State for editing an issue
   const [selectedIssue, setSelectedIssue] = useState<any>(null);
   const [loadingAction, setLoadingAction] = useState(false);
+  
+  // State for viewing issue details
+  const [viewingIssueId, setViewingIssueId] = useState<number | null>(null);
 
   // Set up sensors for drag and drop
   const sensors = useSensors(
@@ -159,6 +163,29 @@ export const KanbanBoard = () => {
       return;
     }
     
+    // Update local state immediately for a responsive UI
+    const updatedIssuesByStatus = { ...issuesByStatus };
+    
+    // Remove issue from old status
+    const oldStatusId = issue.status.id;
+    updatedIssuesByStatus[oldStatusId] = updatedIssuesByStatus[oldStatusId].filter(
+      i => i.id !== issue.id
+    );
+    
+    // Add issue to new status
+    const updatedIssue = { ...issue, status: { ...issue.status, id: parseInt(newStatusId) } };
+    
+    // Ensure the array exists before trying to spread it
+    if (!updatedIssuesByStatus[newStatusId]) {
+      updatedIssuesByStatus[newStatusId] = [];
+    }
+    
+    updatedIssuesByStatus[newStatusId] = [...updatedIssuesByStatus[newStatusId], updatedIssue];
+    
+    setIssuesByStatus(updatedIssuesByStatus);
+    setActiveIssue(null);
+    
+    // Now update the server in the background
     setLoading(true);
     
     try {
@@ -171,34 +198,31 @@ export const KanbanBoard = () => {
       
       await updateIssue(parseInt(issueId), issueData);
       
-      // Refresh issues
-      await refreshData();
-      
-      // Update local state for immediate UI update
-      const updatedIssuesByStatus = { ...issuesByStatus };
-      
-      // Remove issue from old status
-      const oldStatusId = issue.status.id;
-      updatedIssuesByStatus[oldStatusId] = updatedIssuesByStatus[oldStatusId].filter(
-        i => i.id !== issue.id
-      );
-      
-      // Add issue to new status
-      const updatedIssue = { ...issue, status: { ...issue.status, id: parseInt(newStatusId) } };
-      
-      // Ensure the array exists before trying to spread it
-      if (!updatedIssuesByStatus[newStatusId]) {
-        updatedIssuesByStatus[newStatusId] = [];
-      }
-      
-      updatedIssuesByStatus[newStatusId] = [...updatedIssuesByStatus[newStatusId], updatedIssue];
-      
-      setIssuesByStatus(updatedIssuesByStatus);
+      // No need to refresh the entire board, we've already updated the UI
     } catch (err) {
       console.error('Error updating issue status:', err);
+      // Revert the UI change if the server update fails
+      setIssuesByStatus(prevState => {
+        const revertedState = { ...prevState };
+        
+        // Remove issue from new status
+        revertedState[newStatusId] = revertedState[newStatusId].filter(
+          i => i.id !== issue.id
+        );
+        
+        // Add issue back to old status
+        if (!revertedState[oldStatusId]) {
+          revertedState[oldStatusId] = [];
+        }
+        revertedState[oldStatusId] = [...revertedState[oldStatusId], issue];
+        
+        return revertedState;
+      });
+      
+      // Show an error message to the user
+      alert('Failed to update issue status. Please try again.');
     } finally {
       setLoading(false);
-      setActiveIssue(null);
     }
   };
 
@@ -213,10 +237,25 @@ export const KanbanBoard = () => {
         issue: newIssue
       };
       
-      await createIssue(issueData);
+      const createdIssue = await createIssue(issueData);
       
-      // Refresh issues
-      await refreshData();
+      // Update local state without refreshing the entire board
+      if (createdIssue) {
+        setIssuesByStatus(prevState => {
+          const updatedState = { ...prevState };
+          const statusId = createdIssue.status.id;
+          
+          if (!updatedState[statusId]) {
+            updatedState[statusId] = [];
+          }
+          
+          updatedState[statusId] = [...updatedState[statusId], createdIssue];
+          return updatedState;
+        });
+      } else {
+        // If we don't get the created issue back, refresh the board
+        await refreshData();
+      }
       
       // Reset form
       setNewIssue({
@@ -256,8 +295,22 @@ export const KanbanBoard = () => {
       
       await updateIssue(selectedIssue.id, issueData);
       
-      // Refresh issues
-      await refreshData();
+      // Update local state without refreshing the entire board
+      setIssuesByStatus(prevState => {
+        const updatedState = { ...prevState };
+        const statusId = selectedIssue.status.id;
+        
+        if (!updatedState[statusId]) {
+          updatedState[statusId] = [];
+        }
+        
+        // Replace the updated issue in its status column
+        updatedState[statusId] = updatedState[statusId].map(issue => 
+          issue.id === selectedIssue.id ? selectedIssue : issue
+        );
+        
+        return updatedState;
+      });
       
       setSelectedIssue(null);
     } catch (err: any) {
@@ -266,6 +319,11 @@ export const KanbanBoard = () => {
     } finally {
       setLoadingAction(false);
     }
+  };
+
+  // Handle viewing issue details
+  const handleViewIssue = (issueId: number) => {
+    setViewingIssueId(issueId);
   };
 
   // Get color class for priority badge
@@ -372,17 +430,19 @@ export const KanbanBoard = () => {
                   issues={issuesByStatus[status.id] || []}
                   getPriorityColor={getPriorityColor}
                   onEditIssue={setSelectedIssue}
+                  onViewIssue={handleViewIssue}
                 />
               ))}
             </div>
             
             <DragOverlay>
               {activeIssue ? (
-                <div className="w-[300px]">
+                 <div className="w-[300px]">
                   <KanbanCard 
                     issue={activeIssue}
                     getPriorityColor={getPriorityColor}
                     onEditIssue={() => {}}
+                    onViewIssue={() => {}}
                   />
                 </div>
               ) : null}
@@ -410,6 +470,14 @@ export const KanbanBoard = () => {
           setSelectedIssue={setSelectedIssue}
           handleUpdateIssue={handleUpdateIssue}
           loadingAction={loadingAction}
+        />
+      )}
+
+      {/* Issue Details Modal */}
+      {viewingIssueId && (
+        <IssueDetailsModal
+          issueId={viewingIssueId}
+          onClose={() => setViewingIssueId(null)}
         />
       )}
     </div>

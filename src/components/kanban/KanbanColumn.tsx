@@ -9,6 +9,7 @@ interface KanbanColumnProps {
   issues: any[];
   getPriorityColor: (priority: string) => string;
   onEditIssue: (issue: any) => void;
+  onViewIssue: (issueId: number) => void;
 }
 
 export const KanbanColumn: React.FC<KanbanColumnProps> = ({ 
@@ -16,7 +17,8 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   title, 
   issues,
   getPriorityColor,
-  onEditIssue
+  onEditIssue,
+  onViewIssue
 }) => {
   const { setNodeRef } = useDroppable({
     id: id
@@ -63,6 +65,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
               issue={issue}
               getPriorityColor={getPriorityColor}
               onEditIssue={onEditIssue}
+              onViewIssue={onViewIssue}
               statusId={id}
             />
           ))}

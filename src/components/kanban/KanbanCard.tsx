@@ -7,12 +7,14 @@ interface KanbanCardProps {
   issue: any;
   getPriorityColor: (priority: string) => string;
   onEditIssue: (issue: any) => void;
+  onViewIssue: (issueId: number) => void;
 }
 
 export const KanbanCard: React.FC<KanbanCardProps> = ({ 
   issue,
   getPriorityColor,
-  onEditIssue
+  onEditIssue,
+  onViewIssue
 }) => {
   // Format date for display
   const formatDate = (dateString: string) => {
@@ -24,7 +26,10 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-md shadow-sm border border-gray-200 p-3 mb-2 hover:shadow-md transition-shadow">
+    <div 
+      className="bg-white rounded-md shadow-sm border border-gray-200 p-3 mb-2 hover:shadow-md transition-shadow"
+      onClick={() => onViewIssue(issue.id)}
+    >
       <div className="flex justify-between items-start mb-2">
         <span className="text-xs text-gray-500">#{issue.id}</span>
         <span className={`px-2 py-0.5 text-xs rounded-full ${getPriorityColor(issue.priority.name)}`}>
@@ -56,7 +61,10 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
             <Eye size={14} />
           </Link>
           <button 
-            onClick={() => onEditIssue(issue)} 
+            onClick={(e) => {
+              e.stopPropagation();
+              onEditIssue(issue);
+            }} 
             className="text-indigo-600 hover:text-indigo-800"
           >
             <Edit size={14} />

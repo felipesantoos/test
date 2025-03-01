@@ -7,6 +7,7 @@ interface SortableKanbanCardProps {
   issue: any;
   getPriorityColor: (priority: string) => string;
   onEditIssue: (issue: any) => void;
+  onViewIssue: (issueId: number) => void;
   statusId: string;
 }
 
@@ -14,6 +15,7 @@ export const SortableKanbanCard: React.FC<SortableKanbanCardProps> = ({
   issue,
   getPriorityColor,
   onEditIssue,
+  onViewIssue,
   statusId
 }) => {
   const {
@@ -51,6 +53,7 @@ export const SortableKanbanCard: React.FC<SortableKanbanCardProps> = ({
         issue={issue}
         getPriorityColor={getPriorityColor}
         onEditIssue={onEditIssue}
+        onViewIssue={onViewIssue}
       />
     </div>
   );
