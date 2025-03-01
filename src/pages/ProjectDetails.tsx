@@ -13,6 +13,7 @@ import { EditIssueModal } from '../components/project/modals/EditIssueModal';
 import { DeleteConfirmModal } from '../components/project/modals/DeleteConfirmModal';
 import { ArchiveConfirmModal } from '../components/project/modals/ArchiveConfirmModal';
 import { EditProjectModal } from '../components/project/modals/EditProjectModal';
+import { format, parseISO, subDays } from 'date-fns';
 
 export const ProjectDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -99,7 +100,7 @@ export const ProjectDetails = () => {
         // Calculate project progress and stats
         const totalIssues = projectIssues.length;
         const closedIssues = projectIssues.filter(issue => 
-          issue.status && (issue.status.name.toLowerCase() === 'closed' || issue.status.name.toLowerCase() === 'resolved')
+          issue.status && (issue.status.name.toLowerCase() === 'closed' || issue.status.name.toLowerCase() === 'rejected')
         ).length;
         const openIssues = totalIssues - closedIssues;
         
@@ -188,35 +189,60 @@ export const ProjectDetails = () => {
     
     // Generate issues over time data (last 30 days)
     const today = new Date();
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(today.getDate() - 30);
+    const thirtyDaysAgo = subDays(today, 30);
     
-    const timeData = [];
+    // Create an array of dates for the last 30 days
+    const dates = [];
     for (let i = 0; i < 30; i++) {
-      const date = new Date(thirtyDaysAgo);
-      date.setDate(date.getDate() + i);
-      
-      // Count open and closed issues as of this date
-      const openCount = projectIssues.filter(issue => 
-        new Date(issue.created_on) <= date && 
-        (
-          !issue.closed_on || 
-          new Date(issue.closed_on) > date
-        )
-      ).length;
-      
-      const closedCount = projectIssues.filter(issue => 
-        new Date(issue.created_on) <= date && 
-        issue.closed_on && 
-        new Date(issue.closed_on) <= date
-      ).length;
-      
-      timeData.push({
-        date: date.toISOString().split('T')[0],
-        open: openCount,
-        closed: closedCount
-      });
+      const date = subDays(today, 29 - i);
+      dates.push(format(date, 'yyyy-MM-dd'));
     }
+    
+    // Initialize data for each date
+    const timeData = dates.map(date => ({
+      date,
+      open: 0,
+      closed: 0
+    }));
+    
+    // Count issues by status for each date
+    projectIssues.forEach(issue => {
+      const createdDate = parseISO(issue.created_on);
+      const isClosed = issue.status.name.toLowerCase() === 'closed' || issue.status.name.toLowerCase() === 'rejected';
+      
+      // For each date in our range
+      timeData.forEach((dataPoint, index) => {
+        const currentDate = parseISO(dataPoint.date);
+        
+        // If the issue was created on or before this date
+        if (createdDate <= currentDate) {
+          // Check if the issue is closed and when it was closed
+          if (isClosed) {
+            // If we have a closed_on date, use it
+            if (issue.closed_on) {
+              const closedDate = parseISO(issue.closed_on);
+              // If closed after this date, it's still open on this date
+              if (closedDate > currentDate) {
+                dataPoint.open++;
+              } else {
+                dataPoint.closed++;
+              }
+            } else {
+              // If no closed_on date but status is closed, use updated_on as an approximation
+              const updatedDate = parseISO(issue.updated_on);
+              if (updatedDate > currentDate) {
+                dataPoint.open++;
+              } else {
+                dataPoint.closed++;
+              }
+            }
+          } else {
+            // If not closed, it's open on this date
+            dataPoint.open++;
+          }
+        }
+      });
+    });
     
     setIssuesOverTimeData(timeData);
   };
@@ -260,6 +286,8 @@ export const ProjectDetails = () => {
         return 'bg-purple-100 text-purple-800';
       case 'closed':
         return 'bg-gray-100 text-gray-800';
+      case 'rejected':
+        return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -305,65 +333,6 @@ export const ProjectDetails = () => {
     );
   };
 
-  // Handle creating a new issue
-  const handleCreateIssue = async () => {
-    if (!isConnected || !newIssue.subject) return;
-    
-    setLoadingAction(true);
-    
-    try {
-      const issueData = {
-        issue: {
-          ...newIssue,
-          project_id: parseInt(id || '0')
-        }
-      };
-      
-      await createIssue(issueData);
-      
-      // Refresh issues
-      const updatedIssues = await fetchIssues({ projectId: id });
-      setIssues(updatedIssues);
-      
-      // Recalculate project progress and stats
-      const totalIssues = updatedIssues.length;
-      const closedIssues = updatedIssues.filter(issue => 
-        issue.status && (issue.status.name.toLowerCase() === 'closed' || issue.status.name.toLowerCase() === 'resolved')
-      ).length;
-      const openIssues = totalIssues - closedIssues;
-      
-      setIssueStats({
-        total: totalIssues,
-        open: openIssues,
-        closed: closedIssues
-      });
-      
-      // Calculate progress percentage
-      const progress = totalIssues > 0 ? Math.round((closedIssues / totalIssues) * 100) : 0;
-      setProjectProgress(progress);
-      
-      // Process data for charts
-      processChartData(updatedIssues);
-      
-      // Reset form
-      setNewIssue({
-        subject: '',
-        description: '',
-        project_id: parseInt(id || '0'),
-        status_id: 1,
-        priority_id: 2,
-        assigned_to_id: ''
-      });
-      
-      setIsCreatingIssue(false);
-    } catch (err: any) {
-      console.error('Error creating issue:', err);
-      alert('Failed to create issue. Please try again.');
-    } finally {
-      setLoadingAction(false);
-    }
-  };
-
   // Handle bulk creating issues
   const handleBulkCreateIssues = async (issues: any[]): Promise<{success: any[], failed: any[]}> => {
     if (!isConnected || issues.length === 0) return { success: [], failed: [] };
@@ -396,7 +365,7 @@ export const ProjectDetails = () => {
         // Recalculate project progress and stats
         const totalIssues = updatedIssues.length;
         const closedIssues = updatedIssues.filter(issue => 
-          issue.status && (issue.status.name.toLowerCase() === 'closed' || issue.status.name.toLowerCase() === 'resolved')
+          issue.status && (issue.status.name.toLowerCase() === 'closed' || issue.status.name.toLowerCase() === 'rejected')
         ).length;
         const openIssues = totalIssues - closedIssues;
         
@@ -449,7 +418,7 @@ export const ProjectDetails = () => {
       // Recalculate project progress and stats
       const totalIssues = updatedIssues.length;
       const closedIssues = updatedIssues.filter(issue => 
-        issue.status && (issue.status.name.toLowerCase() === 'closed' || issue.status.name.toLowerCase() === 'resolved')
+        issue.status && (issue.status.name.toLowerCase() === 'closed' || issue.status.name.toLowerCase() === 'rejected')
       ).length;
       const openIssues = totalIssues - closedIssues;
       
@@ -470,6 +439,65 @@ export const ProjectDetails = () => {
     } catch (err: any) {
       console.error('Error updating issue:', err);
       alert('Failed to update issue. Please try again.');
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
+  // Handle creating a new issue
+  const handleCreateIssue = async () => {
+    if (!isConnected || !newIssue.subject) return;
+    
+    setLoadingAction(true);
+    
+    try {
+      const issueData = {
+        issue: {
+          ...newIssue,
+          project_id: parseInt(id || '0')
+        }
+      };
+      
+      await createIssue(issueData);
+      
+      // Refresh issues
+      const updatedIssues = await fetchIssues({ projectId: id });
+      setIssues(updatedIssues);
+      
+      // Recalculate project progress and stats
+      const totalIssues = updatedIssues.length;
+      const closedIssues = updatedIssues.filter(issue => 
+        issue.status && (issue.status.name.toLowerCase() === 'closed' || issue.status.name.toLowerCase() === 'rejected')
+      ).length;
+      const openIssues = totalIssues - closedIssues;
+      
+      setIssueStats({
+        total: totalIssues,
+        open: openIssues,
+        closed: closedIssues
+      });
+      
+      // Calculate progress percentage
+      const progress = totalIssues > 0 ? Math.round((closedIssues / totalIssues) * 100) : 0;
+      setProjectProgress(progress);
+      
+      // Process data for charts
+      processChartData(updatedIssues);
+      
+      // Reset form
+      setNewIssue({
+        subject: '',
+        description: '',
+        project_id: parseInt(id || '0'),
+        status_id: 1,
+        priority_id: 2,
+        assigned_to_id: ''
+      });
+      
+      setIsCreatingIssue(false);
+    } catch (err: any) {
+      console.error('Error creating issue:', err);
+      alert('Failed to create issue. Please try again.');
     } finally {
       setLoadingAction(false);
     }
@@ -526,7 +554,7 @@ export const ProjectDetails = () => {
       // Recalculate project progress and stats
       const totalIssues = updatedIssues.length;
       const closedIssues = updatedIssues.filter(issue => 
-        issue.status && (issue.status.name.toLowerCase() === 'closed' || issue.status.name.toLowerCase() === 'resolved')
+        issue.status && (issue.status.name.toLowerCase() === 'closed' || issue.status.name.toLowerCase() === 'rejected')
       ).length;
       const openIssues = totalIssues - closedIssues;
       

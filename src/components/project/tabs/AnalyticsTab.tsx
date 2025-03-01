@@ -43,7 +43,7 @@ export const AnalyticsTab = ({
                 />
                 <YAxis />
                 <Tooltip 
-                  formatter={(value, name) => [value, name === 'open' ? 'Open Issues' : 'Closed Issues']}
+                  formatter={(value, name) => [value, name === 'Open Issues' ? 'Open Issues' : 'Closed Issues']}
                   labelFormatter={(label) => `Date: ${new Date(label).toLocaleDateString()}`}
                 />
                 <Legend />
