@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, CheckSquare, BarChart3, Settings, Users } from 'lucide-react';
+import { LayoutDashboard, CheckSquare, BarChart3, Settings, Users, GitBranch, Figma, GanttChart, Trophy } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 interface ProjectTabsProps {
@@ -22,12 +22,12 @@ export const ProjectTabs = ({ activeTab, setActiveTab, project }: ProjectTabsPro
   const showMembersTab = isAdmin || isProjectManager();
   
   return (
-    <div className="bg-white rounded-lg shadow mb-6">
-      <div className="border-b border-gray-200">
+    <div className="bg-white rounded-lg shadow mb-6 overflow-x-auto">
+      <div className="border-b border-gray-200 min-w-max">
         <nav className="flex -mb-px">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`py-4 px-6 text-center border-b-2 font-medium text-sm flex items-center ${
+            className={`py-4 px-6 text-center border-b-2 font-medium text-sm flex items-center whitespace-nowrap ${
               activeTab === 'overview'
                 ? 'border-indigo-500 text-indigo-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -39,7 +39,7 @@ export const ProjectTabs = ({ activeTab, setActiveTab, project }: ProjectTabsPro
           
           <button
             onClick={() => setActiveTab('issues')}
-            className={`py-4 px-6 text-center border-b-2 font-medium text-sm flex items-center ${
+            className={`py-4 px-6 text-center border-b-2 font-medium text-sm flex items-center whitespace-nowrap ${
               activeTab === 'issues'
                 ? 'border-indigo-500 text-indigo-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -50,8 +50,20 @@ export const ProjectTabs = ({ activeTab, setActiveTab, project }: ProjectTabsPro
           </button>
           
           <button
+            onClick={() => setActiveTab('gantt')}
+            className={`py-4 px-6 text-center border-b-2 font-medium text-sm flex items-center whitespace-nowrap ${
+              activeTab === 'gantt'
+                ? 'border-indigo-500 text-indigo-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <GanttChart size={16} className="mr-2" />
+            Gantt Chart
+          </button>
+          
+          <button
             onClick={() => setActiveTab('analytics')}
-            className={`py-4 px-6 text-center border-b-2 font-medium text-sm flex items-center ${
+            className={`py-4 px-6 text-center border-b-2 font-medium text-sm flex items-center whitespace-nowrap ${
               activeTab === 'analytics'
                 ? 'border-indigo-500 text-indigo-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -61,10 +73,22 @@ export const ProjectTabs = ({ activeTab, setActiveTab, project }: ProjectTabsPro
             Analytics
           </button>
           
+          <button
+            onClick={() => setActiveTab('performance')}
+            className={`py-4 px-6 text-center border-b-2 font-medium text-sm flex items-center whitespace-nowrap ${
+              activeTab === 'performance'
+                ? 'border-indigo-500 text-indigo-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <Trophy size={16} className="mr-2" />
+            Member Performance
+          </button>
+          
           {showMembersTab && (
             <button
               onClick={() => setActiveTab('members')}
-              className={`py-4 px-6 text-center border-b-2 font-medium text-sm flex items-center ${
+              className={`py-4 px-6 text-center border-b-2 font-medium text-sm flex items-center whitespace-nowrap ${
                 activeTab === 'members'
                   ? 'border-indigo-500 text-indigo-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -76,8 +100,32 @@ export const ProjectTabs = ({ activeTab, setActiveTab, project }: ProjectTabsPro
           )}
           
           <button
+            onClick={() => setActiveTab('github')}
+            className={`py-4 px-6 text-center border-b-2 font-medium text-sm flex items-center whitespace-nowrap ${
+              activeTab === 'github'
+                ? 'border-indigo-500 text-indigo-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <GitBranch size={16} className="mr-2" />
+            GitHub
+          </button>
+          
+          <button
+            onClick={() => setActiveTab('figma')}
+            className={`py-4 px-6 text-center border-b-2 font-medium text-sm flex items-center whitespace-nowrap ${
+              activeTab === 'figma'
+                ? 'border-indigo-500 text-indigo-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <Figma size={16} className="mr-2" />
+            Figma
+          </button>
+          
+          <button
             onClick={() => setActiveTab('settings')}
-            className={`py-4 px-6 text-center border-b-2 font-medium text-sm flex items-center ${
+            className={`py-4 px-6 text-center border-b-2 font-medium text-sm flex items-center whitespace-nowrap ${
               activeTab === 'settings'
                 ? 'border-indigo-500 text-indigo-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'

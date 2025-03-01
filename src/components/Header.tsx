@@ -20,9 +20,9 @@ export const Header = () => {
   };
 
   return (
-    <header className="bg-white border-b border-gray-200 py-4 px-6">
+    <header className="bg-white border-b border-gray-200 py-4 px-6 sticky top-0 z-30">
       <div className="flex items-center justify-between">
-        <form onSubmit={handleSearch} className="w-96">
+        <form onSubmit={handleSearch} className="w-full md:w-96">
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search size={18} className="text-gray-400" />
@@ -37,14 +37,14 @@ export const Header = () => {
           </div>
         </form>
         
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-4 ml-4">
           <button 
             onClick={refreshData}
-            className="flex items-center space-x-1 text-sm text-gray-600 hover:text-indigo-600 transition-colors"
+            className="hidden md:flex items-center space-x-1 text-sm text-gray-600 hover:text-indigo-600 transition-colors"
             disabled={isLoading}
           >
             <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
-            <span>Refresh Data</span>
+            <span className="hidden md:inline">Refresh Data</span>
           </button>
           
           <div className="relative">
@@ -62,7 +62,7 @@ export const Header = () => {
               <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center mr-2">
                 <User size={16} className="text-indigo-600" />
               </div>
-              <span>{username}</span>
+              <span className="hidden md:inline">{username}</span>
             </button>
             
             {showDropdown && (
