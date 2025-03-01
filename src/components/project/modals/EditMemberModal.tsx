@@ -16,11 +16,7 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
   loadingAction
 }) => {
   // Extract role IDs from the membership
-  const initialRoleIds = membership.roles
-    ? membership.roles
-        .filter((role: any) => !role.inherited) // Filter out inherited roles
-        .map((role: any) => role.id)
-    : [];
+  const initialRoleIds = membership.role_ids || [];
   
   const [selectedRoleIds, setSelectedRoleIds] = useState<number[]>(initialRoleIds);
   
@@ -31,6 +27,13 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
       : [...selectedRoleIds, roleId];
     
     setSelectedRoleIds(newSelectedRoleIds);
+    
+    // Update the parent component's state immediately when roles change
+    const updatedMembership = {
+      ...membership,
+      role_ids: newSelectedRoleIds
+    };
+    setSelectedMembership(updatedMembership);
   };
 
   // Get member name
@@ -55,15 +58,6 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
 
   // Handle update button click
   const handleUpdate = () => {
-    // Update the membership with selected roles before submitting
-    const updatedMembership = {
-      ...membership,
-      role_ids: selectedRoleIds
-    };
-    
-    // Update the parent component's state with the updated membership
-    setSelectedMembership(updatedMembership);
-    
     // Call the update function
     handleUpdateMembership();
   };
