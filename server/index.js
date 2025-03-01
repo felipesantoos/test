@@ -7,6 +7,7 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const ADMIN_API_KEY = process.env.ADMIN_API_KEY;
 
 // Middleware
 app.use(cors());
@@ -21,6 +22,27 @@ const createRedmineRequest = (authToken, redmineUrl, endpoint, params = {}, meth
     url,
     headers: {
       'Authorization': `Basic ${authToken}`,
+      'Content-Type': 'application/json'
+    },
+    params
+  };
+
+  if (data && (method === 'post' || method === 'put')) {
+    config.data = data;
+  }
+
+  return axios(config);
+};
+
+// Helper function to create Redmine API request with API Key
+const createRedmineApiKeyRequest = (apiKey, redmineUrl, endpoint, params = {}, method = 'get', data = null) => {
+  const url = `${redmineUrl}/` + (endpoint.startsWith('/') ? endpoint.substring(1) : endpoint);
+  
+  const config = {
+    method,
+    url,
+    headers: {
+      'X-Redmine-API-Key': apiKey,
       'Content-Type': 'application/json'
     },
     params
@@ -307,12 +329,12 @@ app.get('/api/issues', async (req, res) => {
   }
 });
 
-// Get users
+// Get users - Using admin API key instead of user authentication
 app.get('/api/users', async (req, res) => {
-  const { authToken, redmineUrl, offset, limit } = req.query;
+  const { redmineUrl, offset, limit } = req.query;
   
-  if (!authToken || !redmineUrl) {
-    return res.status(400).json({ error: 'Authentication token and Redmine URL are required' });
+  if (!ADMIN_API_KEY || !redmineUrl) {
+    return res.status(400).json({ error: 'Admin API key and Redmine URL are required' });
   }
 
   try {
@@ -321,7 +343,8 @@ app.get('/api/users', async (req, res) => {
       limit: limit || 100
     };
 
-    const response = await createRedmineRequest(authToken, redmineUrl, '/users.json', params);
+    // Use the admin API key for this request
+    const response = await createRedmineApiKeyRequest(ADMIN_API_KEY, redmineUrl, '/users.json', params);
     return res.json(response.data);
   } catch (error) {
     console.error('Error fetching users:', error.message);

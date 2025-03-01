@@ -114,10 +114,9 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
       });
       setIssues(issuesResponse.data.issues || []);
 
-      // Fetch users
+      // Fetch users - this endpoint now uses admin API key
       const usersResponse = await axios.get(`${SERVER_URL}/api/users`, {
         params: { 
-          authToken,
           redmineUrl 
         }
       });
