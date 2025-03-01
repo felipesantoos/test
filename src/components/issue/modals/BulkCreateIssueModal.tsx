@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AlertCircle, X, Upload, Download } from 'lucide-react';
 
 interface BulkCreateIssueModalProps {
@@ -9,6 +9,7 @@ interface BulkCreateIssueModalProps {
   trackers: any[];
   statuses: any[];
   priorities: any[];
+  projects?: any[]; // Optional projects list for selection
 }
 
 export const BulkCreateIssueModal = ({ 
@@ -18,7 +19,8 @@ export const BulkCreateIssueModal = ({
   loadingAction,
   trackers,
   statuses,
-  priorities
+  priorities,
+  projects
 }: BulkCreateIssueModalProps) => {
   const [issuesText, setIssuesText] = useState('');
   const [parsedIssues, setParsedIssues] = useState<any[]>([]);
@@ -26,6 +28,12 @@ export const BulkCreateIssueModal = ({
   const [failedIssues, setFailedIssues] = useState<any[]>([]);
   const [showFailedIssues, setShowFailedIssues] = useState(false);
   const [step, setStep] = useState<'input' | 'review' | 'results'>('input');
+  const [selectedProjectId, setSelectedProjectId] = useState<number>(projectId);
+
+  // Update selected project when projectId prop changes
+  useEffect(() => {
+    setSelectedProjectId(projectId);
+  }, [projectId]);
 
   // Parse the issues from text input
   const parseIssues = () => {
@@ -49,7 +57,7 @@ export const BulkCreateIssueModal = ({
               tracker_id: parseInt(trackerId),
               status_id: parseInt(statusId),
               priority_id: parseInt(priorityId),
-              project_id: projectId
+              project_id: selectedProjectId
             };
           });
       }
@@ -67,7 +75,7 @@ export const BulkCreateIssueModal = ({
         
         return {
           ...issue,
-          project_id: projectId,
+          project_id: issue.project_id || selectedProjectId,
           tracker_id: issue.tracker_id || 1,
           status_id: issue.status_id || 1,
           priority_id: issue.priority_id || 2
@@ -108,7 +116,7 @@ export const BulkCreateIssueModal = ({
         tracker_id: 1,
         status_id: 1,
         priority_id: 2,
-        project_id: projectId
+        project_id: selectedProjectId
       },
       {
         subject: 'Example Issue 2',
@@ -116,7 +124,7 @@ export const BulkCreateIssueModal = ({
         tracker_id: 1,
         status_id: 1,
         priority_id: 2,
-        project_id: projectId
+        project_id: selectedProjectId
       }
     ];
     
@@ -175,6 +183,30 @@ export const BulkCreateIssueModal = ({
                 
                 {step === 'input' && (
                   <div className="space-y-4">
+                    {/* Project selection dropdown if projects are provided */}
+                    {projects && projects.length > 0 && (
+                      <div>
+                        <label htmlFor="projectSelect" className="block text-sm font-medium text-gray-700 mb-1">
+                          Project
+                        </label>
+                        <select
+                          id="projectSelect"
+                          value={selectedProjectId}
+                          onChange={(e) => setSelectedProjectId(parseInt(e.target.value))}
+                          className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        >
+                          {projects.map(project => (
+                            <option key={project.id} value={project.id}>
+                              {project.name}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="mt-1 text-xs text-gray-500">
+                          All issues will be created in this project
+                        </p>
+                      </div>
+                    )}
+                    
                     <div>
                       <div className="flex justify-between items-center mb-1">
                         <label htmlFor="issuesText" className="block text-sm font-medium text-gray-700">
@@ -253,7 +285,12 @@ export const BulkCreateIssueModal = ({
                 {step === 'review' && (
                   <div className="space-y-4">
                     <p className="text-sm text-gray-600">
-                      You are about to create {parsedIssues.length} issues. Please review the details below:
+                      You are about to create {parsedIssues.length} issues in project: 
+                      <span className="font-medium ml-1">
+                        {projects ? 
+                          projects.find(p => p.id === selectedProjectId)?.name || selectedProjectId 
+                          : selectedProjectId}
+                      </span>
                     </p>
                     
                     <div className="max-h-80 overflow-y-auto border border-gray-200 rounded-md">

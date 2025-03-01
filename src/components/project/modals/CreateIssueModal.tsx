@@ -6,6 +6,7 @@ interface CreateIssueModalProps {
   handleCreateIssue: () => void;
   setIsCreatingIssue: (isCreating: boolean) => void;
   loadingAction: boolean;
+  projects?: any[]; // Optional projects list for selection
 }
 
 export const CreateIssueModal = ({ 
@@ -13,7 +14,8 @@ export const CreateIssueModal = ({
   setNewIssue, 
   handleCreateIssue, 
   setIsCreatingIssue, 
-  loadingAction 
+  loadingAction,
+  projects
 }: CreateIssueModalProps) => {
   return (
     <div className="fixed inset-0 overflow-y-auto z-50">
@@ -33,6 +35,29 @@ export const CreateIssueModal = ({
                 </h3>
                 
                 <div className="space-y-4">
+                  {/* Project selection if projects are provided */}
+                  {projects && projects.length > 0 && (
+                    <div>
+                      <label htmlFor="project_id" className="block text-sm font-medium text-gray-700 mb-1">
+                        Project *
+                      </label>
+                      <select
+                        id="project_id"
+                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        value={newIssue.project_id}
+                        onChange={(e) => setNewIssue({ ...newIssue, project_id: parseInt(e.target.value) })}
+                        required
+                      >
+                        <option value="">Select a project</option>
+                        {projects.map(project => (
+                          <option key={project.id} value={project.id}>
+                            {project.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  
                   <div>
                     <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-1">
                       Subject *
@@ -62,7 +87,7 @@ export const CreateIssueModal = ({
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
+                      <label htmlFor=" status" className="block text-sm font-medium text-gray-700 mb-1">
                         Status
                       </label>
                       <select
@@ -120,7 +145,7 @@ export const CreateIssueModal = ({
             <button
               type="button"
               onClick={handleCreateIssue}
-              disabled={!newIssue.subject || loadingAction}
+              disabled={!newIssue.subject || !newIssue.project_id || loadingAction}
               className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm disabled:bg-indigo-400"
             >
               {loadingAction ? 'Creating...' : 'Create Issue'}

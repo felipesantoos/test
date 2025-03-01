@@ -62,6 +62,21 @@ export const Issues = () => {
     }
   }, [isConnected]);
 
+  // Update new issue project when project filter changes
+  useEffect(() => {
+    if (projectFilter !== 'all') {
+      setNewIssue(prev => ({
+        ...prev,
+        project_id: parseInt(projectFilter)
+      }));
+    } else if (projects.length > 0) {
+      setNewIssue(prev => ({
+        ...prev,
+        project_id: projects[0].id
+      }));
+    }
+  }, [projectFilter, projects]);
+
   // Filter issues when filters or issues change
   useEffect(() => {
     const loadIssues = async () => {
@@ -327,7 +342,7 @@ export const Issues = () => {
       setNewIssue({
         subject: '',
         description: '',
-        project_id: 0,
+        project_id: projectFilter !== 'all' ? parseInt(projectFilter) : (projects.length > 0 ? projects[0].id : 0),
         status_id: 1,
         priority_id: 2,
         assigned_to_id: ''
@@ -429,13 +444,15 @@ export const Issues = () => {
           </button>
           <button 
             onClick={() => {
-              // Set default project if available
-              if (projects.length > 0) {
-                setNewIssue({
-                  ...newIssue,
-                  project_id: projects[0].id
-                });
-              }
+              // Set default project based on filter or first available
+              const projectId = projectFilter !== 'all' 
+                ? parseInt(projectFilter) 
+                : (projects.length > 0 ? projects[0].id : 0);
+                
+              setNewIssue({
+                ...newIssue,
+                project_id: projectId
+              });
               setIsCreatingIssue(true);
             }}
             className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors flex items-center"
@@ -483,19 +500,21 @@ export const Issues = () => {
           handleCreateIssue={handleCreateIssue}
           setIsCreatingIssue={setIsCreatingIssue}
           loadingAction={loadingAction}
+          projects={projects}
         />
       )}
 
       {/* Bulk Create Issues Modal */}
       {isBulkCreatingIssues && (
         <BulkCreateIssueModal
-          projectId={parseInt(projectFilter) || (projects.length > 0 ? projects[0].id : 0)}
+          projectId={projectFilter !== 'all' ? parseInt(projectFilter) : (projects.length > 0 ? projects[0].id : 0)}
           handleBulkCreateIssues={handleBulkCreateIssues}
           setBulkCreatingIssues={setIsBulkCreatingIssues}
           loadingAction={loadingAction}
           trackers={trackers}
           statuses={issueStatuses}
           priorities={priorities}
+          projects={projects}
         />
       )}
 
