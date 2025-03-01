@@ -6,7 +6,8 @@ import {
   CheckSquare, 
   Users, 
   Settings,
-  BarChart3
+  BarChart3,
+  Trello
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -67,6 +68,21 @@ export const Sidebar = () => {
             >
               <CheckSquare size={20} />
               <span>Issues</span>
+            </NavLink>
+          </li>
+          <li>
+            <NavLink 
+              to="/kanban" 
+              className={({ isActive }) => 
+                `flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+                  isActive 
+                    ? 'bg-indigo-700 text-white' 
+                    : 'text-indigo-100 hover:bg-indigo-700'
+                }`
+              }
+            >
+              <Trello size={20} />
+              <span>Kanban Board</span>
             </NavLink>
           </li>
           <li>
