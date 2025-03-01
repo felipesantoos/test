@@ -7,11 +7,16 @@ export const Header = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const { refreshData, isLoading } = useApi();
   const { username, logout } = useAuth();
+  const [showDropdown, setShowDropdown] = useState(false);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     // Implement search functionality
     console.log('Searching for:', searchQuery);
+  };
+
+  const toggleDropdown = () => {
+    setShowDropdown(!showDropdown);
   };
 
   return (
@@ -49,25 +54,33 @@ export const Header = () => {
             </button>
           </div>
           
-          <div className="relative group">
-            <button className="flex items-center text-sm text-gray-700 hover:text-indigo-600 focus:outline-none">
+          <div className="relative">
+            <button 
+              className="flex items-center text-sm text-gray-700 hover:text-indigo-600 focus:outline-none"
+              onClick={toggleDropdown}
+            >
               <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center mr-2">
                 <User size={16} className="text-indigo-600" />
               </div>
               <span>{username}</span>
             </button>
             
-            <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10 hidden group-hover:block">
-              <button
-                onClick={logout}
-                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-              >
-                <div className="flex items-center">
-                  <LogOut size={16} className="mr-2" />
-                  <span>Sign out</span>
-                </div>
-              </button>
-            </div>
+            {showDropdown && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10">
+                <button
+                  onClick={() => {
+                    logout();
+                    setShowDropdown(false);
+                  }}
+                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                >
+                  <div className="flex items-center">
+                    <LogOut size={16} className="mr-2" />
+                    <span>Sign out</span>
+                  </div>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
