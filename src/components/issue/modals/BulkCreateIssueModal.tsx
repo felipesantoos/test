@@ -67,15 +67,16 @@ export const BulkCreateIssueModal = ({
         throw new Error('Input must be an array of issues');
       }
       
-      // Ensure each issue has at least a subject
+      // Ensure each issue has at least a subject and set the selected project ID
       const validatedIssues = issues.map((issue, index) => {
         if (!issue.subject) {
           throw new Error(`Issue at position ${index + 1} is missing a subject`);
         }
         
+        // Always use the currently selected project ID
         return {
           ...issue,
-          project_id: issue.project_id || selectedProjectId,
+          project_id: selectedProjectId,
           tracker_id: issue.tracker_id || 1,
           status_id: issue.status_id || 1,
           priority_id: issue.priority_id || 2
@@ -94,7 +95,13 @@ export const BulkCreateIssueModal = ({
     if (parsedIssues.length === 0) return;
     
     try {
-      const result = await handleBulkCreateIssues(parsedIssues);
+      // Make sure all issues have the correct project ID before submitting
+      const issuesWithCorrectProject = parsedIssues.map(issue => ({
+        ...issue,
+        project_id: selectedProjectId
+      }));
+      
+      const result = await handleBulkCreateIssues(issuesWithCorrectProject);
       
       if (result.failed.length > 0) {
         setFailedIssues(result.failed);
