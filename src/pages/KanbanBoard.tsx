@@ -106,7 +106,7 @@ export const KanbanBoard = () => {
 
   // Group issues by status when issues or selected project changes
   useEffect(() => {
-    if (issues.length > 0) {
+    if (issues.length > 0 && issueStatuses.length > 0) {
       let filteredIssues = [...issues];
       
       // Filter by selected project if not "all"
@@ -121,12 +121,12 @@ export const KanbanBoard = () => {
       
       // Initialize with all statuses from the API
       issueStatuses.forEach(status => {
-        groupedIssues[status.id] = [];
+        groupedIssues[status.id.toString()] = [];
       });
       
       // Add issues to their respective status groups
       filteredIssues.forEach(issue => {
-        const statusId = issue.status.id;
+        const statusId = issue.status.id.toString();
         if (!groupedIssues[statusId]) {
           groupedIssues[statusId] = [];
         }
@@ -149,16 +149,27 @@ export const KanbanBoard = () => {
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     
-    if (!over) return;
+    if (!over) {
+      setActiveIssue(null);
+      return;
+    }
     
-    // Extract issue ID and status ID from draggable IDs
+    // Extract issue ID from draggable ID
     const issueId = active.id.toString().split('-')[1];
+    
+    // Get the new status ID from the column ID
     const newStatusId = over.id.toString();
     
     // Find the issue
     const issue = issues.find(i => i.id.toString() === issueId);
     
-    if (!issue || issue.status.id.toString() === newStatusId) {
+    if (!issue) {
+      setActiveIssue(null);
+      return;
+    }
+    
+    // If the status hasn't changed, do nothing
+    if (issue.status.id.toString() === newStatusId) {
       setActiveIssue(null);
       return;
     }
@@ -167,25 +178,33 @@ export const KanbanBoard = () => {
     const updatedIssuesByStatus = { ...issuesByStatus };
     
     // Remove issue from old status
-    const oldStatusId = issue.status.id;
-    updatedIssuesByStatus[oldStatusId] = updatedIssuesByStatus[oldStatusId].filter(
-      i => i.id !== issue.id
-    );
+    const oldStatusId = issue.status.id.toString();
+    if (updatedIssuesByStatus[oldStatusId]) {
+      updatedIssuesByStatus[oldStatusId] = updatedIssuesByStatus[oldStatusId].filter(
+        i => i.id !== issue.id
+      );
+    }
+    
+    // Create a copy of the issue with updated status
+    const updatedIssue = { 
+      ...issue, 
+      status: { 
+        ...issue.status, 
+        id: parseInt(newStatusId) 
+      } 
+    };
     
     // Add issue to new status
-    const updatedIssue = { ...issue, status: { ...issue.status, id: parseInt(newStatusId) } };
-    
-    // Ensure the array exists before trying to spread it
     if (!updatedIssuesByStatus[newStatusId]) {
       updatedIssuesByStatus[newStatusId] = [];
     }
-    
     updatedIssuesByStatus[newStatusId] = [...updatedIssuesByStatus[newStatusId], updatedIssue];
     
+    // Update state
     setIssuesByStatus(updatedIssuesByStatus);
     setActiveIssue(null);
     
-    // Now update the server in the background
+    // Now update on the server
     setLoading(true);
     
     try {
@@ -198,17 +217,20 @@ export const KanbanBoard = () => {
       
       await updateIssue(parseInt(issueId), issueData);
       
-      // No need to refresh the entire board, we've already updated the UI
+      // No need to refresh all issues, we've already updated our local state
     } catch (err) {
       console.error('Error updating issue status:', err);
+      
       // Revert the UI change if the server update fails
       setIssuesByStatus(prevState => {
         const revertedState = { ...prevState };
         
         // Remove issue from new status
-        revertedState[newStatusId] = revertedState[newStatusId].filter(
-          i => i.id !== issue.id
-        );
+        if (revertedState[newStatusId]) {
+          revertedState[newStatusId] = revertedState[newStatusId].filter(
+            i => i.id !== issue.id
+          );
+        }
         
         // Add issue back to old status
         if (!revertedState[oldStatusId]) {
@@ -219,7 +241,7 @@ export const KanbanBoard = () => {
         return revertedState;
       });
       
-      // Show an error message to the user
+      // Show error to user
       alert('Failed to update issue status. Please try again.');
     } finally {
       setLoading(false);
@@ -237,25 +259,10 @@ export const KanbanBoard = () => {
         issue: newIssue
       };
       
-      const createdIssue = await createIssue(issueData);
+      await createIssue(issueData);
       
-      // Update local state without refreshing the entire board
-      if (createdIssue) {
-        setIssuesByStatus(prevState => {
-          const updatedState = { ...prevState };
-          const statusId = createdIssue.status.id;
-          
-          if (!updatedState[statusId]) {
-            updatedState[statusId] = [];
-          }
-          
-          updatedState[statusId] = [...updatedState[statusId], createdIssue];
-          return updatedState;
-        });
-      } else {
-        // If we don't get the created issue back, refresh the board
-        await refreshData();
-      }
+      // Refresh issues
+      await refreshData();
       
       // Reset form
       setNewIssue({
@@ -295,22 +302,8 @@ export const KanbanBoard = () => {
       
       await updateIssue(selectedIssue.id, issueData);
       
-      // Update local state without refreshing the entire board
-      setIssuesByStatus(prevState => {
-        const updatedState = { ...prevState };
-        const statusId = selectedIssue.status.id;
-        
-        if (!updatedState[statusId]) {
-          updatedState[statusId] = [];
-        }
-        
-        // Replace the updated issue in its status column
-        updatedState[statusId] = updatedState[statusId].map(issue => 
-          issue.id === selectedIssue.id ? selectedIssue : issue
-        );
-        
-        return updatedState;
-      });
+      // Refresh issues
+      await refreshData();
       
       setSelectedIssue(null);
     } catch (err: any) {
@@ -319,11 +312,6 @@ export const KanbanBoard = () => {
     } finally {
       setLoadingAction(false);
     }
-  };
-
-  // Handle viewing issue details
-  const handleViewIssue = (issueId: number) => {
-    setViewingIssueId(issueId);
   };
 
   // Get color class for priority badge
@@ -427,17 +415,17 @@ export const KanbanBoard = () => {
                   key={status.id}
                   id={status.id.toString()}
                   title={status.name}
-                  issues={issuesByStatus[status.id] || []}
+                  issues={issuesByStatus[status.id.toString()] || []}
                   getPriorityColor={getPriorityColor}
                   onEditIssue={setSelectedIssue}
-                  onViewIssue={handleViewIssue}
+                  onViewIssue={setViewingIssueId}
                 />
               ))}
             </div>
             
             <DragOverlay>
               {activeIssue ? (
-                 <div className="w-[300px]">
+                <div className="w-[300px]">
                   <KanbanCard 
                     issue={activeIssue}
                     getPriorityColor={getPriorityColor}
