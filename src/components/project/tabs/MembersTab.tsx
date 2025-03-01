@@ -112,6 +112,25 @@ export const MembersTab: React.FC<MembersTabProps> = ({ projectId }) => {
     }
   };
 
+  // Prepare membership for editing by adding role_ids
+  const handleEditMembership = (membership: any) => {
+    // Extract non-inherited role IDs from the membership
+    const roleIds = membership.roles
+      ? membership.roles
+          .filter((role: any) => !role.inherited)
+          .map((role: any) => role.id)
+      : [];
+    
+    // Create a copy of the membership with role_ids added
+    const membershipWithRoleIds = {
+      ...membership,
+      role_ids: roleIds
+    };
+    
+    // Set the selected membership with role_ids included
+    setSelectedMembership(membershipWithRoleIds);
+  };
+
   // Handle updating a membership
   const handleUpdateMembership = async () => {
     if (!selectedMembership) return;
@@ -315,7 +334,7 @@ export const MembersTab: React.FC<MembersTabProps> = ({ projectId }) => {
                         {!isMembershipInherited(membership) && (
                           <>
                             <button
-                              onClick={() => setSelectedMembership(membership)}
+                              onClick={() => handleEditMembership(membership)}
                               className="text-indigo-600 hover:text-indigo-900"
                               title="Edit Roles"
                             >
