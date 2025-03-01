@@ -13,7 +13,7 @@ import { EditIssueModal } from '../components/project/modals/EditIssueModal';
 import { DeleteConfirmModal } from '../components/project/modals/DeleteConfirmModal';
 import { ArchiveConfirmModal } from '../components/project/modals/ArchiveConfirmModal';
 import { EditProjectModal } from '../components/project/modals/EditProjectModal';
-import { format, parseISO, subDays } from 'date-fns';
+import { format, parseISO, subDays, isAfter, isBefore, isEqual, startOfDay } from 'date-fns';
 
 export const ProjectDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -205,36 +205,33 @@ export const ProjectDetails = () => {
       closed: 0
     }));
     
-    // Count issues by status for each date
-    projectIssues.forEach(issue => {
-      const createdDate = parseISO(issue.created_on);
-      const isClosed = issue.status.name.toLowerCase() === 'closed' || issue.status.name.toLowerCase() === 'rejected';
+    // For each date, count how many issues were open and closed on that date
+    timeData.forEach((dataPoint, dateIndex) => {
+      const currentDate = parseISO(dataPoint.date);
+      const currentDateStart = startOfDay(currentDate);
+      const nextDate = dateIndex < timeData.length - 1 ? parseISO(timeData[dateIndex + 1].date) : new Date();
       
-      // For each date in our range
-      timeData.forEach((dataPoint, index) => {
-        const currentDate = parseISO(dataPoint.date);
+      projectIssues.forEach(issue => {
+        const createdDate = parseISO(issue.created_on);
+        const isClosed = issue.status.name.toLowerCase() === 'closed' || issue.status.name.toLowerCase() === 'rejected';
         
         // If the issue was created on or before this date
-        if (createdDate <= currentDate) {
-          // Check if the issue is closed and when it was closed
+        if (isBefore(createdDate, nextDate) || isEqual(createdDate, nextDate)) {
           if (isClosed) {
-            // If we have a closed_on date, use it
-            if (issue.closed_on) {
-              const closedDate = parseISO(issue.closed_on);
-              // If closed after this date, it's still open on this date
-              if (closedDate > currentDate) {
-                dataPoint.open++;
-              } else {
-                dataPoint.closed++;
-              }
-            } else {
-              // If no closed_on date but status is closed, use updated_on as an approximation
-              const updatedDate = parseISO(issue.updated_on);
-              if (updatedDate > currentDate) {
-                dataPoint.open++;
-              } else {
-                dataPoint.closed++;
-              }
+            // For closed issues, check when they were closed
+            const closedDate = issue.closed_on ? parseISO(issue.closed_on) : parseISO(issue.updated_on);
+            
+            // If closed after or on this date but before the next date, it was open on this date
+            if (isBefore(currentDateStart, closedDate) && (isBefore(closedDate, nextDate) || isEqual(closedDate, nextDate))) {
+              dataPoint.closed++;
+            }
+            // If closed after the next date, it was open on this date
+            else if (isAfter(closedDate, nextDate)) {
+              dataPoint.open++;
+            }
+            // If closed before or on this date, it was already closed
+            else {
+              // Don't count it for this date
             }
           } else {
             // If not closed, it's open on this date
