@@ -7,6 +7,7 @@ import { ProjectTabs } from '../components/project/ProjectTabs';
 import { OverviewTab } from '../components/project/tabs/OverviewTab';
 import { IssuesTab } from '../components/project/tabs/IssuesTab';
 import { AnalyticsTab } from '../components/project/tabs/AnalyticsTab';
+import { MembersTab } from '../components/project/tabs/MembersTab';
 import { SettingsTab } from '../components/project/tabs/SettingsTab';
 import { CreateIssueModal } from '../components/project/modals/CreateIssueModal';
 import { EditIssueModal } from '../components/project/modals/EditIssueModal';
@@ -291,7 +292,7 @@ export const ProjectDetails = () => {
   };
 
   // Get color class for priority badge
-  const getPriorityColorClass = (priority: string) => {
+  const getPriorityColorClass = ( priority: string) => {
     switch (priority.toLowerCase()) {
       case 'low':
         return 'bg-gray-100 text-gray-800';
@@ -667,7 +668,7 @@ export const ProjectDetails = () => {
       />
       
       {/* Tabs */}
-      <ProjectTabs activeTab={activeTab} setActiveTab={setActiveTab} />
+      <ProjectTabs activeTab={activeTab} setActiveTab={setActiveTab} project={project} />
       
       {/* Tab Content */}
       <div className="bg-white rounded-lg shadow p-6">
@@ -707,6 +708,13 @@ export const ProjectDetails = () => {
             issueStatusData={issueStatusData}
             priorityData={priorityData}
             renderCustomizedLabel={renderCustomizedLabel}
+          />
+        )}
+
+        {/* Members Tab */}
+        {activeTab === 'members' && (
+          <MembersTab 
+            projectId={parseInt(id || '0')}
           />
         )}
 

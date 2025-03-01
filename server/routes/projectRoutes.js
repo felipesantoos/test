@@ -204,4 +204,51 @@ router.get('/:id/versions', async (req, res) => {
   }
 });
 
+// Get project memberships
+router.get('/:id/memberships', async (req, res) => {
+  const { authToken, redmineUrl } = req.query;
+  const { id } = req.params;
+  
+  if (!authToken || !redmineUrl) {
+    return res.status(400).json({ error: 'Authentication token and Redmine URL are required' });
+  }
+
+  try {
+    const response = await createRedmineRequest(authToken, redmineUrl, `/projects/${id}/memberships.json`);
+    return res.json(response.data);
+  } catch (error) {
+    console.error(`Error fetching memberships for project ${id}:`, error.message);
+    return res.status(500).json({ error: `Failed to fetch memberships for project ${id}`, details: error.message });
+  }
+});
+
+// Add a member to a project
+router.post('/:id/memberships', async (req, res) => {
+  const { authToken, redmineUrl } = req.query;
+  const { id } = req.params;
+  const membershipData = req.body;
+  
+  if (!authToken || !redmineUrl) {
+    return res.status(400).json({ error: 'Authentication token and Redmine URL are required' });
+  }
+
+  try {
+    const response = await createRedmineRequest(
+      authToken, 
+      redmineUrl, 
+      `/projects/${id}/memberships.json`, 
+      {}, 
+      'post', 
+      membershipData
+    );
+    return res.status(201).json(response.data);
+  } catch (error) {
+    console.error(`Error adding membership to project ${id}:`, error.message);
+    return res.status(422).json({ 
+      error: `Failed to add membership to project ${id}`, 
+      details: error.response?.data || error.message 
+    });
+  }
+});
+
 export default router;

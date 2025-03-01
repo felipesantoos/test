@@ -8,6 +8,8 @@ import projectRoutes from './routes/projectRoutes.js';
 import issueRoutes from './routes/issueRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import groupRoutes from './routes/groupRoutes.js';
+import membershipRoutes from './routes/membershipRoutes.js';
+import roleRoutes from './routes/roleRoutes.js';
 import otherRoutes from './routes/otherRoutes.js';
 
 // Load environment variables
@@ -26,6 +28,8 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/issues', issueRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/groups', groupRoutes);
+app.use('/api/memberships', membershipRoutes);
+app.use('/api/roles', roleRoutes);
 app.use('/api', otherRoutes);
 
 // Start the server

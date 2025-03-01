@@ -15,11 +15,14 @@ interface ApiContextType {
   issueStatuses: any[];
   trackers: any[];
   priorities: any[];
+  roles: any[];
   refreshData: () => Promise<void>;
   fetchIssues: (filters?: any) => Promise<any[]>;
   fetchProjects: (filters?: any) => Promise<any[]>;
   fetchIssueDetails: (id: number) => Promise<any>;
   fetchProjectDetails: (id: number) => Promise<any>;
+  fetchProjectMemberships: (projectId: number) => Promise<any[]>;
+  fetchRoles: () => Promise<any[]>;
   createIssue: (issueData: any) => Promise<any>;
   updateIssue: (id: number, issueData: any) => Promise<boolean>;
   deleteIssue: (id: number) => Promise<boolean>;
@@ -31,6 +34,9 @@ interface ApiContextType {
   archiveProject: (id: number) => Promise<boolean>;
   unarchiveProject: (id: number) => Promise<boolean>;
   deleteProject: (id: number) => Promise<boolean>;
+  addProjectMember: (projectId: number, memberData: any) => Promise<any>;
+  updateMembership: (membershipId: number, membershipData: any) => Promise<boolean>;
+  deleteMembership: (membershipId: number) => Promise<boolean>;
 }
 
 const ApiContext = createContext<ApiContextType | undefined>(undefined);
@@ -46,6 +52,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
   const [issueStatuses, setIssueStatuses] = useState<any[]>([]);
   const [trackers, setTrackers] = useState<any[]>([]);
   const [priorities, setPriorities] = useState<any[]>([]);
+  const [roles, setRoles] = useState<any[]>([]);
 
   // Get authentication token from localStorage
   const getAuthToken = () => {
@@ -149,6 +156,15 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
       });
       setPriorities(prioritiesResponse.data.issue_priorities || []);
 
+      // Fetch roles
+      const rolesResponse = await axios.get(`${SERVER_URL}/api/roles`, {
+        params: { 
+          authToken,
+          redmineUrl 
+        }
+      });
+      setRoles(rolesResponse.data.roles || []);
+
       setIsLoading(false);
     } catch (err: any) {
       setError('Failed to fetch data from Redmine API');
@@ -247,6 +263,52 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     } catch (err: any) {
       console.error(`Error fetching project ${id}:`, err);
       return null;
+    }
+  };
+
+  // Fetch project memberships
+  const fetchProjectMemberships = async (projectId: number): Promise<any[]> => {
+    if (!isConnected && isAuthenticated && redmineUrl) {
+      const connected = await testConnection();
+      if (!connected) return [];
+    }
+
+    try {
+      const authToken = getAuthToken();
+      
+      const response = await axios.get(`${SERVER_URL}/api/projects/${projectId}/memberships`, {
+        params: { 
+          authToken,
+          redmineUrl
+        }
+      });
+      return response.data.memberships || [];
+    } catch (err: any) {
+      console.error(`Error fetching memberships for project ${projectId}:`, err);
+      return [];
+    }
+  };
+
+  // Fetch roles
+  const fetchRoles = async (): Promise<any[]> => {
+    if (!isConnected && isAuthenticated && redmineUrl) {
+      const connected = await testConnection();
+      if (!connected) return [];
+    }
+
+    try {
+      const authToken = getAuthToken();
+      
+      const response = await axios.get(`${SERVER_URL}/api/roles`, {
+        params: { 
+          authToken,
+          redmineUrl
+        }
+      });
+      return response.data.roles || [];
+    } catch (err: any) {
+      console.error('Error fetching roles:', err);
+      return [];
     }
   };
 
@@ -503,6 +565,75 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Add a member to a project
+  const addProjectMember = async (projectId: number, memberData: any): Promise<any> => {
+    if (!isConnected && isAuthenticated && redmineUrl) {
+      const connected = await testConnection();
+      if (!connected) return null;
+    }
+
+    try {
+      const authToken = getAuthToken();
+      
+      const response = await axios.post(`${SERVER_URL}/api/projects/${projectId}/memberships`, memberData, {
+        params: { 
+          authToken,
+          redmineUrl 
+        }
+      });
+      return response.data.membership || null;
+    } catch (err: any) {
+      console.error(`Error adding member to project ${projectId}:`, err);
+      throw new Error(err.response?.data?.error || `Failed to add member to project ${projectId}`);
+    }
+  };
+
+  // Update a membership
+  const updateMembership = async (membershipId: number, membershipData: any): Promise<boolean> => {
+    if (!isConnected && isAuthenticated && redmineUrl) {
+      const connected = await testConnection();
+      if (!connected) return false;
+    }
+
+    try {
+      const authToken = getAuthToken();
+      
+      await axios.put(`${SERVER_URL}/api/memberships/${membershipId}`, membershipData, {
+        params: { 
+          authToken,
+          redmineUrl 
+        }
+      });
+      return true;
+    } catch (err: any) {
+      console.error(`Error updating membership ${membershipId}:`, err);
+      throw new Error(err.response?.data?.error || `Failed to update membership ${membershipId}`);
+    }
+  };
+
+  // Delete a membership
+  const deleteMembership = async (membershipId: number): Promise<boolean> => {
+    if (!isConnected && isAuthenticated && redmineUrl) {
+      const connected = await testConnection();
+      if (!connected) return false;
+    }
+
+    try {
+      const authToken = getAuthToken();
+      
+      await axios.delete(`${SERVER_URL}/api/memberships/${membershipId}`, {
+        params: { 
+          authToken,
+          redmineUrl 
+        }
+      });
+      return true;
+    } catch (err: any) {
+      console.error(`Error deleting membership ${membershipId}:`, err);
+      throw new Error(err.response?.data?.error || `Failed to delete membership ${membershipId}`);
+    }
+  };
+
   // Initial connection test if authenticated
   useEffect(() => {
     if (isAuthenticated && redmineUrl) {
@@ -520,11 +651,14 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     issueStatuses,
     trackers,
     priorities,
+    roles,
     refreshData,
     fetchIssues,
     fetchProjects,
     fetchIssueDetails,
     fetchProjectDetails,
+    fetchProjectMemberships,
+    fetchRoles,
     createIssue,
     updateIssue,
     deleteIssue,
@@ -535,7 +669,10 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     updateProject,
     archiveProject,
     unarchiveProject,
-    deleteProject
+    deleteProject,
+    addProjectMember,
+    updateMembership,
+    deleteMembership
   };
 
   return <ApiContext.Provider value={value}>{children}</ApiContext.Provider>;

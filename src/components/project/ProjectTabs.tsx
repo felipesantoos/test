@@ -1,12 +1,26 @@
 import React from 'react';
-import { LayoutDashboard, CheckSquare, BarChart3, Settings } from 'lucide-react';
+import { LayoutDashboard, CheckSquare, BarChart3, Settings, Users } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 interface ProjectTabsProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  project: any;
 }
 
-export const ProjectTabs = ({ activeTab, setActiveTab }: ProjectTabsProps) => {
+export const ProjectTabs = ({ activeTab, setActiveTab, project }: ProjectTabsProps) => {
+  const { isAdmin } = useAuth();
+  
+  // Check if user is a project manager for this project
+  const isProjectManager = () => {
+    // This would need to be implemented based on your user roles data
+    // For now, we'll just check if the user is an admin
+    return isAdmin;
+  };
+  
+  // Only show the Members tab if the user is an admin or a project manager
+  const showMembersTab = isAdmin || isProjectManager();
+  
   return (
     <div className="bg-white rounded-lg shadow mb-6">
       <div className="border-b border-gray-200">
@@ -46,6 +60,20 @@ export const ProjectTabs = ({ activeTab, setActiveTab }: ProjectTabsProps) => {
             <BarChart3 size={16} className="mr-2" />
             Analytics
           </button>
+          
+          {showMembersTab && (
+            <button
+              onClick={() => setActiveTab('members')}
+              className={`py-4 px-6 text-center border-b-2 font-medium text-sm flex items-center ${
+                activeTab === 'members'
+                  ? 'border-indigo-500 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <Users size={16} className="mr-2" />
+              Members
+            </button>
+          )}
           
           <button
             onClick={() => setActiveTab('settings')}
