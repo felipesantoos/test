@@ -1,14 +1,37 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useApi } from '../context/ApiContext';
-import { Search, Filter, ArrowUpDown, Calendar, Users, CheckSquare, AlertCircle } from 'lucide-react';
+import { Search, Filter, ArrowUpDown, Calendar, Users, CheckSquare, AlertCircle, Plus } from 'lucide-react';
+import { CreateProjectModal } from '../components/project/modals/CreateProjectModal';
 
 export const Projects = () => {
-  const { isConnected, isLoading, error, projects, issues, refreshData, fetchProjects, fetchIssues } = useApi();
+  const { 
+    isConnected, 
+    isLoading, 
+    error, 
+    projects, 
+    trackers,
+    refreshData, 
+    fetchProjects, 
+    fetchIssues,
+    createProject
+  } = useApi();
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredProjects, setFilteredProjects] = useState<any[]>([]);
   const [projectsWithProgress, setProjectsWithProgress] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  
+  // State for creating a new project
+  const [isCreatingProject, setIsCreatingProject] = useState(false);
+  const [loadingAction, setLoadingAction] = useState(false);
+  const [newProject, setNewProject] = useState({
+    name: '',
+    identifier: '',
+    description: '',
+    is_public: true,
+    tracker_ids: [] as number[]
+  });
 
   useEffect(() => {
     if (isConnected && projects.length === 0) {
@@ -105,6 +128,48 @@ export const Projects = () => {
     }
   };
 
+  // Handle creating a new project
+  const handleCreateProject = async () => {
+    if (!isConnected || !newProject.name || !newProject.identifier) return;
+    
+    setLoadingAction(true);
+    
+    try {
+      // Prepare project data for API
+      const projectData = {
+        project: {
+          name: newProject.name,
+          identifier: newProject.identifier,
+          description: newProject.description,
+          is_public: newProject.is_public,
+          tracker_ids: newProject.tracker_ids.length > 0 ? newProject.tracker_ids : undefined
+        }
+      };
+      
+      // Create the project
+      await createProject(projectData);
+      
+      // Refresh projects list
+      await refreshData();
+      
+      // Reset form and close modal
+      setNewProject({
+        name: '',
+        identifier: '',
+        description: '',
+        is_public: true,
+        tracker_ids: []
+      });
+      
+      setIsCreatingProject(false);
+    } catch (err: any) {
+      console.error('Error creating project:', err);
+      alert(`Failed to create project: ${err.message}`);
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
   // Format date to a readable format
   const formatDate = (dateString: string) => {
     if (!dateString) return '-';
@@ -117,9 +182,9 @@ export const Projects = () => {
         <AlertCircle size={48} className="text-yellow-500 mb-4" />
         <h2 className="text-2xl font-bold mb-2">Not Connected to Redmine</h2>
         <p className="text-gray-600 mb-4">Please configure your Redmine API settings to get started.</p>
-        <a href="/settings" className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors">
+        <Link to="/settings" className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors">
           Go to Settings
-        </a>
+        </Link>
       </div>
     );
   }
@@ -128,13 +193,22 @@ export const Projects = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800">Projects</h1>
-        <button 
-          onClick={refreshData}
-          disabled={isLoading || loading}
-          className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors disabled:bg-indigo-400"
-        >
-          {isLoading || loading ? 'Refreshing...' : 'Refresh Projects'}
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={refreshData}
+            disabled={isLoading || loading}
+            className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-50 transition-colors disabled:bg-gray-100 disabled:text-gray-400"
+          >
+            {isLoading || loading ? 'Refreshing...' : 'Refresh Projects'}
+          </button>
+          <button 
+            onClick={() => setIsCreatingProject(true)}
+            className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors flex items-center"
+          >
+            <Plus size={16} className="mr-2" />
+            New Project
+          </button>
+        </div>
       </div>
 
       {/* Search and Filters */}
@@ -181,6 +255,21 @@ export const Projects = () => {
       ) : error && filteredProjects.length === 0 ? (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
           {error}
+        </div>
+      ) : filteredProjects.length === 0 ? (
+        <div className="bg-white rounded-lg shadow p-8 text-center">
+          <div className="flex flex-col items-center">
+            <AlertCircle size={48} className="text-gray-400 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-1">No projects found</h3>
+            <p className="text-gray-500 mb-4">Try adjusting your search criteria or create a new project</p>
+            <button 
+              onClick={() => setIsCreatingProject(true)}
+              className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors flex items-center"
+            >
+              <Plus size={16} className="mr-2" />
+              Create New Project
+            </button>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -235,6 +324,18 @@ export const Projects = () => {
             </div>
           ))}
         </div>
+      )}
+
+      {/* Create Project Modal */}
+      {isCreatingProject && (
+        <CreateProjectModal
+          newProject={newProject}
+          setNewProject={setNewProject}
+          handleCreateProject={handleCreateProject}
+          setIsCreatingProject={setIsCreatingProject}
+          loadingAction={loadingAction}
+          trackers={trackers}
+        />
       )}
     </div>
   );
