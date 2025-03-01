@@ -191,7 +191,7 @@ export const UserManagement = () => {
     setLoadingAction(true);
 
     try {
-      const response = await fetch(`${SERVER_URL}/api/users`, {
+      const response = await fetch(`${SERVER_URL}/api/users?redmineUrl=${encodeURIComponent(redmineUrl)}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -200,10 +200,19 @@ export const UserManagement = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(
-          errorData.errors?.join(", ") || "Failed to create user"
-        );
+        const text = await response.text();
+        let errorMessage = "Failed to create user";
+        
+        try {
+          // Try to parse as JSON
+          const errorData = JSON.parse(text);
+          errorMessage = errorData.error || errorData.details || errorMessage;
+        } catch (e) {
+          // If not JSON, use text as is (but truncate if too long)
+          errorMessage = text.length > 100 ? text.substring(0, 100) + "..." : text;
+        }
+        
+        throw new Error(errorMessage);
       }
 
       // Refresh users list
@@ -245,7 +254,7 @@ export const UserManagement = () => {
         try {
           // Try to parse as JSON
           const errorData = JSON.parse(text);
-          errorMessage = errorData.error || errorData.errors?.join(", ") || errorMessage;
+          errorMessage = errorData.error || errorData.details || errorMessage;
         } catch (e) {
           // If not JSON, use text as is (but truncate if too long)
           errorMessage = text.length > 100 ? text.substring(0, 100) + "..." : text;
@@ -283,7 +292,19 @@ export const UserManagement = () => {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to delete user");
+        const text = await response.text();
+        let errorMessage = "Failed to delete user";
+        
+        try {
+          // Try to parse as JSON
+          const errorData = JSON.parse(text);
+          errorMessage = errorData.error || errorData.details || errorMessage;
+        } catch (e) {
+          // If not JSON, use text as is (but truncate if too long)
+          errorMessage = text.length > 100 ? text.substring(0, 100) + "..." : text;
+        }
+        
+        throw new Error(errorMessage);
       }
 
       // Refresh users list
@@ -316,7 +337,19 @@ export const UserManagement = () => {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to add user to group");
+        const text = await response.text();
+        let errorMessage = "Failed to add user to group";
+        
+        try {
+          // Try to parse as JSON
+          const errorData = JSON.parse(text);
+          errorMessage = errorData.error || errorData.details || errorMessage;
+        } catch (e) {
+          // If not JSON, use text as is (but truncate if too long)
+          errorMessage = text.length > 100 ? text.substring(0, 100) + "..." : text;
+        }
+        
+        throw new Error(errorMessage);
       }
 
       // Refresh users list
@@ -347,7 +380,19 @@ export const UserManagement = () => {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to remove user from group");
+        const text = await response.text();
+        let errorMessage = "Failed to remove user from group";
+        
+        try {
+          // Try to parse as JSON
+          const errorData = JSON.parse(text);
+          errorMessage = errorData.error || errorData.details || errorMessage;
+        } catch (e) {
+          // If not JSON, use text as is (but truncate if too long)
+          errorMessage = text.length > 100 ? text.substring(0, 100) + "..." : text;
+        }
+        
+        throw new Error(errorMessage);
       }
 
       // Refresh users list
@@ -453,7 +498,7 @@ export const UserManagement = () => {
             <select
               value={filters.status}
               onChange={(e) => handleStatusChange(e.target.value)}
-              className="border border-gray-300 rounded-md text-sm text-gray-700 py-2 pl-3 pr-8 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+              className="border border-gray-300 rounded-md text-sm text-gray-700 py-2 pl-3 pr-8 focus:outline-none focus:ring-1 focus:ring -indigo-500 focus:border-indigo-500"
             >
               <option value="all">All Statuses</option>
               <option value="1">Active</option>
