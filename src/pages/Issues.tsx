@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useApi } from '../context/ApiContext';
 import { 
   Search, 
@@ -13,7 +14,8 @@ import {
   ChevronUp, 
   ChevronDown,
   Clock,
-  X
+  X,
+  Eye
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -449,9 +451,9 @@ export const Issues = () => {
         <AlertCircle size={48} className="text-yellow-500 mb-4" />
         <h2 className="text-2xl font-bold mb-2">Not Connected to Redmine</h2>
         <p className="text-gray-600 mb-4">Please configure your Redmine API settings to get started.</p>
-        <a href="/settings" className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors">
+        <Link to="/settings" className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors">
           Go to Settings
-        </a>
+        </Link>
       </div>
     );
   }
@@ -761,9 +763,9 @@ export const Issues = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        <a href={`/issues/${issue.id}`} className="hover:text-indigo-600">
+                        <Link to={`/issues/${issue.id}`} className="hover: text-indigo-600">
                           {issue.subject}
-                        </a>
+                        </Link>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -787,6 +789,13 @@ export const Issues = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex justify-end space-x-3">
+                        <Link
+                          to={`/issues/${issue.id}`}
+                          className="text-indigo-600 hover:text-indigo-900"
+                          title="View Issue"
+                        >
+                          <Eye size={16} />
+                        </Link>
                         <button
                           onClick={() => handleEditIssue(issue)}
                           className="text-indigo-600 hover:text-indigo-900"
