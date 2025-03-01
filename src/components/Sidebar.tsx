@@ -7,12 +7,13 @@ import {
   Users, 
   Settings,
   BarChart3,
-  Trello
+  Trello,
+  UserCog
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export const Sidebar = () => {
-  const { username } = useAuth();
+  const { username, isAdmin } = useAuth();
   
   return (
     <div className="bg-indigo-800 text-white w-64 flex flex-col h-full">
@@ -100,6 +101,26 @@ export const Sidebar = () => {
               <span>Team Performance</span>
             </NavLink>
           </li>
+          
+          {/* Admin-only User Management Link */}
+          {isAdmin && (
+            <li>
+              <NavLink 
+                to="/users" 
+                className={({ isActive }) => 
+                  `flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+                    isActive 
+                      ? 'bg-indigo-700 text-white' 
+                      : 'text-indigo-100 hover:bg-indigo-700'
+                  }`
+                }
+              >
+                <UserCog size={20} />
+                <span>User Management</span>
+              </NavLink>
+            </li>
+          )}
+          
           <li>
             <NavLink 
               to="/settings" 
@@ -124,7 +145,7 @@ export const Sidebar = () => {
           </div>
           <div>
             <p className="text-sm font-medium">{username || 'John Doe'}</p>
-            <p className="text-xs text-indigo-300">Redmine User</p>
+            <p className="text-xs text-indigo-300">{isAdmin ? 'Administrator' : 'Redmine User'}</p>
           </div>
         </div>
       </div>

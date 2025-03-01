@@ -9,11 +9,13 @@ import { Issues } from './pages/Issues';
 import { IssueDetails } from './pages/IssueDetails';
 import { KanbanBoard } from './pages/KanbanBoard';
 import { TeamPerformance } from './pages/TeamPerformance';
+import { UserManagement } from './pages/UserManagement';
 import { Settings } from './pages/Settings';
 import { Login } from './pages/Login';
 import { ApiProvider } from './context/ApiContext';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { AdminRoute } from './components/AdminRoute';
 
 function App() {
   return (
@@ -112,6 +114,19 @@ function App() {
                   </div>
                 </div>
               </ProtectedRoute>
+            } />
+            <Route path="/users" element={
+              <AdminRoute>
+                <div className="flex h-screen bg-gray-100">
+                  <Sidebar />
+                  <div className="flex-1 flex flex-col overflow-hidden">
+                    <Header />
+                    <main className="flex-1 overflow-y-auto p-4">
+                      <UserManagement />
+                    </main>
+                  </div>
+                </div>
+              </AdminRoute>
             } />
             <Route path="/settings" element={
               <ProtectedRoute>

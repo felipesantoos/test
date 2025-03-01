@@ -7,6 +7,7 @@ const SERVER_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 interface AuthContextType {
   isAuthenticated: boolean;
+  isAdmin: boolean;
   username: string;
   redmineUrl: string;
   setRedmineUrl: (url: string) => void;
@@ -21,6 +22,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [username, setUsername] = useState<string>('');
   const [redmineUrl, setRedmineUrl] = useState<string>(() => localStorage.getItem('redmine_url') || '');
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -32,11 +34,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const storedUsername = localStorage.getItem('redmine_username');
     const storedAuth = localStorage.getItem('redmine_auth');
     const storedUrl = localStorage.getItem('redmine_url');
+    const storedIsAdmin = localStorage.getItem('redmine_is_admin');
     
     if (storedUsername && storedAuth && storedUrl) {
       setUsername(storedUsername);
       setRedmineUrl(storedUrl);
       setIsAuthenticated(true);
+      setIsAdmin(storedIsAdmin === 'true');
     }
   }, []);
 
@@ -70,14 +74,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
       
       if (response.data.success) {
+        // Check if user is admin
+        const isUserAdmin = response.data.user?.admin === true;
+        
         // Store authentication data
         localStorage.setItem('redmine_username', username);
         localStorage.setItem('redmine_auth', authToken);
         localStorage.setItem('redmine_url', url);
+        localStorage.setItem('redmine_is_admin', isUserAdmin ? 'true' : 'false');
         
         setUsername(username);
         setRedmineUrl(url);
         setIsAuthenticated(true);
+        setIsAdmin(isUserAdmin);
         setIsLoading(false);
         
         return true;
@@ -96,10 +105,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = () => {
     localStorage.removeItem('redmine_username');
     localStorage.removeItem('redmine_auth');
+    localStorage.removeItem('redmine_is_admin');
     // Don't remove redmine_url to make it easier for users to log back in
     
     setUsername('');
     setIsAuthenticated(false);
+    setIsAdmin(false);
     navigate('/login');
   };
 
@@ -110,6 +121,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const value = {
     isAuthenticated,
+    isAdmin,
     username,
     redmineUrl,
     setRedmineUrl,
