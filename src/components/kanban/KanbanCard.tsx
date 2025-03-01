@@ -57,9 +57,15 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
       <div className="flex justify-between items-center mt-3 pt-2 border-t border-gray-100">
         <span className="text-xs text-gray-500">{issue.project.name}</span>
         <div className="flex space-x-2">
-          <Link to={`/issues/${issue.id}`} className="text-indigo-600 hover:text-indigo-800">
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              onViewIssue(issue.id);
+            }} 
+            className="text-indigo-600 hover:text-indigo-800"
+          >
             <Eye size={14} />
-          </Link>
+          </button>
           <button 
             onClick={(e) => {
               e.stopPropagation();

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useApi } from "../context/ApiContext";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -13,10 +13,6 @@ import {
   User,
   Users,
   Shield,
-  Eye,
-  EyeOff,
-  Lock,
-  Unlock,
   Check,
   X,
   ChevronLeft,
@@ -112,7 +108,6 @@ export const UserManagement = () => {
         setTotalUsers(data.total_count || 0);
 
         // Fetch groups for filtering
-        // Note: This is a placeholder - you'll need to implement the groups endpoint
         try {
           const groupsResponse = await fetch(`${SERVER_URL}/api/groups?redmineUrl=${encodeURIComponent(redmineUrl)}`);
           if (groupsResponse.ok) {
@@ -290,6 +285,69 @@ export const UserManagement = () => {
     } catch (err: any) {
       console.error("Error deleting user:", err);
       alert(`Failed to delete user: ${err.message}`);
+      return false;
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
+  // Add user to group
+  const handleAddUserToGroup = async (userId: number, groupId: number): Promise<boolean> => {
+    if (!isConnected || !isAdmin || !redmineUrl) return false;
+
+    setLoadingAction(true);
+
+    try {
+      const response = await fetch(`${SERVER_URL}/api/groups/${groupId}/users`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ user_id: userId })
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to add user to group");
+      }
+
+      // Refresh users list
+      setRefreshTrigger((prev) => prev + 1);
+
+      return true;
+    } catch (err: any) {
+      console.error("Error adding user to group:", err);
+      alert(`Failed to add user to group: ${err.message}`);
+      return false;
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
+  // Remove user from group
+  const handleRemoveUserFromGroup = async (userId: number, groupId: number): Promise<boolean> => {
+    if (!isConnected || !isAdmin || !redmineUrl) return false;
+
+    setLoadingAction(true);
+
+    try {
+      const response = await fetch(`${SERVER_URL}/api/groups/${groupId}/users/${userId}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json"
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to remove user from group");
+      }
+
+      // Refresh users list
+      setRefreshTrigger((prev) => prev + 1);
+
+      return true;
+    } catch (err: any) {
+      console.error("Error removing user from group:", err);
+      alert(`Failed to remove user from group: ${err.message}`);
       return false;
     } finally {
       setLoadingAction(false);
