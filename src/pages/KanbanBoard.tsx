@@ -24,6 +24,7 @@ import { KanbanCard } from '../components/kanban/KanbanCard';
 import { CreateIssueModal } from '../components/project/modals/CreateIssueModal';
 import { EditIssueModal } from '../components/project/modals/EditIssueModal';
 import { IssueDetailsModal } from '../components/issue/modals/IssueDetailsModal';
+import { KanbanFilters } from '../components/kanban/KanbanFilters';
 
 export const KanbanBoard = () => {
   const { 
@@ -34,6 +35,8 @@ export const KanbanBoard = () => {
     issues, 
     issueStatuses,
     priorities,
+    trackers,
+    users,
     refreshData, 
     fetchIssues,
     updateIssue,
@@ -73,6 +76,20 @@ export const KanbanBoard = () => {
   // State to track when to refresh data
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
+  // State for filters
+  const [filters, setFilters] = useState({
+    search: '',
+    assignee: 'all',
+    priority: [] as string[],
+    tracker: 'all',
+    status: [] as string[],
+    dateFrom: '',
+    dateTo: ''
+  });
+
+  // State for filtered issues
+  const [filteredIssues, setFilteredIssues] = useState<any[]>([]);
+
   // Set up sensors for drag and drop
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -107,38 +124,113 @@ export const KanbanBoard = () => {
     }
   }, [selectedProject, projects]);
 
-  // Group issues by status when issues or selected project changes
+  // Apply filters to issues
   useEffect(() => {
-    if (issues.length > 0 && issueStatuses.length > 0) {
-      let filteredIssues = [...issues];
+    if (issues.length > 0) {
+      let filtered = [...issues];
       
-      // Filter by selected project if not "all"
+      // Filter by project
       if (selectedProject !== 'all') {
-        filteredIssues = filteredIssues.filter(issue => 
+        filtered = filtered.filter(issue => 
           issue.project.id.toString() === selectedProject
         );
       }
       
+      // Filter by search query
+      if (filters.search) {
+        const searchLower = filters.search.toLowerCase();
+        filtered = filtered.filter(issue => 
+          issue.subject.toLowerCase().includes(searchLower) || 
+          issue.id.toString().includes(searchLower)
+        );
+      }
+      
+      // Filter by assignee
+      if (filters.assignee !== 'all') {
+        if (filters.assignee === 'unassigned') {
+          filtered = filtered.filter(issue => !issue.assigned_to);
+        } else {
+          filtered = filtered.filter(issue => 
+            issue.assigned_to && issue.assigned_to.id.toString() === filters.assignee
+          );
+        }
+      }
+      
+      // Filter by priority
+      if (filters.priority.length > 0) {
+        filtered = filtered.filter(issue => 
+          filters.priority.includes(issue.priority.id.toString())
+        );
+      }
+      
+      // Filter by tracker
+      if (filters.tracker !== 'all') {
+        filtered = filtered.filter(issue => 
+          issue.tracker.id.toString() === filters.tracker
+        );
+      }
+      
+      // Filter by date range
+      if (filters.dateFrom) {
+        const fromDate = new Date(filters.dateFrom);
+        filtered = filtered.filter(issue => 
+          new Date(issue.updated_on) >= fromDate
+        );
+      }
+      
+      if (filters.dateTo) {
+        const toDate = new Date(filters.dateTo);
+        toDate.setHours(23, 59, 59, 999); // End of the day
+        filtered = filtered.filter(issue => 
+          new Date(issue.updated_on) <= toDate
+        );
+      }
+      
+      setFilteredIssues(filtered);
+    } else {
+      setFilteredIssues([]);
+    }
+  }, [issues, selectedProject, filters]);
+
+  // Group issues by status when filtered issues or statuses change
+  useEffect(() => {
+    if (filteredIssues.length > 0 && issueStatuses.length > 0) {
       // Group issues by status
       const groupedIssues: Record<string, any[]> = {};
       
       // Initialize with all statuses from the API
       issueStatuses.forEach(status => {
-        groupedIssues[status.id.toString()] = [];
+        // Only include statuses that are not filtered out
+        if (filters.status.length === 0 || filters.status.includes(status.id.toString())) {
+          groupedIssues[status.id.toString()] = [];
+        }
       });
       
       // Add issues to their respective status groups
       filteredIssues.forEach(issue => {
         const statusId = issue.status.id.toString();
-        if (!groupedIssues[statusId]) {
-          groupedIssues[statusId] = [];
+        if (groupedIssues[statusId] !== undefined) {
+          groupedIssues[statusId].push(issue);
         }
-        groupedIssues[statusId].push(issue);
       });
       
       setIssuesByStatus(groupedIssues);
+    } else {
+      // Initialize with all statuses but empty arrays
+      const emptyGroups: Record<string, any[]> = {};
+      
+      if (issueStatuses.length > 0) {
+        issueStatuses.forEach(status => {
+          // Only include statuses that are not filtered out
+          if (filters.status.length === 0 || filters.status.includes(status.id.toString())) {
+            emptyGroups[status.id.toString()] = [];
+          }
+        });
+      }
+      
+      setIssuesByStatus(emptyGroups);
     }
-  }, [issues, selectedProject, issueStatuses]);
+  }, [filteredIssues, issueStatuses, filters.status]);
 
   // Handle drag start
   const handleDragStart = (event: DragStartEvent) => {
@@ -323,6 +415,63 @@ export const KanbanBoard = () => {
     setRefreshTrigger(prev => prev + 1);
   };
 
+  // Apply filters
+  const applyFilters = () => {
+    // The filtering is handled by the useEffect
+    // This function is just a trigger for the filter application
+    // We can use it to save filters to localStorage if needed
+    saveFiltersToLocalStorage();
+  };
+
+  // Reset filters
+  const resetFilters = () => {
+    setFilters({
+      search: '',
+      assignee: 'all',
+      priority: [],
+      tracker: 'all',
+      status: [],
+      dateFrom: '',
+      dateTo: ''
+    });
+    
+    // Clear localStorage filters
+    localStorage.removeItem('kanbanFilters');
+  };
+
+  // Save filters to localStorage
+  const saveFiltersToLocalStorage = () => {
+    localStorage.setItem('kanbanFilters', JSON.stringify({
+      ...filters,
+      project: selectedProject
+    }));
+  };
+
+  // Load filters from localStorage
+  useEffect(() => {
+    const savedFilters = localStorage.getItem('kanbanFilters');
+    if (savedFilters) {
+      try {
+        const parsedFilters = JSON.parse(savedFilters);
+        setFilters({
+          search: parsedFilters.search || '',
+          assignee: parsedFilters.assignee || 'all',
+          priority: parsedFilters.priority || [],
+          tracker: parsedFilters.tracker || 'all',
+          status: parsedFilters.status || [],
+          dateFrom: parsedFilters.dateFrom || '',
+          dateTo: parsedFilters.dateTo || ''
+        });
+        
+        if (parsedFilters.project) {
+          setSelectedProject(parsedFilters.project);
+        }
+      } catch (e) {
+        console.error('Error parsing saved filters:', e);
+      }
+    }
+  }, []);
+
   // Get color class for priority badge
   const getPriorityColor = (priority: string) => {
     switch (priority.toLowerCase()) {
@@ -377,29 +526,15 @@ export const KanbanBoard = () => {
         </div>
       </div>
 
-      {/* Project Filter */}
-      <div className="bg-white rounded-lg shadow p-4">
-        <div className="flex flex-col md:flex-row md:items-center gap-4">
-          <div>
-            <label htmlFor="projectFilter" className="block text-sm font-medium text-gray-700 mb-1">
-              Project
-            </label>
-            <select
-              id="projectFilter"
-              value={selectedProject}
-              onChange={(e) => setSelectedProject(e.target.value)}
-              className="border border-gray-300 rounded-md text-sm text-gray-700 py-2 pl-3 pr-8 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-            >
-              <option value="all">All Projects</option>
-              {projects.map(project => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
+      {/* Kanban Filters Component */}
+      <KanbanFilters
+        selectedProject={selectedProject}
+        setSelectedProject={setSelectedProject}
+        filters={filters}
+        setFilters={setFilters}
+        applyFilters={applyFilters}
+        resetFilters={resetFilters}
+      />
 
       {/* Kanban Board */}
       {isLoading || loading ? (
@@ -420,15 +555,18 @@ export const KanbanBoard = () => {
           >
             <div className="flex space-x-4 min-w-max">
               {issueStatuses.map(status => (
-                <KanbanColumn 
-                  key={status.id}
-                  id={status.id.toString()}
-                  title={status.name}
-                  issues={issuesByStatus[status.id.toString()] || []}
-                  getPriorityColor={getPriorityColor}
-                  onEditIssue={setSelectedIssue}
-                  onViewIssue={setViewingIssueId}
-                />
+                // Only render columns that are not filtered out
+                (filters.status.length === 0 || filters.status.includes(status.id.toString())) && (
+                  <KanbanColumn 
+                    key={status.id}
+                    id={status.id.toString()}
+                    title={status.name}
+                    issues={issuesByStatus[status.id.toString()] || []}
+                    getPriorityColor={getPriorityColor}
+                    onEditIssue={setSelectedIssue}
+                    onViewIssue={setViewingIssueId}
+                  />
+                )
               ))}
             </div>
             
