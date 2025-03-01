@@ -10,6 +10,7 @@ import { AnalyticsTab } from '../components/project/tabs/AnalyticsTab';
 import { MembersTab } from '../components/project/tabs/MembersTab';
 import { SettingsTab } from '../components/project/tabs/SettingsTab';
 import { GanttChartTab } from '../components/project/tabs/GanttChartTab';
+import { MemberPerformanceTab } from '../components/project/tabs/MemberPerformanceTab';
 import { CreateIssueModal } from '../components/project/modals/CreateIssueModal';
 import { EditIssueModal } from '../components/project/modals/EditIssueModal';
 import { DeleteConfirmModal } from '../components/project/modals/DeleteConfirmModal';
@@ -706,6 +707,13 @@ export const ProjectDetails = () => {
             issueStatusData={issueStatusData}
             priorityData={priorityData}
             renderCustomizedLabel={renderCustomizedLabel}
+          />
+        )}
+
+        {/* Member Performance Tab */}
+        {activeTab === 'performance' && (
+          <MemberPerformanceTab 
+            projectId={parseInt(id || '0')}
           />
         )}
 
