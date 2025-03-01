@@ -28,7 +28,7 @@ import { DeleteConfirmModal } from "../components/user/DeleteConfirmModal";
 
 export const UserManagement = () => {
   const { isConnected, isLoading, error } = useApi();
-  const { isAdmin } = useAuth();
+  const { isAdmin, redmineUrl } = useAuth();
   const navigate = useNavigate();
 
   // State for users data
@@ -61,6 +61,9 @@ export const UserManagement = () => {
   // State to track when to refresh data
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
+  // Server URL from environment variable
+  const SERVER_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
   // Redirect if not admin
   useEffect(() => {
     if (!isLoading && !isAdmin) {
@@ -71,29 +74,34 @@ export const UserManagement = () => {
   // Fetch users data
   useEffect(() => {
     const fetchUsers = async () => {
-      if (!isConnected || !isAdmin) return;
+      if (!isConnected || !isAdmin || !redmineUrl) return;
 
       setLoading(true);
       setApiError(null);
 
       try {
-        console.log("Test 1");
+        // Prepare query parameters
+        const queryParams = new URLSearchParams({
+          redmineUrl: redmineUrl,
+          offset: ((currentPage - 1) * usersPerPage).toString(),
+          limit: usersPerPage.toString()
+        });
+
+        // Add filters if they exist
+        if (filters.status !== "all") {
+          queryParams.append("status", filters.status);
+        }
+        if (filters.groupId) {
+          queryParams.append("group_id", filters.groupId);
+        }
+        if (filters.name) {
+          queryParams.append("name", filters.name);
+        }
+
         // Fetch users with filters
         const response = await fetch(
-          `/api/users.json?offset=${
-            (currentPage - 1) * usersPerPage
-          }&limit=${usersPerPage}${
-            filters.status !== "all" ? `&status=${filters.status}` : ""
-          }${filters.groupId ? `&group_id=${filters.groupId}` : ""}${
-            filters.name ? `&name=${encodeURIComponent(filters.name)}` : ""
-          }`,
-          {
-            headers: {
-              "X-Redmine-API-Key": localStorage.getItem("redmine_auth") || "",
-            },
-          }
+          `${SERVER_URL}/api/users?${queryParams.toString()}`
         );
-        console.log(response);
 
         if (!response.ok) {
           throw new Error("Failed to fetch users");
@@ -104,15 +112,16 @@ export const UserManagement = () => {
         setTotalUsers(data.total_count || 0);
 
         // Fetch groups for filtering
-        const groupsResponse = await fetch("/api/groups.json", {
-          headers: {
-            "X-Redmine-API-Key": localStorage.getItem("redmine_auth") || "",
-          },
-        });
-
-        if (groupsResponse.ok) {
-          const groupsData = await groupsResponse.json();
-          setGroups(groupsData.groups || []);
+        // Note: This is a placeholder - you'll need to implement the groups endpoint
+        try {
+          const groupsResponse = await fetch(`${SERVER_URL}/api/groups?redmineUrl=${encodeURIComponent(redmineUrl)}`);
+          if (groupsResponse.ok) {
+            const groupsData = await groupsResponse.json();
+            setGroups(groupsData.groups || []);
+          }
+        } catch (groupErr) {
+          console.warn("Could not fetch groups:", groupErr);
+          // Don't fail the whole operation if groups can't be fetched
         }
       } catch (err: any) {
         console.error("Error fetching users:", err);
@@ -126,10 +135,12 @@ export const UserManagement = () => {
   }, [
     isConnected,
     isAdmin,
+    redmineUrl,
     currentPage,
     usersPerPage,
     filters,
     refreshTrigger,
+    SERVER_URL
   ]);
 
   // Handle search input change
@@ -180,18 +191,17 @@ export const UserManagement = () => {
 
   // Create a new user
   const handleCreateUser = async (userData: any): Promise<boolean> => {
-    if (!isConnected || !isAdmin) return false; // Ensure a boolean return
+    if (!isConnected || !isAdmin || !redmineUrl) return false;
 
     setLoadingAction(true);
 
     try {
-      const response = await fetch("/api/users.json", {
+      const response = await fetch(`${SERVER_URL}/api/users`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "X-Redmine-API-Key": localStorage.getItem("redmine_auth") || "",
+          "Content-Type": "application/json"
         },
-        body: JSON.stringify(userData),
+        body: JSON.stringify(userData)
       });
 
       if (!response.ok) {
@@ -209,7 +219,7 @@ export const UserManagement = () => {
     } catch (err: any) {
       console.error("Error creating user:", err);
       alert(`Failed to create user: ${err.message}`);
-      return false; // Ensure a boolean return
+      return false;
     } finally {
       setLoadingAction(false);
     }
@@ -220,18 +230,17 @@ export const UserManagement = () => {
     userId: number,
     userData: any
   ): Promise<boolean> => {
-    if (!isConnected || !isAdmin) return false; // Ensure a boolean return
+    if (!isConnected || !isAdmin || !redmineUrl) return false;
 
     setLoadingAction(true);
 
     try {
-      const response = await fetch(`/api/users/${userId}.json`, {
+      const response = await fetch(`${SERVER_URL}/api/users/${userId}`, {
         method: "PUT",
         headers: {
-          "Content-Type": "application/json",
-          "X-Redmine-API-Key": localStorage.getItem("redmine_auth") || "",
+          "Content-Type": "application/json"
         },
-        body: JSON.stringify(userData),
+        body: JSON.stringify(userData)
       });
 
       if (!response.ok) {
@@ -249,7 +258,7 @@ export const UserManagement = () => {
     } catch (err: any) {
       console.error("Error updating user:", err);
       alert(`Failed to update user: ${err.message}`);
-      return false; // Ensure a boolean return
+      return false;
     } finally {
       setLoadingAction(false);
     }
@@ -257,16 +266,16 @@ export const UserManagement = () => {
 
   // Delete a user
   const handleDeleteUser = async (userId: number): Promise<boolean> => {
-    if (!isConnected || !isAdmin) return false; // Ensure a boolean return
+    if (!isConnected || !isAdmin || !redmineUrl) return false;
 
     setLoadingAction(true);
 
     try {
-      const response = await fetch(`/api/users/${userId}.json`, {
+      const response = await fetch(`${SERVER_URL}/api/users/${userId}`, {
         method: "DELETE",
         headers: {
-          "X-Redmine-API-Key": localStorage.getItem("redmine_auth") || "",
-        },
+          "Content-Type": "application/json"
+        }
       });
 
       if (!response.ok) {
@@ -281,7 +290,7 @@ export const UserManagement = () => {
     } catch (err: any) {
       console.error("Error deleting user:", err);
       alert(`Failed to delete user: ${err.message}`);
-      return false; // Ensure a boolean return
+      return false;
     } finally {
       setLoadingAction(false);
     }
@@ -385,18 +394,20 @@ export const UserManagement = () => {
               <option value="3">Locked</option>
             </select>
 
-            <select
-              value={filters.groupId}
-              onChange={(e) => handleGroupChange(e.target.value)}
-              className="border border-gray-300 rounded-md text-sm text-gray-700 py-2 pl-3 pr-8 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-            >
-              <option value="">All Groups</option>
-              {groups.map((group) => (
-                <option key={group.id} value={group.id}>
-                  {group.name}
-                </option>
-              ))}
-            </select>
+            {groups.length > 0 && (
+              <select
+                value={filters.groupId}
+                onChange={(e) => handleGroupChange(e.target.value)}
+                className="border border-gray-300 rounded-md text-sm text-gray-700 py-2 pl-3 pr-8 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option value="">All Groups</option>
+                {groups.map((group) => (
+                  <option key={group.id} value={group.id}>
+                    {group.name}
+                  </option>
+                ))}
+              </select>
+            )}
 
             <button
               className="flex items-center space-x-1 px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50"
