@@ -26,13 +26,11 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
   
   // Handle role selection
   const handleRoleChange = (roleId: number) => {
-    setSelectedRoleIds(prev => {
-      if (prev.includes(roleId)) {
-        return prev.filter(id => id !== roleId);
-      } else {
-        return [...prev, roleId];
-      }
-    });
+    const newSelectedRoleIds = selectedRoleIds.includes(roleId)
+      ? selectedRoleIds.filter(id => id !== roleId)
+      : [...selectedRoleIds, roleId];
+    
+    setSelectedRoleIds(newSelectedRoleIds);
   };
 
   // Get member name
@@ -58,10 +56,13 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
   // Handle update button click
   const handleUpdate = () => {
     // Update the membership with selected roles before submitting
-    setSelectedMembership({
+    const updatedMembership = {
       ...membership,
       role_ids: selectedRoleIds
-    });
+    };
+    
+    // Update the parent component's state with the updated membership
+    setSelectedMembership(updatedMembership);
     
     // Call the update function
     handleUpdateMembership();
