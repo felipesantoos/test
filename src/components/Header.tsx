@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { Bell, Search, RefreshCw } from 'lucide-react';
+import { Bell, Search, RefreshCw, LogOut, User } from 'lucide-react';
 import { useApi } from '../context/ApiContext';
+import { useAuth } from '../context/AuthContext';
 
 export const Header = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const { refreshData, isLoading } = useApi();
+  const { username, logout } = useAuth();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,6 +47,27 @@ export const Header = () => {
               <Bell size={20} />
               <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-500"></span>
             </button>
+          </div>
+          
+          <div className="relative group">
+            <button className="flex items-center text-sm text-gray-700 hover:text-indigo-600 focus:outline-none">
+              <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center mr-2">
+                <User size={16} className="text-indigo-600" />
+              </div>
+              <span>{username}</span>
+            </button>
+            
+            <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10 hidden group-hover:block">
+              <button
+                onClick={logout}
+                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              >
+                <div className="flex items-center">
+                  <LogOut size={16} className="mr-2" />
+                  <span>Sign out</span>
+                </div>
+              </button>
+            </div>
           </div>
         </div>
       </div>

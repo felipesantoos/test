@@ -12,15 +12,15 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-// Helper function to create Redmine API request
-const createRedmineRequest = (apiKey, redmineUrl, endpoint, params = {}, method = 'get', data = null) => {
+// Helper function to create Redmine API request with Basic Auth
+const createRedmineRequest = (authToken, redmineUrl, endpoint, params = {}, method = 'get', data = null) => {
   const url = `${redmineUrl}/` + (endpoint.startsWith('/') ? endpoint.substring(1) : endpoint);
   
   const config = {
     method,
     url,
     headers: {
-      'X-Redmine-API-Key': apiKey,
+      'Authorization': `Basic ${authToken}`,
       'Content-Type': 'application/json'
     },
     params
@@ -33,22 +33,42 @@ const createRedmineRequest = (apiKey, redmineUrl, endpoint, params = {}, method 
   return axios(config);
 };
 
-// Test connection to Redmine API
-app.get('/api/test-connection', async (req, res) => {
-  const { apiKey, redmineUrl } = req.query;
+// Authentication endpoints
+app.get('/api/auth/login', async (req, res) => {
+  const { authToken, redmineUrl } = req.query;
   
-  if (!apiKey || !redmineUrl) {
-    return res.status(400).json({ error: 'API key and Redmine URL are required' });
+  if (!authToken || !redmineUrl) {
+    return res.status(400).json({ error: 'Authentication token and Redmine URL are required' });
   }
 
   try {
-    // Try to fetch the current user to test the connection
-    const response = await createRedmineRequest(apiKey, redmineUrl, '/users/current.json');
+    // Try to fetch the current user to test the authentication
+    const response = await createRedmineRequest(authToken, redmineUrl, '/users/current.json');
     return res.json({ success: true, user: response.data.user });
   } catch (error) {
-    console.error('Error testing Redmine connection:', error.message);
+    console.error('Error authenticating with Redmine:', error.message);
     return res.status(401).json({ 
-      error: 'Failed to connect to Redmine API', 
+      error: 'Authentication failed. Please check your credentials.', 
+      details: error.message 
+    });
+  }
+});
+
+app.get('/api/auth/verify', async (req, res) => {
+  const { authToken, redmineUrl } = req.query;
+  
+  if (!authToken || !redmineUrl) {
+    return res.status(400).json({ error: 'Authentication token and Redmine URL are required' });
+  }
+
+  try {
+    // Verify the authentication by fetching the current user
+    const response = await createRedmineRequest(authToken, redmineUrl, '/users/current.json');
+    return res.json({ success: true, user: response.data.user });
+  } catch (error) {
+    console.error('Error verifying authentication:', error.message);
+    return res.status(401).json({ 
+      error: 'Authentication verification failed', 
       details: error.message 
     });
   }
@@ -56,10 +76,10 @@ app.get('/api/test-connection', async (req, res) => {
 
 // Get projects
 app.get('/api/projects', async (req, res) => {
-  const { apiKey, redmineUrl, offset, limit, include } = req.query;
+  const { authToken, redmineUrl, offset, limit, include } = req.query;
   
-  if (!apiKey || !redmineUrl) {
-    return res.status(400).json({ error: 'API key and Redmine URL are required' });
+  if (!authToken || !redmineUrl) {
+    return res.status(400).json({ error: 'Authentication token and Redmine URL are required' });
   }
 
   try {
@@ -69,7 +89,7 @@ app.get('/api/projects', async (req, res) => {
       include: include || 'trackers,issue_categories'
     };
 
-    const response = await createRedmineRequest(apiKey, redmineUrl, '/projects.json', params);
+    const response = await createRedmineRequest(authToken, redmineUrl, '/projects.json', params);
     return res.json(response.data);
   } catch (error) {
     console.error('Error fetching projects:', error.message);
@@ -79,11 +99,11 @@ app.get('/api/projects', async (req, res) => {
 
 // Get project details
 app.get('/api/projects/:id', async (req, res) => {
-  const { apiKey, redmineUrl, include } = req.query;
+  const { authToken, redmineUrl, include } = req.query;
   const { id } = req.params;
   
-  if (!apiKey || !redmineUrl) {
-    return res.status(400).json({ error: 'API key and Redmine URL are required' });
+  if (!authToken || !redmineUrl) {
+    return res.status(400).json({ error: 'Authentication token and Redmine URL are required' });
   }
 
   try {
@@ -91,7 +111,7 @@ app.get('/api/projects/:id', async (req, res) => {
       include: include || 'trackers,issue_categories,enabled_modules'
     };
 
-    const response = await createRedmineRequest(apiKey, redmineUrl, `/projects/${id}.json`, params);
+    const response = await createRedmineRequest(authToken, redmineUrl, `/projects/${id}.json`, params);
     return res.json(response.data);
   } catch (error) {
     console.error(`Error fetching project ${id}:`, error.message);
@@ -101,16 +121,16 @@ app.get('/api/projects/:id', async (req, res) => {
 
 // Create a new project
 app.post('/api/projects', async (req, res) => {
-  const { apiKey, redmineUrl } = req.query;
+  const { authToken, redmineUrl } = req.query;
   const projectData = req.body;
   
-  if (!apiKey || !redmineUrl) {
-    return res.status(400).json({ error: 'API key and Redmine URL are required' });
+  if (!authToken || !redmineUrl) {
+    return res.status(400).json({ error: 'Authentication token and Redmine URL are required' });
   }
 
   try {
     const response = await createRedmineRequest(
-      apiKey, 
+      authToken, 
       redmineUrl, 
       '/projects.json', 
       {}, 
@@ -129,17 +149,17 @@ app.post('/api/projects', async (req, res) => {
 
 // Update a project
 app.put('/api/projects/:id', async (req, res) => {
-  const { apiKey, redmineUrl } = req.query;
+  const { authToken, redmineUrl } = req.query;
   const { id } = req.params;
   const projectData = req.body;
   
-  if (!apiKey || !redmineUrl) {
-    return res.status(400).json({ error: 'API key and Redmine URL are required' });
+  if (!authToken || !redmineUrl) {
+    return res.status(400).json({ error: 'Authentication token and Redmine URL are required' });
   }
 
   try {
     const response = await createRedmineRequest(
-      apiKey, 
+      authToken, 
       redmineUrl, 
       `/projects/${id}.json`, 
       {}, 
@@ -158,16 +178,16 @@ app.put('/api/projects/:id', async (req, res) => {
 
 // Archive a project
 app.put('/api/projects/:id/archive', async (req, res) => {
-  const { apiKey, redmineUrl } = req.query;
+  const { authToken, redmineUrl } = req.query;
   const { id } = req.params;
   
-  if (!apiKey || !redmineUrl) {
-    return res.status(400).json({ error: 'API key and Redmine URL are required' });
+  if (!authToken || !redmineUrl) {
+    return res.status(400).json({ error: 'Authentication token and Redmine URL are required' });
   }
 
   try {
     await createRedmineRequest(
-      apiKey, 
+      authToken, 
       redmineUrl, 
       `/projects/${id}/archive.json`, 
       {}, 
@@ -185,16 +205,16 @@ app.put('/api/projects/:id/archive', async (req, res) => {
 
 // Unarchive a project
 app.put('/api/projects/:id/unarchive', async (req, res) => {
-  const { apiKey, redmineUrl } = req.query;
+  const { authToken, redmineUrl } = req.query;
   const { id } = req.params;
   
-  if (!apiKey || !redmineUrl) {
-    return res.status(400).json({ error: 'API key and Redmine URL are required' });
+  if (!authToken || !redmineUrl) {
+    return res.status(400).json({ error: 'Authentication token and Redmine URL are required' });
   }
 
   try {
     await createRedmineRequest(
-      apiKey, 
+      authToken, 
       redmineUrl, 
       `/projects/${id}/unarchive.json`, 
       {}, 
@@ -212,16 +232,16 @@ app.put('/api/projects/:id/unarchive', async (req, res) => {
 
 // Delete a project
 app.delete('/api/projects/:id', async (req, res) => {
-  const { apiKey, redmineUrl } = req.query;
+  const { authToken, redmineUrl } = req.query;
   const { id } = req.params;
   
-  if (!apiKey || !redmineUrl) {
-    return res.status(400).json({ error: 'API key and Redmine URL are required' });
+  if (!authToken || !redmineUrl) {
+    return res.status(400).json({ error: 'Authentication token and Redmine URL are required' });
   }
 
   try {
     await createRedmineRequest(
-      apiKey, 
+      authToken, 
       redmineUrl, 
       `/projects/${id}.json`, 
       {}, 
@@ -240,13 +260,13 @@ app.delete('/api/projects/:id', async (req, res) => {
 // Get issues with advanced filtering
 app.get('/api/issues', async (req, res) => {
   const { 
-    apiKey, redmineUrl, projectId, status, assignedTo, offset, limit, sort,
+    authToken, redmineUrl, projectId, status, assignedTo, offset, limit, sort,
     include, issueId, trackerId, parentId, subprojectId, createdOn, updatedOn,
     priorityId, categoryId, fixedVersionId, ...customFields
   } = req.query;
   
-  if (!apiKey || !redmineUrl) {
-    return res.status(400).json({ error: 'API key and Redmine URL are required' });
+  if (!authToken || !redmineUrl) {
+    return res.status(400).json({ error: 'Authentication token and Redmine URL are required' });
   }
 
   try {
@@ -279,7 +299,7 @@ app.get('/api/issues', async (req, res) => {
     // Remove undefined params
     Object.keys(params).forEach(key => params[key] === undefined && delete params[key]);
 
-    const response = await createRedmineRequest(apiKey, redmineUrl, '/issues.json', params);
+    const response = await createRedmineRequest(authToken, redmineUrl, '/issues.json', params);
     return res.json(response.data);
   } catch (error) {
     console.error('Error fetching issues:', error.message);
@@ -289,10 +309,10 @@ app.get('/api/issues', async (req, res) => {
 
 // Get users
 app.get('/api/users', async (req, res) => {
-  const { apiKey, redmineUrl, offset, limit } = req.query;
+  const { authToken, redmineUrl, offset, limit } = req.query;
   
-  if (!apiKey || !redmineUrl) {
-    return res.status(400).json({ error: 'API key and Redmine URL are required' });
+  if (!authToken || !redmineUrl) {
+    return res.status(400).json({ error: 'Authentication token and Redmine URL are required' });
   }
 
   try {
@@ -301,7 +321,7 @@ app.get('/api/users', async (req, res) => {
       limit: limit || 100
     };
 
-    const response = await createRedmineRequest(apiKey, redmineUrl, '/users.json', params);
+    const response = await createRedmineRequest(authToken, redmineUrl, '/users.json', params);
     return res.json(response.data);
   } catch (error) {
     console.error('Error fetching users:', error.message);
@@ -311,14 +331,14 @@ app.get('/api/users', async (req, res) => {
 
 // Get issue statuses
 app.get('/api/issue_statuses', async (req, res) => {
-  const { apiKey, redmineUrl } = req.query;
+  const { authToken, redmineUrl } = req.query;
   
-  if (!apiKey || !redmineUrl) {
-    return res.status(400).json({ error: 'API key and Redmine URL are required' });
+  if (!authToken || !redmineUrl) {
+    return res.status(400).json({ error: 'Authentication token and Redmine URL are required' });
   }
 
   try {
-    const response = await createRedmineRequest(apiKey, redmineUrl, '/issue_statuses.json');
+    const response = await createRedmineRequest(authToken, redmineUrl, '/issue_statuses.json');
     return res.json(response.data);
   } catch (error) {
     console.error('Error fetching issue statuses:', error.message);
@@ -328,11 +348,11 @@ app.get('/api/issue_statuses', async (req, res) => {
 
 // Get issue details
 app.get('/api/issues/:id', async (req, res) => {
-  const { apiKey, redmineUrl, include } = req.query;
+  const { authToken, redmineUrl, include } = req.query;
   const { id } = req.params;
   
-  if (!apiKey || !redmineUrl) {
-    return res.status(400).json({ error: 'API key and Redmine URL are required' });
+  if (!authToken || !redmineUrl) {
+    return res.status(400).json({ error: 'Authentication token and Redmine URL are required' });
   }
 
   try {
@@ -340,7 +360,7 @@ app.get('/api/issues/:id', async (req, res) => {
       include: include || 'attachments,relations,children,journals,watchers,allowed_statuses'
     };
 
-    const response = await createRedmineRequest(apiKey, redmineUrl, `/issues/${id}.json`, params);
+    const response = await createRedmineRequest(authToken, redmineUrl, `/issues/${id}.json`, params);
     return res.json(response.data);
   } catch (error) {
     console.error(`Error fetching issue ${id}:`, error.message);
@@ -350,16 +370,16 @@ app.get('/api/issues/:id', async (req, res) => {
 
 // Create a new issue
 app.post('/api/issues', async (req, res) => {
-  const { apiKey, redmineUrl } = req.query;
+  const { authToken, redmineUrl } = req.query;
   const issueData = req.body;
   
-  if (!apiKey || !redmineUrl) {
-    return res.status(400).json({ error: 'API key and Redmine URL are required' });
+  if (!authToken || !redmineUrl) {
+    return res.status(400).json({ error: 'Authentication token and Redmine URL are required' });
   }
 
   try {
     const response = await createRedmineRequest(
-      apiKey, 
+      authToken, 
       redmineUrl, 
       '/issues.json', 
       {}, 
@@ -375,17 +395,17 @@ app.post('/api/issues', async (req, res) => {
 
 // Update an issue
 app.put('/api/issues/:id', async (req, res) => {
-  const { apiKey, redmineUrl } = req.query;
+  const { authToken, redmineUrl } = req.query;
   const { id } = req.params;
   const issueData = req.body;
   
-  if (!apiKey || !redmineUrl) {
-    return res.status(400).json({ error: 'API key and Redmine URL are required' });
+  if (!authToken || !redmineUrl) {
+    return res.status(400).json({ error: 'Authentication token and Redmine URL are required' });
   }
 
   try {
     const response = await createRedmineRequest(
-      apiKey, 
+      authToken, 
       redmineUrl, 
       `/issues/${id}.json`, 
       {}, 
@@ -401,15 +421,15 @@ app.put('/api/issues/:id', async (req, res) => {
 
 // Delete an issue
 app.delete('/api/issues/:id', async (req, res) => {
-  const { apiKey, redmineUrl } = req.query;
+  const { authToken, redmineUrl } = req.query;
   const { id } = req.params;
   
-  if (!apiKey || !redmineUrl) {
-    return res.status(400).json({ error: 'API key and Redmine URL are required' });
+  if (!authToken || !redmineUrl) {
+    return res.status(400).json({ error: 'Authentication token and Redmine URL are required' });
   }
 
   try {
-    await createRedmineRequest(apiKey, redmineUrl, `/issues/${id}.json`, {}, 'delete');
+    await createRedmineRequest(authToken, redmineUrl, `/issues/${id}.json`, {}, 'delete');
     return res.status(200).json({ success: true });
   } catch (error) {
     console.error(`Error deleting issue ${id}:`, error.message);
@@ -419,12 +439,12 @@ app.delete('/api/issues/:id', async (req, res) => {
 
 // Add a watcher to an issue
 app.post('/api/issues/:id/watchers', async (req, res) => {
-  const { apiKey, redmineUrl } = req.query;
+  const { authToken, redmineUrl } = req.query;
   const { id } = req.params;
   const { user_id } = req.body;
   
-  if (!apiKey || !redmineUrl) {
-    return res.status(400).json({ error: 'API key and Redmine URL are required' });
+  if (!authToken || !redmineUrl) {
+    return res.status(400).json({ error: 'Authentication token and Redmine URL are required' });
   }
 
   if (!user_id) {
@@ -433,7 +453,7 @@ app.post('/api/issues/:id/watchers', async (req, res) => {
 
   try {
     await createRedmineRequest(
-      apiKey, 
+      authToken, 
       redmineUrl, 
       `/issues/${id}/watchers.json`, 
       {}, 
@@ -449,16 +469,16 @@ app.post('/api/issues/:id/watchers', async (req, res) => {
 
 // Remove a watcher from an issue
 app.delete('/api/issues/:id/watchers/:user_id', async (req, res) => {
-  const { apiKey, redmineUrl } = req.query;
+  const { authToken, redmineUrl } = req.query;
   const { id, user_id } = req.params;
   
-  if (!apiKey || !redmineUrl) {
-    return res.status(400).json({ error: 'API key and Redmine URL are required' });
+  if (!authToken || !redmineUrl) {
+    return res.status(400).json({ error: 'Authentication token and Redmine URL are required' });
   }
 
   try {
     await createRedmineRequest(
-      apiKey, 
+      authToken, 
       redmineUrl, 
       `/issues/${id}/watchers/${user_id}.json`, 
       {}, 
@@ -473,14 +493,14 @@ app.delete('/api/issues/:id/watchers/:user_id', async (req, res) => {
 
 // Get trackers
 app.get('/api/trackers', async (req, res) => {
-  const { apiKey, redmineUrl } = req.query;
+  const { authToken, redmineUrl } = req.query;
   
-  if (!apiKey || !redmineUrl) {
-    return res.status(400).json({ error: 'API key and Redmine URL are required' });
+  if (!authToken || !redmineUrl) {
+    return res.status(400).json({ error: 'Authentication token and Redmine URL are required' });
   }
 
   try {
-    const response = await createRedmineRequest(apiKey, redmineUrl, '/trackers.json');
+    const response = await createRedmineRequest(authToken, redmineUrl, '/trackers.json');
     return res.json(response.data);
   } catch (error) {
     console.error('Error fetching trackers:', error.message);
@@ -490,14 +510,14 @@ app.get('/api/trackers', async (req, res) => {
 
 // Get priorities
 app.get('/api/enumerations/issue_priorities', async (req, res) => {
-  const { apiKey, redmineUrl } = req.query;
+  const { authToken, redmineUrl } = req.query;
   
-  if (!apiKey || !redmineUrl) {
-    return res.status(400).json({ error: 'API key and Redmine URL are required' });
+  if (!authToken || !redmineUrl) {
+    return res.status(400).json({ error: 'Authentication token and Redmine URL are required' });
   }
 
   try {
-    const response = await createRedmineRequest(apiKey, redmineUrl, '/enumerations/issue_priorities.json');
+    const response = await createRedmineRequest(authToken, redmineUrl, '/enumerations/issue_priorities.json');
     return res.json(response.data);
   } catch (error) {
     console.error('Error fetching priorities:', error.message);
@@ -507,15 +527,15 @@ app.get('/api/enumerations/issue_priorities', async (req, res) => {
 
 // Get versions for a project
 app.get('/api/projects/:id/versions', async (req, res) => {
-  const { apiKey, redmineUrl } = req.query;
+  const { authToken, redmineUrl } = req.query;
   const { id } = req.params;
   
-  if (!apiKey || !redmineUrl) {
-    return res.status(400).json({ error: 'API key and Redmine URL are required' });
+  if (!authToken || !redmineUrl) {
+    return res.status(400).json({ error: 'Authentication token and Redmine URL are required' });
   }
 
   try {
-    const response = await createRedmineRequest(apiKey, redmineUrl, `/projects/${id}/versions.json`);
+    const response = await createRedmineRequest(authToken, redmineUrl, `/projects/${id}/versions.json`);
     return res.json(response.data);
   } catch (error) {
     console.error(`Error fetching versions for project ${id}:`, error.message);

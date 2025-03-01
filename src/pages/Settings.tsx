@@ -1,26 +1,29 @@
 import React, { useState } from 'react';
 import { useApi } from '../context/ApiContext';
-import { Save, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { Save, RefreshCw, CheckCircle, AlertCircle, LogOut } from 'lucide-react';
 
 export const Settings = () => {
   const { 
-    apiKey, 
-    redmineUrl, 
-    setApiKey, 
-    setRedmineUrl, 
     isConnected, 
     isLoading, 
-    error, 
-    testConnection 
+    error: apiError, 
+    refreshData 
   } = useApi();
+  
+  const {
+    username,
+    redmineUrl,
+    setRedmineUrl,
+    error: authError,
+    logout
+  } = useAuth();
 
-  const [localApiKey, setLocalApiKey] = useState(apiKey);
   const [localRedmineUrl, setLocalRedmineUrl] = useState(redmineUrl);
   const [testStatus, setTestStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [testError, setTestError] = useState<string | null>(null);
 
   const handleSaveSettings = async () => {
-    setApiKey(localApiKey);
     setRedmineUrl(localRedmineUrl);
     await handleTestConnection();
   };
@@ -30,11 +33,8 @@ export const Settings = () => {
     setTestError(null);
     
     try {
-      const success = await testConnection();
-      setTestStatus(success ? 'success' : 'error');
-      if (!success) {
-        setTestError('Failed to connect to Redmine API. Please check your credentials.');
-      }
+      await refreshData();
+      setTestStatus('success');
     } catch (err) {
       setTestStatus('error');
       setTestError('An unexpected error occurred while testing the connection.');
@@ -48,7 +48,7 @@ export const Settings = () => {
       </div>
 
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold mb-4">Redmine API Configuration</h2>
+        <h2 className="text-lg font-semibold mb-4">Redmine Connection</h2>
         
         {/* Connection Status */}
         <div className={`mb-6 p-4 rounded-md ${isConnected ? 'bg-green-50' : 'bg-yellow-50'}`}>
@@ -68,7 +68,7 @@ export const Settings = () => {
                 <p>
                   {isConnected 
                     ? 'Your connection to the Redmine API is active. You can now view and analyze your Redmine data.' 
-                    : 'Please configure your Redmine API settings below to connect to your Redmine instance.'}
+                    : 'Please check your Redmine URL and authentication settings.'}
                 </p>
               </div>
             </div>
@@ -76,6 +76,23 @@ export const Settings = () => {
         </div>
 
         <div className="space-y-4">
+          <div>
+            <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
+              Username
+            </label>
+            <input
+              type="text"
+              id="username"
+              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-gray-100"
+              value={username}
+              readOnly
+              disabled
+            />
+            <p className="mt-1 text-sm text-gray-500">
+              To change your username, you need to log out and log back in
+            </p>
+          </div>
+
           <div>
             <label htmlFor="redmineUrl" className="block text-sm font-medium text-gray-700 mb-1">
               Redmine URL
@@ -90,23 +107,6 @@ export const Settings = () => {
             />
             <p className="mt-1 text-sm text-gray-500">
               Enter the URL of your Redmine instance (e.g., https://redmine.example.com)
-            </p>
-          </div>
-
-          <div>
-            <label htmlFor="apiKey" className="block text-sm font-medium text-gray-700 mb-1">
-              API Key
-            </label>
-            <input
-              type="password"
-              id="apiKey"
-              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              placeholder="Your Redmine API key"
-              value={localApiKey}
-              onChange={(e) => setLocalApiKey(e.target.value)}
-            />
-            <p className="mt-1 text-sm text-gray-500">
-              You can find your API key in your Redmine account settings
             </p>
           </div>
 
@@ -132,6 +132,14 @@ export const Settings = () => {
               )}
               Test Connection
             </button>
+            
+            <button
+              onClick={logout}
+              className="inline-flex items-center px-4 py-2 border border-red-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+            >
+              <LogOut size={16} className="mr-2" />
+              Sign Out
+            </button>
           </div>
 
           {/* Test Connection Status */}
@@ -146,6 +154,13 @@ export const Settings = () => {
             <div className="mt-4 p-3 bg-red-50 text-red-800 rounded-md flex items-start">
               <AlertCircle size={16} className="mr-2 mt-0.5 flex-shrink-0" />
               <span>{testError || 'Connection failed. Please check your API key and Redmine URL.'}</span>
+            </div>
+          )}
+          
+          {(apiError || authError) && (
+            <div className="mt-4 p-3 bg-red-50 text-red-800 rounded-md flex items-start">
+              <AlertCircle size={16} className="mr-2 mt-0.5 flex-shrink-0" />
+              <span>{apiError || authError}</span>
             </div>
           )}
         </div>
