@@ -4,10 +4,9 @@ import { useAuth } from '../context/AuthContext';
 import { AlertCircle, LogIn, Server } from 'lucide-react';
 
 export const Login = () => {
-  const { isAuthenticated, login, isLoading, error, clearError, redmineUrl, setRedmineUrl } = useAuth();
+  const { isAuthenticated, login, isLoading, error, clearError, redmineUrl } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [localRedmineUrl, setLocalRedmineUrl] = useState(redmineUrl);
   const navigate = useNavigate();
 
   // Redirect if already authenticated
@@ -17,22 +16,11 @@ export const Login = () => {
     }
   }, [isAuthenticated, navigate]);
 
-  // Update local Redmine URL when context value changes
-  useEffect(() => {
-    setLocalRedmineUrl(redmineUrl);
-  }, [redmineUrl]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     clearError();
     
-    // Ensure URL has protocol
-    let formattedUrl = localRedmineUrl;
-    if (formattedUrl && !formattedUrl.startsWith('http://') && !formattedUrl.startsWith('https://')) {
-      formattedUrl = `https://${formattedUrl}`;
-    }
-    
-    const success = await login(username, password, formattedUrl);
+    const success = await login(username, password, redmineUrl);
     if (success) {
       navigate('/');
     }
@@ -69,19 +57,6 @@ export const Login = () => {
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
-              <label htmlFor="redmine-url" className="sr-only">Redmine URL</label>
-              <input
-                id="redmine-url"
-                name="redmine-url"
-                type="text"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Redmine URL (e.g., https://redmine.example.com)"
-                value={localRedmineUrl}
-                onChange={(e) => setLocalRedmineUrl(e.target.value)}
-              />
-            </div>
-            <div>
               <label htmlFor="username" className="sr-only">Username</label>
               <input
                 id="username"
@@ -89,7 +64,7 @@ export const Login = () => {
                 type="text"
                 autoComplete="username"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="Username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}

@@ -10,7 +10,6 @@ interface AuthContextType {
   isAdmin: boolean;
   username: string;
   redmineUrl: string;
-  setRedmineUrl: (url: string) => void;
   isLoading: boolean;
   error: string | null;
   login: (username: string, password: string, redmineUrl: string) => Promise<boolean>;
@@ -24,7 +23,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [username, setUsername] = useState<string>('');
-  const [redmineUrl, setRedmineUrl] = useState<string>(() => localStorage.getItem('redmine_url') || '');
+  const [redmineUrl, setRedmineUrl] = useState<string>(() => import.meta.env.VITE_REDMINE_URL || localStorage.getItem('redmine_url') || '');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -33,29 +32,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const storedUsername = localStorage.getItem('redmine_username');
     const storedAuth = localStorage.getItem('redmine_auth');
-    const storedUrl = localStorage.getItem('redmine_url');
     const storedIsAdmin = localStorage.getItem('redmine_is_admin');
     
-    if (storedUsername && storedAuth && storedUrl) {
+    if (storedUsername && storedAuth) {
       setUsername(storedUsername);
-      setRedmineUrl(storedUrl);
       setIsAuthenticated(true);
       setIsAdmin(storedIsAdmin === 'true');
     }
   }, []);
 
-  // Save redmine URL to localStorage when it changes
-  useEffect(() => {
-    if (redmineUrl) {
-      localStorage.setItem('redmine_url', redmineUrl);
-    }
-  }, [redmineUrl]);
-
   // Login with username and password
   const login = async (username: string, password: string, url: string): Promise<boolean> => {
-    if (!username || !password || !url) {
-      setError('Username, password, and Redmine URL are required');
+    if (!username || !password) {
+      setError('Username and password are required');
       return false;
+    }
+
+    if (!url) {
+      url = import.meta.env.VITE_REDMINE_URL || '';
+      if (!url) {
+        setError('Redmine URL is not configured. Please check your environment variables.');
+        return false;
+      }
     }
 
     setIsLoading(true);
@@ -124,7 +122,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     isAdmin,
     username,
     redmineUrl,
-    setRedmineUrl,
     isLoading,
     error,
     login,
