@@ -200,23 +200,14 @@ export const UserManagement = () => {
       });
 
       if (!response.ok) {
-        const text = await response.text();
-        let errorMessage = "Failed to create user";
-        
-        try {
-          // Try to parse as JSON
-          const errorData = JSON.parse(text);
-          errorMessage = errorData.error || errorData.details || errorMessage;
-        } catch (e) {
-          // If not JSON, use text as is (but truncate if too long)
-          errorMessage = text.length > 100 ? text.substring(0, 100) + "..." : text;
-        }
-        
-        throw new Error(errorMessage);
+        const errorData = await response.json();
+        throw new Error(errorData.error || errorData.details || "Failed to create user");
       }
 
       // Refresh users list
       setRefreshTrigger((prev) => prev + 1);
+      
+      // Important: Close the modal AFTER successful creation
       setIsCreatingUser(false);
 
       return true;
@@ -248,23 +239,14 @@ export const UserManagement = () => {
       });
 
       if (!response.ok) {
-        const text = await response.text();
-        let errorMessage = "Failed to update user";
-        
-        try {
-          // Try to parse as JSON
-          const errorData = JSON.parse(text);
-          errorMessage = errorData.error || errorData.details || errorMessage;
-        } catch (e) {
-          // If not JSON, use text as is (but truncate if too long)
-          errorMessage = text.length > 100 ? text.substring(0, 100) + "..." : text;
-        }
-        
-        throw new Error(errorMessage);
+        const errorData = await response.json();
+        throw new Error(errorData.error || errorData.details || "Failed to update user");
       }
 
       // Refresh users list
       setRefreshTrigger((prev) => prev + 1);
+      
+      // Important: Close the modal AFTER successful update
       setSelectedUser(null);
 
       return true;
@@ -285,123 +267,24 @@ export const UserManagement = () => {
 
     try {
       const response = await fetch(`${SERVER_URL}/api/users/${userId}?redmineUrl=${encodeURIComponent(redmineUrl)}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json"
-        }
+        method: "DELETE"
       });
 
       if (!response.ok) {
-        const text = await response.text();
-        let errorMessage = "Failed to delete user";
-        
-        try {
-          // Try to parse as JSON
-          const errorData = JSON.parse(text);
-          errorMessage = errorData.error || errorData.details || errorMessage;
-        } catch (e) {
-          // If not JSON, use text as is (but truncate if too long)
-          errorMessage = text.length > 100 ? text.substring(0, 100) + "..." : text;
-        }
-        
-        throw new Error(errorMessage);
+        const errorData = await response.json();
+        throw new Error(errorData.error || errorData.details || "Failed to delete user");
       }
 
       // Refresh users list
       setRefreshTrigger((prev) => prev + 1);
+      
+      // Important: Close the modal AFTER successful deletion
       setUserToDelete(null);
 
       return true;
     } catch (err: any) {
       console.error("Error deleting user:", err);
       alert(`Failed to delete user: ${err.message}`);
-      return false;
-    } finally {
-      setLoadingAction(false);
-    }
-  };
-
-  // Add user to group
-  const handleAddUserToGroup = async (userId: number, groupId: number): Promise<boolean> => {
-    if (!isConnected || !isAdmin || !redmineUrl) return false;
-
-    setLoadingAction(true);
-
-    try {
-      const response = await fetch(`${SERVER_URL}/api/groups/${groupId}/users?redmineUrl=${encodeURIComponent(redmineUrl)}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ user_id: userId })
-      });
-
-      if (!response.ok) {
-        const text = await response.text();
-        let errorMessage = "Failed to add user to group";
-        
-        try {
-          // Try to parse as JSON
-          const errorData = JSON.parse(text);
-          errorMessage = errorData.error || errorData.details || errorMessage;
-        } catch (e) {
-          // If not JSON, use text as is (but truncate if too long)
-          errorMessage = text.length > 100 ? text.substring(0, 100) + "..." : text;
-        }
-        
-        throw new Error(errorMessage);
-      }
-
-      // Refresh users list
-      setRefreshTrigger((prev) => prev + 1);
-
-      return true;
-    } catch (err: any) {
-      console.error("Error adding user to group:", err);
-      alert(`Failed to add user to group: ${err.message}`);
-      return false;
-    } finally {
-      setLoadingAction(false);
-    }
-  };
-
-  // Remove user from group
-  const handleRemoveUserFromGroup = async (userId: number, groupId: number): Promise<boolean> => {
-    if (!isConnected || !isAdmin || !redmineUrl) return false;
-
-    setLoadingAction(true);
-
-    try {
-      const response = await fetch(`${SERVER_URL}/api/groups/${groupId}/users/${userId}?redmineUrl=${encodeURIComponent(redmineUrl)}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json"
-        }
-      });
-
-      if (!response.ok) {
-        const text = await response.text();
-        let errorMessage = "Failed to remove user from group";
-        
-        try {
-          // Try to parse as JSON
-          const errorData = JSON.parse(text);
-          errorMessage = errorData.error || errorData.details || errorMessage;
-        } catch (e) {
-          // If not JSON, use text as is (but truncate if too long)
-          errorMessage = text.length > 100 ? text.substring(0, 100) + "..." : text;
-        }
-        
-        throw new Error(errorMessage);
-      }
-
-      // Refresh users list
-      setRefreshTrigger((prev) => prev + 1);
-
-      return true;
-    } catch (err: any) {
-      console.error("Error removing user from group:", err);
-      alert(`Failed to remove user from group: ${err.message}`);
       return false;
     } finally {
       setLoadingAction(false);
