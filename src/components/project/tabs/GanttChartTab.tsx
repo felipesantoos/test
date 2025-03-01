@@ -22,6 +22,8 @@ export const GanttChartTab: React.FC<GanttChartTabProps> = ({ projectId }) => {
   // Load issues for the project
   useEffect(() => {
     const loadIssues = async () => {
+      if (!projectId) return;
+      
       setLoading(true);
       setError(null);
       
@@ -41,7 +43,7 @@ export const GanttChartTab: React.FC<GanttChartTabProps> = ({ projectId }) => {
         setFilteredIssues(issuesWithDates);
       } catch (err: any) {
         console.error('Error loading issues for Gantt chart:', err);
-        setError('Failed to load issues. Please try again.');
+        setError(err.message || 'Failed to load issues. Please try again.');
       } finally {
         setLoading(false);
       }

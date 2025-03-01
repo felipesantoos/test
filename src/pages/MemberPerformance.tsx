@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApi } from '../context/ApiContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { AlertCircle, Trophy, Users, CheckSquare, Clock, Filter, RefreshCw, Download } from 'lucide-react';
@@ -360,6 +360,48 @@ export const MemberPerformance = () => {
         </div>
       </div>
 
+      {/* Stats Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-800">Team Members</h2>
+            <div className="bg-indigo-100 p-2 rounded-full">
+              <Users size={20} className="text-indigo-600" />
+            </div>
+          </div>
+          <div className="text-3xl font-bold text-gray-800 mb-1">{memberPerformance.length}</div>
+          <p className="text-sm text-gray-500">Active contributors</p>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-800">Total Issues</h2>
+            <div className="bg-green-100 p-2 rounded-full">
+              <CheckSquare size={20} className="text-green-600" />
+            </div>
+          </div>
+          <div className="text-3xl font-bold text-gray-800 mb-1">
+            {memberPerformance.reduce((sum, member) => sum + member.assignedIssues, 0)}
+          </div>
+          <p className="text-sm text-gray-500">Assigned to team</p>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-800">Avg. Resolution Time</h2>
+            <div className="bg-yellow-100 p-2 rounded-full">
+              <Clock size={20} className="text-yellow-600" />
+            </div>
+          </div>
+          <div className="text-3xl font-bold text-gray-800 mb-1">
+            {memberPerformance.length > 0 
+              ? (memberPerformance.reduce((sum, member) => sum + member.avgResolutionTime, 0) / memberPerformance.length).toFixed(1) 
+              : '0'}
+          </div>
+          <p className="text-sm text-gray-500">Days per issue</p>
+        </div>
+      </div>
+
       {/* Top Performers */}
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-lg font-semibold mb-4 flex items-center">
@@ -381,7 +423,7 @@ export const MemberPerformance = () => {
                       <span className="font-medium text-indigo-800">{index + 1}</span>
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">{member.name}</p>
+                      <p className="font-medium">{member.name}</p>
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -409,7 +451,7 @@ export const MemberPerformance = () => {
         )}
       </div>
 
-      {/* Performance Charts */}
+      {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold mb-4">

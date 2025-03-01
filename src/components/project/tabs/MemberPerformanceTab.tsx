@@ -71,520 +71,401 @@ export const MemberPerformanceTab: React.FC<MemberPerformanceTabProps> = ({ proj
             });
           }
           
-          const member = membersMap.get(assigneeId); priority: string) => {
-    switch (priority.toLowerCase()) {
-      case 'low':
-        return 'bg-gray-100 text-gray-800';
-      case 'normal':
-        return 'bg-blue-100 text-blue-800';
-      case 'high':
-        return 'bg-orange-100 text-orange-800';
-      case 'urgent':
-        return 'bg-red-100 text-red-800';
-      case 'immediate':
-        return 'bg-red-100 text-red-800 font-bold';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  // Custom label renderer for pie chart to prevent overlap
-  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, name }: any) => {
-    const RADIAN = Math.PI / 180;
-    const radius = outerRadius + 30;
-    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-    const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
-    return (
-      <text 
-        x={x} 
-        y={y} 
-        fill={issueStatusData[index]?.color || '#000'} 
-        textAnchor={x > cx ? 'start' : 'end'} 
-        dominantBaseline="central"
-        fontSize={12}
-        fontWeight="bold"
-      >
-        {`${name} (${(percent * 100).toFixed(0)}%)`}
-      </text>
-    );
-  };
-
-  // Handle bulk creating issues
-  const handleBulkCreateIssues = async (issues: any[]): Promise<{success: any[], failed: any[]}> => {
-    if (!isConnected || issues.length === 0) return { success: [], failed: [] };
-    
-    setLoadingAction(true);
-    
-    const successfulIssues: any[] = [];
-    const failedIssues: any[] = [];
-    
-    try {
-      // Process issues one by one to track which ones fail
-      for (const issueData of issues) {
-        try {
-          const result = await createIssue({ issue: issueData });
-          successfulIssues.push(result);
-        } catch (err: any) {
-          // Add error information to the failed issue
-          failedIssues.push({
-            ...issueData,
-            error: err.message || 'Failed to create issue'
-          });
-        }
-      }
-      
-      // Refresh issues if any were created successfully
-      if (successfulIssues.length > 0) {
-        const updatedIssues = await fetchIssues({ projectId: id });
-        setIssues(updatedIssues);
-        
-        // Recalculate project progress and stats
-        const totalIssues = updatedIssues.length;
-        const closedIssues = updatedIssues.filter(issue => 
-          issue.status && (issue.status.name.toLowerCase() === 'closed' || issue.status.name.toLowerCase() === 'rejected')
-        ).length;
-        const openIssues = totalIssues - closedIssues;
-        
-        setIssueStats({
-          total: totalIssues,
-          open: openIssues,
-          closed: closedIssues
+          const member = membersMap.get(assigneeId);
+          
+          // Count assigned issues
+          member.assignedIssues++;
+          
+          // Check if issue is resolved or closed
+          const isResolved = issue.status && 
+            (issue.status.name.toLowerCase() === 'resolved' || 
+             issue.status.name.toLowerCase() === 'closed');
+          
+          // Get date range based on selected time range
+          const now = new Date();
+          let startDate = now;
+          
+          switch (timeRange) {
+            case 'week':
+              startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+              break;
+            case 'month':
+              startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+              break;
+            case 'quarter':
+              startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+              break;
+            case 'all':
+              // No date filtering
+              break;
+          }
+          
+          // Apply time range filter if needed
+          const issueUpdatedDate = parseISO(issue.updated_on);
+          const isInTimeRange = timeRange === 'all' || issueUpdatedDate >= startDate;
+          
+          if (isResolved && isInTimeRange) {
+            member.resolvedIssues++;
+            
+            // Calculate resolution time if both created and closed dates are available
+            if (issue.created_on && issue.closed_on) {
+              const createdDate = parseISO(issue.created_on);
+              const closedDate = parseISO(issue.closed_on);
+              const resolutionDays = Math.max(0, (closedDate.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
+              
+              member.resolutionTimes.push(resolutionDays);
+            }
+          }
+          
+          // Count updates (journals)
+          if (issue.journals && isInTimeRange) {
+            const userJournals = issue.journals.filter((journal: any) => 
+              journal.user && journal.user.id === assigneeId
+            );
+            
+            member.totalUpdates += userJournals.length;
+            
+            // Update last activity date
+            if (userJournals.length > 0) {
+              const latestJournal = userJournals.reduce((latest: any, current: any) => {
+                return new Date(latest.created_on) > new Date(current.created_on) ? latest : current;
+              });
+              
+              const journalDate = new Date(latestJournal.created_on);
+              
+              if (!member.lastActivity || journalDate > member.lastActivity) {
+                member.lastActivity = journalDate;
+              }
+            }
+          }
         });
         
-        // Calculate progress percentage
-        const progress = totalIssues > 0 ? Math.round((closedIssues / totalIssues) * 100) : 0;
-        setProjectProgress(progress);
+        // Calculate average resolution time for each member
+        membersMap.forEach(member => {
+          if (member.resolutionTimes.length > 0) {
+            const totalTime = member.resolutionTimes.reduce((sum: number, time: number) => sum + time, 0);
+            member.avgResolutionTime = parseFloat((totalTime / member.resolutionTimes.length).toFixed(1));
+          }
+        });
         
-        // Process data for charts
-        processChartData(updatedIssues);
+        // Convert map to array and sort by the selected metric
+        const performanceArray = Array.from(membersMap.values());
+        
+        // Filter out members with no activity
+        const activeMembers = performanceArray.filter(member => 
+          member.assignedIssues > 0 || member.resolvedIssues > 0 || member.totalUpdates > 0
+        );
+        
+        setMemberPerformance(activeMembers);
+      } catch (err: any) {
+        console.error('Error loading member performance data:', err);
+        setError(err.message || 'Failed to load member performance data');
+      } finally {
+        setLoading(false);
       }
-      
-      return { success: successfulIssues, failed: failedIssues };
-    } catch (err: any) {
-      console.error('Error in bulk issue creation:', err);
-      throw new Error('Failed to process bulk issue creation');
-    } finally {
-      setLoadingAction(false);
-    }
+    };
+    
+    loadMemberPerformance();
+  }, [projectId, fetchIssues, fetchProjectMemberships, timeRange]);
+
+  // Get color for chart
+  const getChartColor = (index: number) => {
+    const colors = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#6366F1', '#14B8A6', '#F97316', '#8B5CF6', '#06B6D4'];
+    return colors[index % colors.length];
   };
 
-  // Handle updating an issue
-  const handleUpdateIssue = async () => {
-    if (!isConnected || !selectedIssue || !selectedIssue.subject) return;
-    
-    setLoadingAction(true);
-    
-    try {
-      const issueData = {
-        issue: {
-          subject: selectedIssue.subject,
-          description: selectedIssue.description,
-          status_id: selectedIssue.status.id,
-          priority_id: selectedIssue.priority.id,
-          assigned_to_id: selectedIssue.assigned_to?.id || null
-        }
-      };
-      
-      await updateIssue(selectedIssue.id, issueData);
-      
-      // Refresh issues
-      const updatedIssues = await fetchIssues({ projectId: id });
-      setIssues(updatedIssues);
-      
-      // Recalculate project progress and stats
-      const totalIssues = updatedIssues.length;
-      const closedIssues = updatedIssues.filter(issue => 
-        issue.status && (issue.status.name.toLowerCase() === 'closed' || issue.status.name.toLowerCase() === 'rejected')
-      ).length;
-      const openIssues = totalIssues - closedIssues;
-      
-      setIssueStats({
-        total: totalIssues,
-        open: openIssues,
-        closed: closedIssues
-      });
-      
-      // Calculate progress percentage
-      const progress = totalIssues > 0 ? Math.round((closedIssues / totalIssues) * 100) : 0;
-      setProjectProgress(progress);
-      
-      // Process data for charts
-      processChartData(updatedIssues);
-      
-      setSelectedIssue(null);
-    } catch (err: any) {
-      console.error('Error updating issue:', err);
-      alert('Failed to update issue. Please try again.');
-    } finally {
-      setLoadingAction(false);
-    }
+  // Format date for display
+  const formatDate = (date: Date | null) => {
+    if (!date) return 'Never';
+    return format(date, 'MMM d, yyyy');
   };
 
-  // Handle creating a new issue
-  const handleCreateIssue = async () => {
-    if (!isConnected || !newIssue.subject) return;
-    
-    setLoadingAction(true);
-    
-    try {
-      const issueData = {
-        issue: {
-          ...newIssue,
-          project_id: parseInt(id || '0')
-        }
-      };
-      
-      await createIssue(issueData);
-      
-      // Refresh issues
-      const updatedIssues = await fetchIssues({ projectId: id });
-      setIssues(updatedIssues);
-      
-      // Recalculate project progress and stats
-      const totalIssues = updatedIssues.length;
-      const closedIssues = updatedIssues.filter(issue => 
-        issue.status && (issue.status.name.toLowerCase() === 'closed' || issue.status.name.toLowerCase() === 'rejected')
-      ).length;
-      const openIssues = totalIssues - closedIssues;
-      
-      setIssueStats({
-        total: totalIssues,
-        open: openIssues,
-        closed: closedIssues
-      });
-      
-      // Calculate progress percentage
-      const progress = totalIssues > 0 ? Math.round((closedIssues / totalIssues) * 100) : 0;
-      setProjectProgress(progress);
-      
-      // Process data for charts
-      processChartData(updatedIssues);
-      
-      // Reset form
-      setNewIssue({
-        subject: '',
-        description: '',
-        project_id: parseInt(id || '0'),
-        status_id: 1,
-        priority_id: 2,
-        assigned_to_id: ''
-      });
-      
-      setIsCreatingIssue(false);
-    } catch (err: any) {
-      console.error('Error creating issue:', err);
-      alert('Failed to create issue. Please try again.');
-    } finally {
-      setLoadingAction(false);
-    }
-  };
+  // Get top performers based on resolved issues
+  const topPerformers = [...memberPerformance]
+    .sort((a, b) => b.resolvedIssues - a.resolvedIssues)
+    .slice(0, 5);
 
-  // Handle updating a project
-  const handleUpdateProject = async () => {
-    if (!isConnected || !editedProject || !editedProject.name || !editedProject.identifier) return;
-    
-    setLoadingAction(true);
-    
-    try {
-      const projectData = {
-        project: {
-          name: editedProject.name,
-          identifier: editedProject.identifier,
-          description: editedProject.description,
-          is_public: editedProject.is_public
-        }
-      };
-      
-      await updateProject(parseInt(id || '0'), projectData);
-      
-      // Refresh project details
-      const updatedProject = await fetchProjectDetails(parseInt(id || '0'));
-      setProject(updatedProject);
-      
-      setIsEditingProject(false);
-    } catch (err: any) {
-      console.error('Error updating project:', err);
-      alert('Failed to update project. Please try again.');
-    } finally {
-      setLoadingAction(false);
-    }
-  };
+  // Prepare data for charts
+  const performanceData = memberPerformance.map(member => ({
+    name: member.name,
+    resolved: member.resolvedIssues,
+    assigned: member.assignedIssues,
+    updates: member.totalUpdates,
+    time: member.avgResolutionTime
+  }));
 
-  // Handle deleting an issue
-  const handleDeleteIssue = async (issueId: number) => {
-    if (!isConnected) return;
-    
-    if (!confirm('Are you sure you want to delete this issue? This action cannot be undone.')) {
-      return;
-    }
-    
-    setLoadingAction(true);
-    
-    try {
-      await deleteIssue(issueId);
-      
-      // Refresh issues
-      const updatedIssues = await fetchIssues({ projectId: id });
-      setIssues(updatedIssues);
-      
-      // Recalculate project progress and stats
-      const totalIssues = updatedIssues.length;
-      const closedIssues = updatedIssues.filter(issue => 
-        issue.status && (issue.status.name.toLowerCase() === 'closed' || issue.status.name.toLowerCase() === 'rejected')
-      ).length;
-      const openIssues = totalIssues - closedIssues;
-      
-      setIssueStats({
-        total: totalIssues,
-        open: openIssues,
-        closed: closedIssues
-      });
-      
-      // Calculate progress percentage
-      const progress = totalIssues > 0 ? Math.round((closedIssues / totalIssues) * 100) : 0;
-      setProjectProgress(progress);
-      
-      // Process data for charts
-      processChartData(updatedIssues);
-    } catch (err: any) {
-      console.error('Error deleting issue:', err);
-      alert('Failed to delete issue. Please try again.');
-    } finally {
-      setLoadingAction(false);
-    }
-  };
-
-  // Handle archiving/unarchiving a project
-  const handleArchiveProject = async () => {
-    if (!isConnected || !project) return;
-    
-    setLoadingAction(true);
-    
-    try {
-      if (project.status === 9) {
-        // Unarchive
-        await unarchiveProject(project.id);
-      } else {
-        // Archive
-        await archiveProject(project.id);
-      }
-      
-      // Refresh project details
-      const updatedProject = await fetchProjectDetails(parseInt(id || '0'));
-      setProject(updatedProject);
-      
-      setShowArchiveConfirm(false);
-    } catch (err: any) {
-      console.error('Error archiving/unarchiving project:', err);
-      alert('Failed to archive/unarchive project. Please try again.');
-    } finally {
-      setLoadingAction(false);
-    }
-  };
-
-  // Handle deleting a project
-  const handleDeleteProject = async () => {
-    if (!isConnected || !project) return;
-    
-    setLoadingAction(true);
-    
-    try {
-      await deleteProject(project.id);
-      
-      // Redirect to projects list
-      navigate('/projects');
-    } catch (err: any) {
-      console.error('Error deleting project:', err);
-      alert('Failed to delete project. Please try again.');
-    } finally {
-      setLoadingAction(false);
-    }
-  };
-
-  if (!isConnected) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full">
-        <AlertCircle size={48} className="text-yellow-500 mb-4" />
-        <h2 className="text-2xl font-bold mb-2">Not Connected to Redmine</h2>
-        <p className="text-gray-600 mb-4">Please configure your Redmine API settings to get started.</p>
-        <Link to="/settings" className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors">
-          Go to Settings
-        </Link>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
-      </div>
-    );
-  }
-
-  if (error || !project) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full">
-        <AlertCircle size={48} className="text-red-500 mb-4" />
-        <h2 className="text-2xl font-bold mb-2">Error Loading Project</h2>
-        <p className="text-gray-600 mb-4">{error || 'Project not found'}</p>
-        <Link to="/projects" className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors">
-          Back to Projects
-        </Link>
-      </div>
-    );
-  }
+  // Prepare workload distribution data
+  const totalAssigned = memberPerformance.reduce((sum, member) => sum + member.assignedIssues, 0);
+  const workloadDistribution = memberPerformance
+    .filter(member => member.assignedIssues > 0)
+    .map((member, index) => ({
+      name: member.name,
+      value: member.assignedIssues,
+      percentage: totalAssigned > 0 ? Math.round((member.assignedIssues / totalAssigned) * 100) : 0,
+      color: getChartColor(index)
+    }));
 
   return (
     <div className="space-y-6">
-      {/* Project Header */}
-      <ProjectHeader 
-        project={project} 
-        projectProgress={projectProgress} 
-        issueStats={issueStats} 
-        formatDate={formatDate} 
-      />
-      
-      {/* Tabs */}
-      <ProjectTabs activeTab={activeTab} setActiveTab={setActiveTab} project={project} />
-      
-      {/* Tab Content */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <h2 className="text-lg font-semibold text-gray-800">Member Performance</h2>
+        <div className="flex border border-gray-300 rounded-md overflow-hidden">
+          <button
+            className={`px-3 py-1 text-sm ${timeRange === 'week' ? 'bg-indigo-100 text-indigo-700' : 'bg-white text-gray-700'}`}
+            onClick={() => setTimeRange('week')}
+          >
+            Week
+          </button>
+          <button
+            className={`px-3 py-1 text-sm ${timeRange === 'month' ? ' bg-indigo-100 text-indigo-700' : 'bg-white text-gray-700'}`}
+            onClick={() => setTimeRange('month')}
+          >
+            Month
+          </button>
+          <button
+            className={`px-3 py-1 text-sm ${timeRange === 'quarter' ? 'bg-indigo-100 text-indigo-700' : 'bg-white text-gray-700'}`}
+            onClick={() => setTimeRange('quarter')}
+          >
+            Quarter
+          </button>
+          <button
+            className={`px-3 py-1 text-sm ${timeRange === 'all' ? 'bg-indigo-100 text-indigo-700' : 'bg-white text-gray-700'}`}
+            onClick={() => setTimeRange('all')}
+          >
+            All Time
+          </button>
+        </div>
+      </div>
+
+      {/* Top Performers */}
       <div className="bg-white rounded-lg shadow p-6">
-        {/* Overview Tab */}
-        {activeTab === 'overview' && (
-          <OverviewTab 
-            project={project} 
-            issueStats={issueStats} 
-            recentActivity={recentActivity} 
-            formatDate={formatDate} 
-          />
-        )}
-
-        {/* Issues Tab */}
-        {activeTab === 'issues' && (
-          <IssuesTab 
-            projectId={parseInt(id || '0')}
-            issues={issues}
-            loading={loading}
-            getStatusColorClass={getStatusColorClass}
-            getPriorityColorClass={getPriorityColorClass}
-            formatDate={formatDate}
-            handleDeleteIssue={handleDeleteIssue}
-            setSelectedIssue={setSelectedIssue}
-            setIsCreatingIssue={setIsCreatingIssue}
-            trackers={trackers}
-            statuses={issueStatuses}
-            priorities={priorities}
-            handleBulkCreateIssues={handleBulkCreateIssues}
-          />
-        )}
-
-        {/* Gantt Chart Tab */}
-        {activeTab === 'gantt' && (
-          <GanttChartTab 
-            projectId={parseInt(id || '0')}
-          />
-        )}
-
-        {/* Analytics Tab */}
-        {activeTab === 'analytics' && (
-          <AnalyticsTab 
-            issuesOverTimeData={issuesOverTimeData}
-            issueStatusData={issueStatusData}
-            priorityData={priorityData}
-            renderCustomizedLabel={renderCustomizedLabel}
-          />
-        )}
-
-        {/* Member Performance Tab */}
-        {activeTab === 'performance' && (
-          <MemberPerformanceTab 
-            projectId={parseInt(id || '0')}
-          />
-        )}
-
-        {/* Members Tab */}
-        {activeTab === 'members' && (
-          <MembersTab 
-            projectId={parseInt(id || '0')}
-          />
-        )}
-
-        {/* GitHub Integration Tab */}
-        {activeTab === 'github' && (
-          <GitHubIntegrationTab 
-            projectId={parseInt(id || '0')}
-            issues={issues}
-          />
-        )}
-
-        {/* Figma Integration Tab */}
-        {activeTab === 'figma' && (
-          <FigmaIntegrationTab 
-            projectId={parseInt(id || '0')}
-          />
-        )}
-
-        {/* Settings Tab */}
-        {activeTab === 'settings' && (
-          <SettingsTab 
-            project={project}
-            formatDate={formatDate}
-            setIsEditingProject={setIsEditingProject}
-            setShowArchiveConfirm={setShowArchiveConfirm}
-            setShowDeleteConfirm={setShowDeleteConfirm}
-          />
+        <h2 className="text-lg font-semibold mb-4 flex items-center">
+          <Trophy size={20} className="text-yellow-500 mr-2" />
+          Top Performers
+        </h2>
+        
+        {topPerformers.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-gray-500">No performance data available for the selected time period.</p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              {topPerformers.map((member, index) => (
+                <div key={member.id} className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
+                  <div className="flex items-center mb-3">
+                    <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center mr-3">
+                      <span className="font-medium text-indigo-800">{index + 1}</span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">{member.name}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Resolved:</span>
+                      <span className="font-medium">{member.resolvedIssues}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Assigned:</span>
+                      <span className="font-medium">{member.assignedIssues}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Updates:</span>
+                      <span className="font-medium">{member.totalUpdates}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Avg. Time:</span>
+                      <span className="font-medium">{member.avgResolutionTime} days</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
       </div>
 
-      {/* Modals */}
-      {isCreatingIssue && (
-        <CreateIssueModal 
-          newIssue={newIssue}
-          setNewIssue={setNewIssue}
-          handleCreateIssue={handleCreateIssue}
-          setIsCreatingIssue={setIsCreatingIssue}
-          loadingAction={loadingAction}
-        />
-      )}
+      {/* Performance Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold mb-4">Resolved vs. Assigned Issues</h2>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={performanceData}
+                margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" angle={-45} textAnchor="end" height={60} />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="resolved" name="Resolved Issues" fill="#10B981" />
+                <Bar dataKey="assigned" name="Assigned Issues" fill="#3B82F6" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
 
-      {selectedIssue && (
-        <EditIssueModal 
-          selectedIssue={selectedIssue}
-          setSelectedIssue={setSelectedIssue}
-          handleUpdateIssue={handleUpdateIssue}
-          loadingAction={loadingAction}
-        />
-      )}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold mb-4">Average Resolution Time (Days)</h2>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={performanceData}
+                margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" angle={-45} textAnchor="end" height={60} />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="time" name="Days" fill="#8B5CF6" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
 
-      {isEditingProject && editedProject && (
-        <EditProjectModal
-          project={project}
-          editedProject={editedProject}
-          setEditedProject={setEditedProject}
-          handleUpdateProject={handleUpdateProject}
-          setIsEditingProject={setIsEditingProject}
-          loadingAction={loadingAction}
-        />
-      )}
+      {/* Workload Distribution */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-lg font-semibold mb-4">Workload Distribution</h2>
+        {workloadDistribution.length === 0 ? (
+          <div className="h-80 flex items-center justify-center">
+            <p className="text-gray-500">No workload data available.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={workloadDistribution}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                  >
+                    {workloadDistribution.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value, name, props) => [`${value} issues (${props.payload.percentage}%)`, name]} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div>
+              <h3 className="text-md font-medium mb-3">Member Details</h3>
+              <div className="space-y-4 max-h-64 overflow-y-auto">
+                {memberPerformance.map(member => (
+                  <div key={member.id} className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center mr-3">
+                        <span className="font-medium text-indigo-800">
+                          {member.name.split(' ').map((n: string) => n[0]).join('')}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="font-medium">{member.name}</p>
+                        <p className="text-xs text-gray-500">Last active: {formatDate(member.lastActivity)}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">{member.assignedIssues} issues</p>
+                      <p className="text-sm text-green-600">{member.resolvedIssues} resolved</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
-      {showDeleteConfirm && (
-        <DeleteConfirmModal 
-          handleDeleteProject={handleDeleteProject}
-          setShowDeleteConfirm={setShowDeleteConfirm}
-          loadingAction={loadingAction}
-        />
-      )}
-
-      {showArchiveConfirm && (
-        <ArchiveConfirmModal 
-          project={project}
-          handleArchiveProject={handleArchiveProject}
-          setShowArchiveConfirm={setShowArchiveConfirm}
-          loadingAction={loadingAction}
-        />
-      )}
+      {/* Member Performance Table */}
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h2 className="text-lg font-semibold">Member Performance Details</h2>
+        </div>
+        
+        {memberPerformance.length === 0 ? (
+          <div className="p-6 text-center">
+            <p className="text-gray-500">No performance data available for the selected time period.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Member
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Assigned Issues
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Resolved Issues
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Updates
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Avg. Resolution Time
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Last Activity
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {memberPerformance.map((member) => (
+                  <tr key={member.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                          <span className="font-medium text-indigo-800">
+                            {member.name.split(' ').map((n: string) => n[0]).join('')}
+                          </span>
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">{member.name}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <CheckSquare size={16} className="text-gray-400 mr-2" />
+                        <span className="text-sm text-gray-900">{member.assignedIssues}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <CheckSquare size={16} className="text-green-500 mr-2" />
+                        <span className="text-sm text-gray-900">{member.resolvedIssues}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {member.totalUpdates}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <Clock size={16} className="text-gray-400 mr-2" />
+                        <span className="text-sm text-gray-900">{member.avgResolutionTime} days</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {formatDate(member.lastActivity)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
