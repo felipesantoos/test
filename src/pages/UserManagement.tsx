@@ -230,7 +230,7 @@ export const UserManagement = () => {
     setLoadingAction(true);
 
     try {
-      const response = await fetch(`${SERVER_URL}/api/users/${userId}`, {
+      const response = await fetch(`${SERVER_URL}/api/users/${userId}?redmineUrl=${encodeURIComponent(redmineUrl)}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json"
@@ -239,10 +239,19 @@ export const UserManagement = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(
-          errorData.errors?.join(", ") || "Failed to update user"
-        );
+        const text = await response.text();
+        let errorMessage = "Failed to update user";
+        
+        try {
+          // Try to parse as JSON
+          const errorData = JSON.parse(text);
+          errorMessage = errorData.error || errorData.errors?.join(", ") || errorMessage;
+        } catch (e) {
+          // If not JSON, use text as is (but truncate if too long)
+          errorMessage = text.length > 100 ? text.substring(0, 100) + "..." : text;
+        }
+        
+        throw new Error(errorMessage);
       }
 
       // Refresh users list
@@ -266,7 +275,7 @@ export const UserManagement = () => {
     setLoadingAction(true);
 
     try {
-      const response = await fetch(`${SERVER_URL}/api/users/${userId}`, {
+      const response = await fetch(`${SERVER_URL}/api/users/${userId}?redmineUrl=${encodeURIComponent(redmineUrl)}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json"
@@ -298,7 +307,7 @@ export const UserManagement = () => {
     setLoadingAction(true);
 
     try {
-      const response = await fetch(`${SERVER_URL}/api/groups/${groupId}/users`, {
+      const response = await fetch(`${SERVER_URL}/api/groups/${groupId}/users?redmineUrl=${encodeURIComponent(redmineUrl)}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -330,7 +339,7 @@ export const UserManagement = () => {
     setLoadingAction(true);
 
     try {
-      const response = await fetch(`${SERVER_URL}/api/groups/${groupId}/users/${userId}`, {
+      const response = await fetch(`${SERVER_URL}/api/groups/${groupId}/users/${userId}?redmineUrl=${encodeURIComponent(redmineUrl)}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json"
