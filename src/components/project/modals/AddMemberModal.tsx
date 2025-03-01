@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Search, Users, User } from 'lucide-react';
 
 interface AddMemberModalProps {
@@ -33,25 +33,34 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
   // Filter available users (those who are not already members)
   const availableUsers = users.filter(user => !existingUserIds.includes(user.id));
   
-  // Filter users based on search query
-  useEffect(() => {
+  // Handle search input change
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const query = e.target.value;
+    setSearchQuery(query);
+    
+    // Filter users based on search query
     if (availableUsers.length > 0) {
-      if (searchQuery) {
+      if (query) {
         const filtered = availableUsers.filter(user => {
           const fullName = `${user.firstname} ${user.lastname}`.toLowerCase();
           const login = user.login.toLowerCase();
           const email = user.mail ? user.mail.toLowerCase() : '';
           
-          return fullName.includes(searchQuery.toLowerCase()) || 
-                 login.includes(searchQuery.toLowerCase()) ||
-                 email.includes(searchQuery.toLowerCase());
+          return fullName.includes(query.toLowerCase()) || 
+                 login.includes(query.toLowerCase()) ||
+                 email.includes(query.toLowerCase());
         });
         setFilteredUsers(filtered);
       } else {
         setFilteredUsers(availableUsers);
       }
     }
-  }, [searchQuery, availableUsers]);
+  };
+
+  // Initialize filtered users when component mounts
+  React.useEffect(() => {
+    setFilteredUsers(availableUsers);
+  }, []);
 
   // Handle role selection
   const handleRoleChange = (roleId: number) => {
@@ -147,7 +156,7 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
                           className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                           placeholder="Search users..."
                           value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
+                          onChange={handleSearchChange}
                         />
                       </div>
                       
