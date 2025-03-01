@@ -9,6 +9,7 @@ import { IssuesTab } from '../components/project/tabs/IssuesTab';
 import { AnalyticsTab } from '../components/project/tabs/AnalyticsTab';
 import { MembersTab } from '../components/project/tabs/MembersTab';
 import { SettingsTab } from '../components/project/tabs/SettingsTab';
+import { GanttChartTab } from '../components/project/tabs/GanttChartTab';
 import { CreateIssueModal } from '../components/project/modals/CreateIssueModal';
 import { EditIssueModal } from '../components/project/modals/EditIssueModal';
 import { DeleteConfirmModal } from '../components/project/modals/DeleteConfirmModal';
@@ -501,37 +502,6 @@ export const ProjectDetails = () => {
     }
   };
 
-  // Handle updating a project
-  const handleUpdateProject = async () => {
-    if (!isConnected || !editedProject || !editedProject.name || !editedProject.identifier) return;
-    
-    setLoadingAction(true);
-    
-    try {
-      const projectData = {
-        project: {
-          name: editedProject.name,
-          identifier: editedProject.identifier,
-          description: editedProject.description,
-          is_public: editedProject.is_public
-        }
-      };
-      
-      await updateProject(parseInt(id || '0'), projectData);
-      
-      // Refresh project details
-      const updatedProject = await fetchProjectDetails(parseInt(id || '0'));
-      setProject(updatedProject);
-      
-      setIsEditingProject(false);
-    } catch (err: any) {
-      console.error('Error updating project:', err);
-      alert('Failed to update project. Please try again.');
-    } finally {
-      setLoadingAction(false);
-    }
-  };
-
   // Handle deleting an issue
   const handleDeleteIssue = async (issueId: number) => {
     if (!isConnected) return;
@@ -575,6 +545,27 @@ export const ProjectDetails = () => {
       setLoadingAction(false);
     }
   };
+
+  // Handle updating a project
+  const handleUpdateProject = async () => {
+    if (!project || !editedProject) return;
+  
+    setLoadingAction(true);
+  
+    try {
+      await updateProject(project.id, editedProject);
+  
+      // Refresh project details
+      const updatedProject = await fetchProjectDetails(parseInt(id || '0'));
+      setProject(updatedProject);
+      setIsEditingProject(false);
+    } catch (err: any) {
+      console.error('Error updating project:', err);
+      alert('Failed to update project. Please try again.');
+    } finally {
+      setLoadingAction(false);
+    }
+  };  
 
   // Handle archiving/unarchiving a project
   const handleArchiveProject = async () => {
@@ -698,6 +689,13 @@ export const ProjectDetails = () => {
             statuses={issueStatuses}
             priorities={priorities}
             handleBulkCreateIssues={handleBulkCreateIssues}
+          />
+        )}
+
+        {/* Gantt Chart Tab */}
+        {activeTab === 'gantt' && (
+          <GanttChartTab 
+            projectId={parseInt(id || '0')}
           />
         )}
 
