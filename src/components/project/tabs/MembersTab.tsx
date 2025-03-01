@@ -101,6 +101,8 @@ export const MembersTab: React.FC<MembersTabProps> = ({ projectId }) => {
       
       // Refresh memberships
       setRefreshTrigger(prev => prev + 1);
+      
+      // Close the modal after successful operation
       setIsAddingMember(false);
     } catch (err: any) {
       console.error('Error adding member:', err);
@@ -132,6 +134,8 @@ export const MembersTab: React.FC<MembersTabProps> = ({ projectId }) => {
       
       // Refresh memberships
       setRefreshTrigger(prev => prev + 1);
+      
+      // Close the modal after successful operation
       setSelectedMembership(null);
     } catch (err: any) {
       console.error('Error updating membership:', err);
@@ -152,6 +156,8 @@ export const MembersTab: React.FC<MembersTabProps> = ({ projectId }) => {
       
       // Refresh memberships
       setRefreshTrigger(prev => prev + 1);
+      
+      // Close the modal after successful operation
       setMembershipToDelete(null);
     } catch (err: any) {
       console.error('Error deleting membership:', err);

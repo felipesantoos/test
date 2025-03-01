@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
 interface EditMemberModalProps {
   membership: any;
@@ -24,14 +24,6 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
   
   const [selectedRoleIds, setSelectedRoleIds] = useState<number[]>(initialRoleIds);
   
-  // Update the membership when role selection changes
-  useEffect(() => {
-    setSelectedMembership({
-      ...membership,
-      role_ids: selectedRoleIds
-    });
-  }, [selectedRoleIds, setSelectedMembership, membership]);
-
   // Handle role selection
   const handleRoleChange = (roleId: number) => {
     setSelectedRoleIds(prev => {
@@ -65,6 +57,13 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
 
   // Handle update button click
   const handleUpdate = () => {
+    // Update the membership with selected roles before submitting
+    setSelectedMembership({
+      ...membership,
+      role_ids: selectedRoleIds
+    });
+    
+    // Call the update function
     handleUpdateMembership();
   };
 
@@ -77,7 +76,7 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
     <div className="fixed inset-0 overflow-y-auto z-50">
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-          <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+          <div className="absolute inset-0 bg-gray-500 opacity-75" onClick={handleCancel}></div>
         </div>
         
         <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
