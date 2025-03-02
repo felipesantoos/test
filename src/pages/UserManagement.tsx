@@ -564,7 +564,9 @@ export const UserManagement = () => {
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">
-                            {user.firstname} {user.lastname}
+                            <Link to={`/users/${user.id}`} className="text-indigo-600 hover:text-indigo-900">
+                              {user.firstname} {user.lastname}
+                            </Link>
                           </div>
                           <div className="text-sm text-gray-500">
                             {user.login}
