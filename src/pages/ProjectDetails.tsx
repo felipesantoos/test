@@ -17,6 +17,7 @@ import { DeleteConfirmModal } from '../components/project/modals/DeleteConfirmMo
 import { ArchiveConfirmModal } from '../components/project/modals/ArchiveConfirmModal';
 import { EditProjectModal } from '../components/project/modals/EditProjectModal';
 import { format, parseISO, subDays, isAfter, isBefore, isEqual, startOfDay } from 'date-fns';
+import { GitHubIntegrationTab } from '../components/project/tabs/GitHubIntegrationTab';
 
 export const ProjectDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -721,6 +722,14 @@ export const ProjectDetails = () => {
         {activeTab === 'members' && (
           <MembersTab 
             projectId={parseInt(id || '0')}
+          />
+        )}
+
+        {/* GitHub Integration Tab */}
+        {activeTab === 'github' && (
+          <GitHubIntegrationTab 
+            projectId={parseInt(id || '0')}
+            issues={issues}
           />
         )}
 

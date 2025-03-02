@@ -342,7 +342,7 @@ export const GitHubIntegrationTab: React.FC<GitHubIntegrationTabProps> = ({ proj
                       <td className="px-6 py-4">
                         {linked.pullRequests && linked.pullRequests.length > 0 ? (
                           <div className="space-y-2">
-                            {linked.pullRequests.map(pr => (
+                            {linked.pullRequests.map((pr: { id: number; title: string; number: number; url: string; status: string; author: string; created_at: string }) => (
                               <div key={pr.id} className="flex items-center">
                                 <div className="flex-shrink-0">
                                   <GitPullRequest size={16} className="text-gray-400" />
