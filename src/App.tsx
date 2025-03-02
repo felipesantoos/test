@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { Dashboard } from './pages/Dashboard';
@@ -26,6 +26,8 @@ function App() {
         <ApiProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
+            
+            {/* Protected Routes */}
             <Route path="/" element={
               <ProtectedRoute>
                 <div className="flex h-screen bg-gray-100">
@@ -39,6 +41,7 @@ function App() {
                 </div>
               </ProtectedRoute>
             } />
+            
             <Route path="/projects" element={
               <ProtectedRoute>
                 <div className="flex h-screen bg-gray-100">
@@ -52,6 +55,7 @@ function App() {
                 </div>
               </ProtectedRoute>
             } />
+            
             <Route path="/projects/:id" element={
               <ProtectedRoute>
                 <div className="flex h-screen bg-gray-100">
@@ -65,6 +69,7 @@ function App() {
                 </div>
               </ProtectedRoute>
             } />
+            
             <Route path="/issues" element={
               <ProtectedRoute>
                 <div className="flex h-screen bg-gray-100">
@@ -78,6 +83,7 @@ function App() {
                 </div>
               </ProtectedRoute>
             } />
+            
             <Route path="/issues/:id" element={
               <ProtectedRoute>
                 <div className="flex h-screen bg-gray-100">
@@ -91,6 +97,7 @@ function App() {
                 </div>
               </ProtectedRoute>
             } />
+            
             <Route path="/kanban" element={
               <ProtectedRoute>
                 <div className="flex h-screen bg-gray-100">
@@ -104,6 +111,7 @@ function App() {
                 </div>
               </ProtectedRoute>
             } />
+            
             <Route path="/team" element={
               <ProtectedRoute>
                 <div className="flex h-screen bg-gray-100">
@@ -117,6 +125,7 @@ function App() {
                 </div>
               </ProtectedRoute>
             } />
+            
             <Route path="/member-performance" element={
               <ProtectedRoute>
                 <div className="flex h-screen bg-gray-100">
@@ -130,6 +139,7 @@ function App() {
                 </div>
               </ProtectedRoute>
             } />
+            
             <Route path="/users" element={
               <AdminRoute>
                 <div className="flex h-screen bg-gray-100">
@@ -143,6 +153,7 @@ function App() {
                 </div>
               </AdminRoute>
             } />
+            
             <Route path="/users/:id" element={
               <AdminRoute>
                 <div className="flex h-screen bg-gray-100">
@@ -156,6 +167,7 @@ function App() {
                 </div>
               </AdminRoute>
             } />
+            
             <Route path="/settings" element={
               <ProtectedRoute>
                 <div className="flex h-screen bg-gray-100">
@@ -169,6 +181,9 @@ function App() {
                 </div>
               </ProtectedRoute>
             } />
+
+            {/* Catch all route - redirect to dashboard */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </ApiProvider>
       </AuthProvider>
