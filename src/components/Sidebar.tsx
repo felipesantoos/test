@@ -73,7 +73,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({ username, isAdmin, onIt
       <div className="p-5 border-b border-indigo-700">
         <div className="flex items-center space-x-2">
           <BarChart3 size={24} />
-          <h1 className="text-xl font-bold">Redmine Analytics</h1>
+          <h1 className="text-xl font-bold">DIT Manager</h1>
         </div>
       </div>
       <nav className="flex-1 overflow-y-auto py-4">
