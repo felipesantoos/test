@@ -9,6 +9,7 @@ import { Issues } from './pages/Issues';
 import { IssueDetails } from './pages/IssueDetails';
 import { KanbanBoard } from './pages/KanbanBoard';
 import { TeamPerformance } from './pages/TeamPerformance';
+import { MemberPerformance } from './pages/MemberPerformance';
 import { UserManagement } from './pages/UserManagement';
 import { UserDetails } from './pages/UserDetails';
 import { Settings } from './pages/Settings';
@@ -111,6 +112,19 @@ function App() {
                     <Header />
                     <main className="flex-1 overflow-y-auto p-4">
                       <TeamPerformance />
+                    </main>
+                  </div>
+                </div>
+              </ProtectedRoute>
+            } />
+            <Route path="/member-performance" element={
+              <ProtectedRoute>
+                <div className="flex h-screen bg-gray-100">
+                  <Sidebar />
+                  <div className="flex-1 flex flex-col overflow-hidden">
+                    <Header />
+                    <main className="flex-1 overflow-y-auto p-4">
+                      <MemberPerformance />
                     </main>
                   </div>
                 </div>
