@@ -29,6 +29,7 @@ import {
   EyeOff,
   Calendar,
   BarChart as BarChartIcon,
+  User,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format, parseISO, subDays, startOfDay, endOfDay } from "date-fns";
@@ -44,8 +45,8 @@ interface PerformanceMetrics {
   lastActivity: Date | null;
   efficiency: number;
   responseTime: number;
-  team?: string;
-  role?: string;
+  team: string;
+  role: string;
 }
 
 interface FilterState {
@@ -92,15 +93,30 @@ export const MemberPerformance = () => {
   });
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
-  // Mock data for teams and roles (replace with actual data)
-  const teams = ["Development", "Design", "QA", "Management"];
-  const roles = [
-    "Developer",
-    "Designer",
-    "Tester",
-    "Project Manager",
-    "Team Lead",
-  ];
+  // Get unique teams and roles from user data
+  const getUniqueTeamsAndRoles = (users: any[]) => {
+    const teams = new Set<string>();
+    const roles = new Set<string>();
+
+    users.forEach((user) => {
+      // Extract team from custom fields if available
+      const teamField = user.custom_fields?.find((f: any) => f.name === "Team");
+      if (teamField?.value) {
+        teams.add(teamField.value);
+      }
+
+      // Extract role from custom fields if available
+      const roleField = user.custom_fields?.find((f: any) => f.name === "Role");
+      if (roleField?.value) {
+        roles.add(roleField.value);
+      }
+    });
+
+    return {
+      teams: Array.from(teams),
+      roles: Array.from(roles),
+    };
+  };
 
   // Load and process performance data
   useEffect(() => {
@@ -110,7 +126,7 @@ export const MemberPerformance = () => {
       setLoading(true);
 
       try {
-        // Fetch all issues
+        // Fetch all issues with journals for response time calculation
         const allIssues = await fetchIssues({
           include: "journals,relations,children",
         });
@@ -169,8 +185,30 @@ export const MemberPerformance = () => {
           const efficiency =
             assignedCount > 0 ? (resolvedCount / assignedCount) * 100 : 0;
 
-          // Calculate average response time (mock data - replace with actual calculation)
-          const responseTime = Math.random() * 24; // Random hours for demonstration
+          // Calculate average response time
+          const responseTimes = userIssues
+            .filter((issue) => issue.journals && issue.journals.length > 0)
+            .map((issue) => {
+              const created = new Date(issue.created_on);
+              const firstResponse = new Date(issue.journals[0].created_on);
+              return (
+                (firstResponse.getTime() - created.getTime()) / (1000 * 60 * 60)
+              ); // Hours
+            });
+
+          const avgResponseTime =
+            responseTimes.length > 0
+              ? responseTimes.reduce((sum, time) => sum + time, 0) /
+                responseTimes.length
+              : 0;
+
+          // Extract team and role from custom fields
+          const teamField = user.custom_fields?.find(
+            (f: any) => f.name === "Team"
+          );
+          const roleField = user.custom_fields?.find(
+            (f: any) => f.name === "Role"
+          );
 
           return {
             id: user.id,
@@ -182,9 +220,9 @@ export const MemberPerformance = () => {
             resolutionTimes,
             lastActivity,
             efficiency,
-            responseTime,
-            team: teams[Math.floor(Math.random() * teams.length)], // Mock data
-            role: roles[Math.floor(Math.random() * roles.length)], // Mock data
+            responseTime: avgResponseTime,
+            team: teamField?.value || "Unassigned",
+            role: roleField?.value || "Unassigned",
           };
         });
 
@@ -229,7 +267,7 @@ export const MemberPerformance = () => {
 
     // Apply time range filter
     const now = new Date();
-    let startDate: Date | null = null; // Initialize with null
+    let startDate: Date | null = null;
 
     switch (filters.timeRange) {
       case "day":
@@ -394,6 +432,51 @@ export const MemberPerformance = () => {
     document.body.removeChild(link);
   };
 
+  // Get top 5 unique performers based on selected metric
+  const getTop5Performers = () => {
+    const metrics = [
+      { key: "resolvedIssues", label: "Most Issues Resolved" },
+      { key: "efficiency", label: "Highest Efficiency", suffix: "%" },
+      {
+        key: "responseTime",
+        label: "Fastest Response Time",
+        suffix: "h",
+        reverse: true,
+      },
+      {
+        key: "avgResolutionTime",
+        label: "Fastest Resolution Time",
+        suffix: " days",
+        reverse: true,
+      },
+    ];
+
+    const selectedMetric =
+      metrics.find((m) => m.key === filters.metric) || metrics[0];
+
+    // Get sorted members based on the selected metric
+    const sorted = [...filteredPerformance].sort((a, b) => {
+      const aValue = a[
+        selectedMetric.key as keyof PerformanceMetrics
+      ] as number;
+      const bValue = b[
+        selectedMetric.key as keyof PerformanceMetrics
+      ] as number;
+
+      // Handle reverse sorting for time-based metrics (lower is better)
+      return selectedMetric.reverse ? aValue - bValue : bValue - aValue;
+    });
+
+    // Take top 5 unique members
+    return sorted.slice(0, 5).map((member, index) => ({
+      rank: index + 1,
+      member,
+      metric: selectedMetric.label,
+      value: member[selectedMetric.key as keyof PerformanceMetrics] as number,
+      suffix: selectedMetric.suffix || "",
+    }));
+  };
+
   if (!isConnected) {
     return (
       <div className="flex flex-col items-center justify-center h-full">
@@ -433,6 +516,88 @@ export const MemberPerformance = () => {
             Export CSV
           </button>
         </div>
+      </div>
+
+      {/* Top Performers Section */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+          <h2 className="text-lg font-semibold flex items-center">
+            <Trophy size={20} className="text-yellow-500 mr-2" />
+            Top 5 Performers
+          </h2>
+
+          <select
+            value={filters.metric}
+            onChange={(e) =>
+              setFilters((prev) => ({ ...prev, metric: e.target.value }))
+            }
+            className="border border-gray-300 rounded-md text-sm text-gray-700 py-2 pl-3 pr-8 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+          >
+            <option value="resolvedIssues">By Issues Resolved</option>
+            <option value="efficiency">By Efficiency</option>
+            <option value="responseTime">By Response Time</option>
+            <option value="avgResolutionTime">By Resolution Time</option>
+          </select>
+        </div>
+
+        {filteredPerformance.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-gray-500">
+              No performance data available for the selected time period.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            {getTop5Performers().map((performer) => (
+              <div
+                key={performer.member.id}
+                className="bg-white rounded-lg border border-gray-200 shadow-sm p-4"
+              >
+                <div className="flex items-center mb-3">
+                  <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center mr-3">
+                    <span className="font-medium text-indigo-800">
+                      #{performer.rank}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">
+                      {performer.member.name}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {performer.member.role}
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Value:</span>
+                    <span className="font-medium">
+                      {performer.value.toFixed(1)}
+                      {performer.suffix}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Team:</span>
+                    <span className="font-medium">{performer.member.team}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Issues:</span>
+                    <span className="font-medium">
+                      {performer.member.resolvedIssues}/
+                      {performer.member.assignedIssues}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Updates:</span>
+                    <span className="font-medium">
+                      {performer.member.totalUpdates}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Filters */}
@@ -509,7 +674,7 @@ export const MemberPerformance = () => {
                   className="block w-full border border-gray-300 rounded-md text-sm text-gray-700 py-2 pl-3 pr-8 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
                 >
                   <option value="all">All Teams</option>
-                  {teams.map((team) => (
+                  {getUniqueTeamsAndRoles(users).teams.map((team) => (
                     <option key={team} value={team}>
                       {team}
                     </option>
@@ -529,7 +694,7 @@ export const MemberPerformance = () => {
                   className="block w-full border border-gray-300 rounded-md text-sm text-gray-700 py-2 pl-3 pr-8 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
                 >
                   <option value="all">All Roles</option>
-                  {roles.map((role) => (
+                  {getUniqueTeamsAndRoles(users).roles.map((role) => (
                     <option key={role} value={role}>
                       {role}
                     </option>
