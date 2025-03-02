@@ -11,7 +11,6 @@ import {
   ChevronUp
 } from 'lucide-react';
 import { DeleteIssueConfirmModal } from './modals/DeleteIssueConfirmModal';
-import { Link } from 'react-router-dom';
 
 interface IssueListProps {
   issues: any[];
@@ -39,6 +38,7 @@ interface IssueListProps {
   getUniqueAssignees: () => any[];
   resetFilters: () => void;
   handleFilterChange: () => void;
+  onViewIssue: (id: number) => void;
 }
 
 export const IssueList: React.FC<IssueListProps> = ({ 
@@ -66,7 +66,8 @@ export const IssueList: React.FC<IssueListProps> = ({
   priorities,
   getUniqueAssignees,
   resetFilters,
-  handleFilterChange
+  handleFilterChange,
+  onViewIssue
 }) => {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [sortConfig, setSortConfig] = useState<SortConfig[]>([]);
@@ -406,7 +407,7 @@ export const IssueList: React.FC<IssueListProps> = ({
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
-                  <tr>
+                  <tr className="divide-x divide-gray-200">
                     {/* Fixed ID Column */}
                     <th scope="col" className="sticky left-0 z-20 bg-gray-50 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('id')}>
                       <div className="flex items-center justify-between">
@@ -465,7 +466,7 @@ export const IssueList: React.FC<IssueListProps> = ({
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {sortedIssues.map((issue) => (
-                    <tr key={issue.id} className="hover:bg-gray-50">
+                    <tr key={issue.id} className="divide-x divide-gray-200 hover:bg-gray-50">
                       {/* Fixed ID Column */}
                       <td className="sticky left-0 z-10 bg-white hover:bg-gray-50 px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         #{issue.id}
@@ -473,10 +474,12 @@ export const IssueList: React.FC<IssueListProps> = ({
                       
                       {/* Fixed Subject Column */}
                       <td className="sticky left-[100px] z-10 bg-white hover:bg-gray-50 px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900 max-w-md truncate">
-                          <Link to={`/issues/${issue.id}`} className="hover:text-indigo-600">
-                            {issue.subject}
-                          </Link>
+                        <div 
+                          className="text-sm font-medium text-gray-900 max-w-md truncate cursor-pointer hover:text-indigo-600"
+                          title={issue.subject}
+                          onClick={() => onViewIssue(issue.id)}
+                        >
+                          {issue.subject}
                         </div>
                       </td>
                       
@@ -506,13 +509,13 @@ export const IssueList: React.FC<IssueListProps> = ({
                       {/* Fixed Actions Column */}
                       <td className="sticky right-0 z-10 bg-white hover:bg-gray-50 px-6 py-4 whitespace-nowrap text-sm font-medium text-right">
                         <div className="flex justify-end space-x-3">
-                          <Link
-                            to={`/issues/${issue.id}`}
+                          <button
+                            onClick={() => onViewIssue(issue.id)}
                             className="text-indigo-600 hover:text-indigo-900"
                             title="View Issue"
                           >
                             <Eye size={16} />
-                          </Link>
+                          </button>
                           <button
                             onClick={() => handleEditIssue(issue)}
                             className="text-indigo-600 hover:text-indigo-900"

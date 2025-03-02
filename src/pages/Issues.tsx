@@ -7,6 +7,7 @@ import { IssueList } from '../components/issue/IssueList';
 import { EditIssueModal } from '../components/project/modals/EditIssueModal';
 import { CreateIssueModal } from '../components/project/modals/CreateIssueModal';
 import { BulkCreateIssueModal } from '../components/issue/modals/BulkCreateIssueModal';
+import { IssueDetailsModal } from '../components/issue/modals/IssueDetailsModal';
 
 export const Issues = () => {
   const { 
@@ -37,6 +38,9 @@ export const Issues = () => {
   const [filteredIssues, setFilteredIssues] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   
+  // State for viewing issue details
+  const [viewingIssueId, setViewingIssueId] = useState<number | null>(null);
+
   // State for selected issue (for editing)
   const [selectedIssue, setSelectedIssue] = useState<any>(null);
   
@@ -490,6 +494,7 @@ export const Issues = () => {
         getUniqueAssignees={getUniqueAssignees}
         resetFilters={resetFilters}
         handleFilterChange={handleFilterChange}
+        onViewIssue={setViewingIssueId}
       />
 
       {/* Create Issue Modal */}
@@ -515,6 +520,14 @@ export const Issues = () => {
           statuses={issueStatuses}
           priorities={priorities}
           projects={projects}
+        />
+      )}
+
+      {/* Issue Details Modal */}
+      {viewingIssueId && (
+        <IssueDetailsModal
+          issueId={viewingIssueId}
+          onClose={() => setViewingIssueId(null)}
         />
       )}
 
