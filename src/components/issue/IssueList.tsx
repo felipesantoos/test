@@ -5,18 +5,13 @@ import {
   Filter, 
   Edit, 
   Trash2, 
-  ChevronUp, 
-  ChevronDown, 
   X, 
   ArrowUpDown, 
-  Eye 
+  Eye, 
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
-
-// Interface for sort configuration
-interface SortConfig {
-  key: string;
-  direction: 'asc' | 'desc';
-}
+import { DeleteIssueConfirmModal } from './modals/DeleteIssueConfirmModal';
 
 interface IssueListProps {
   issues: any[];
@@ -75,6 +70,8 @@ export const IssueList: React.FC<IssueListProps> = ({
 }) => {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [sortConfig, setSortConfig] = useState<SortConfig[]>([]);
+  const [issueToDelete, setIssueToDelete] = useState<any | null>(null);
+  const [loadingDelete, setLoadingDelete] = useState(false);
 
   // Handle column sorting
   const handleSort = (columnId: string) => {
@@ -101,6 +98,19 @@ export const IssueList: React.FC<IssueListProps> = ({
     }
     
     setSortConfig(newSortConfig);
+  };
+
+  // Handle issue deletion
+  const handleDelete = async () => {
+    if (!issueToDelete) return;
+    
+    setLoadingDelete(true);
+    try {
+      await handleDeleteIssue(issueToDelete.id);
+      setIssueToDelete(null);
+    } finally {
+      setLoadingDelete(false);
+    }
   };
 
   // Get the current sort direction for a column
@@ -524,7 +534,7 @@ export const IssueList: React.FC<IssueListProps> = ({
                           <Edit size={16} />
                         </button>
                         <button
-                          onClick={() => handleDeleteIssue(issue.id)}
+                          onClick={() => setIssueToDelete(issue)}
                           className="text-red-600 hover:text-red-900"
                           title="Delete Issue"
                         >
@@ -539,6 +549,22 @@ export const IssueList: React.FC<IssueListProps> = ({
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      {issueToDelete && (
+        <DeleteIssueConfirmModal
+          issue={issueToDelete}
+          onDelete={handleDelete}
+          onClose={() => setIssueToDelete(null)}
+          isLoading={loadingDelete}
+        />
+      )}
     </div>
   );
 };
+
+// Interface for sort configuration
+interface SortConfig {
+  key: string;
+  direction: 'asc' | 'desc';
+}
