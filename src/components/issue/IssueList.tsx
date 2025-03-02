@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { DeleteIssueConfirmModal } from "./modals/DeleteIssueConfirmModal";
 import { Link } from "react-router-dom";
+import "./styles.css";
 
 interface IssueListProps {
   issues: any[];
@@ -616,7 +617,7 @@ export const IssueList: React.FC<IssueListProps> = ({
 
                       {/* Fixed Subject Column */}
                       <td
-                        className="sticky left-[100px] z-20 bg-white px-6 py-4 whitespace-nowrap border-r border-gray-200"
+                        className="sticky left-[100px] z-20 bg-white px-6 py-4 border-r border-gray-200"
                         style={{
                           width: "400px", // Match the width of the header
                           minWidth: "400px", // Match the min-width of the header
@@ -625,7 +626,7 @@ export const IssueList: React.FC<IssueListProps> = ({
                         }}
                       >
                         <div
-                          className="text-sm font-medium text-gray-900 max-w-full truncate cursor-pointer hover:text-indigo-600"
+                          className="text-sm font-medium text-gray-900 cursor-pointer hover:text-indigo-600 multiline-truncate"
                           title={issue.subject}
                           onClick={() => onViewIssue(issue.id)}
                         >

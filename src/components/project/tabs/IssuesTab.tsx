@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Plus, Upload } from 'lucide-react';
 import { IssueList } from '../../issue/IssueList';
 import { BulkCreateIssueModal } from '../../issue/modals/BulkCreateIssueModal';
+import { IssueDetailsModal } from '../../issue/modals/IssueDetailsModal';
 
 interface IssuesTabProps {
   projectId: number;
@@ -180,6 +181,14 @@ export const IssuesTab = ({
           trackers={trackers}
           statuses={statuses}
           priorities={priorities}
+        />
+      )}
+
+      {/* Issue Details Modal */}
+      {viewingIssueId && (
+        <IssueDetailsModal
+          issueId={viewingIssueId}
+          onClose={() => setViewingIssueId(null)}
         />
       )}
     </div>
