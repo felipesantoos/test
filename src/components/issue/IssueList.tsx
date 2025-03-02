@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { 
   Search, 
   Filter, 
@@ -12,6 +11,7 @@ import {
   ChevronUp
 } from 'lucide-react';
 import { DeleteIssueConfirmModal } from './modals/DeleteIssueConfirmModal';
+import { Link } from 'react-router-dom';
 
 interface IssueListProps {
   issues: any[];
@@ -41,7 +41,7 @@ interface IssueListProps {
   handleFilterChange: () => void;
 }
 
-export const IssueList: React.FC<IssueListProps> = ({
+export const IssueList: React.FC<IssueListProps> = ({ 
   issues,
   loading,
   getStatusColorClass,
@@ -402,150 +402,138 @@ export const IssueList: React.FC<IssueListProps> = ({
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th 
-                    scope="col" 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                    onClick={() => handleSort('id')}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span>ID</span>
-                      <span className="text-gray-400">{getSortIndicator('id')}</span>
-                    </div>
-                  </th>
-                  <th 
-                    scope="col" 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                    onClick={() => handleSort('subject')}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span>Subject</span>
-                      <span className="text-gray-400">{getSortIndicator('subject')}</span>
-                    </div>
-                  </th>
-                  {projectFilter !== undefined && (
-                    <th 
-                      scope="col" 
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                      onClick={() => handleSort('project')}
-                    >
+          <div className="relative">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    {/* Fixed ID Column */}
+                    <th scope="col" className="sticky left-0 z-20 bg-gray-50 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('id')}>
                       <div className="flex items-center justify-between">
-                        <span>Project</span>
-                        <span className="text-gray-400">{getSortIndicator('project')}</span>
+                        <span>ID</span>
+                        <span className="text-gray-400">{getSortIndicator('id')}</span>
                       </div>
                     </th>
-                  )}
-                  <th 
-                    scope="col" 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                    onClick={() => handleSort('status')}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span>Status</span>
-                      <span className="text-gray-400">{getSortIndicator('status')}</span>
-                    </div>
-                  </th>
-                  <th 
-                    scope="col" 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                    onClick={() => handleSort('priority')}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span>Priority</span>
-                      <span className="text-gray-400">{getSortIndicator('priority')}</span>
-                    </div>
-                  </th>
-                  <th 
-                    scope="col" 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                    onClick={() => handleSort('assignedTo')}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span>Assigned To</span>
-                      <span className="text-gray-400">{getSortIndicator('assignedTo')}</span>
-                    </div>
-                  </th>
-                  <th 
-                    scope="col" 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                    onClick={() => handleSort('updated')}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span>Updated</span>
-                      <span className="text-gray-400">{getSortIndicator('updated')}</span>
-                    </div>
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {sortedIssues.map((issue) => (
-                  <tr key={issue.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      #{issue.id}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        <Link to={`/issues/${issue.id}`} className="hover:text-indigo-600">
-                          {issue.subject}
-                        </Link>
+                    
+                    {/* Fixed Subject Column */}
+                    <th scope="col" className="sticky left-[100px] z-20 bg-gray-50 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('subject')}>
+                      <div className="flex items-center justify-between">
+                        <span>Subject</span>
+                        <span className="text-gray-400">{getSortIndicator('subject')}</span>
                       </div>
-                    </td>
+                    </th>
+                    
+                    {/* Scrollable Columns */}
                     {projectFilter !== undefined && (
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{issue.project.name}</div>
-                      </td>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('project')}>
+                        <div className="flex items-center justify-between">
+                          <span>Project</span>
+                          <span className="text-gray-400">{getSortIndicator('project')}</span>
+                        </div>
+                      </th>
                     )}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColorClass(issue.status.name)}`}>
-                        {issue.status.name}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getPriorityColorClass(issue.priority.name)}`}>
-                        {issue.priority.name}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {issue.assigned_to ? issue.assigned_to.name : '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDate(issue.updated_on)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex justify-end space-x-3">
-                        <Link
-                          to={`/issues/${issue.id}`}
-                          className="text-indigo-600 hover:text-indigo-900"
-                          title="View Issue"
-                        >
-                          <Eye size={16} />
-                        </Link>
-                        <button
-                          onClick={() => handleEditIssue(issue)}
-                          className="text-indigo-600 hover:text-indigo-900"
-                          title="Edit Issue"
-                        >
-                          <Edit size={16} />
-                        </button>
-                        <button
-                          onClick={() => setIssueToDelete(issue)}
-                          className="text-red-600 hover:text-red-900"
-                          title="Delete Issue"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('status')}>
+                      <div className="flex items-center justify-between">
+                        <span>Status</span>
+                        <span className="text-gray-400">{getSortIndicator('status')}</span>
                       </div>
-                    </td>
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('priority')}>
+                      <div className="flex items-center justify-between">
+                        <span>Priority</span>
+                        <span className="text-gray-400">{getSortIndicator('priority')}</span>
+                      </div>
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('assignedTo')}>
+                      <div className="flex items-center justify-between">
+                        <span>Assigned To</span>
+                        <span className="text-gray-400">{getSortIndicator('assignedTo')}</span>
+                      </div>
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('updated')}>
+                      <div className="flex items-center justify-between">
+                        <span>Updated</span>
+                        <span className="text-gray-400">{getSortIndicator('updated')}</span>
+                      </div>
+                    </th>
+                    
+                    {/* Fixed Actions Column */}
+                    <th scope="col" className="sticky right-0 z-20 bg-gray-50 px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {sortedIssues.map((issue) => (
+                    <tr key={issue.id} className="hover:bg-gray-50">
+                      {/* Fixed ID Column */}
+                      <td className="sticky left-0 z-10 bg-white hover:bg-gray-50 px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        #{issue.id}
+                      </td>
+                      
+                      {/* Fixed Subject Column */}
+                      <td className="sticky left-[100px] z-10 bg-white hover:bg-gray-50 px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900 max-w-md truncate">
+                          <Link to={`/issues/${issue.id}`} className="hover:text-indigo-600">
+                            {issue.subject}
+                          </Link>
+                        </div>
+                      </td>
+                      
+                      {/* Scrollable Columns */}
+                      {projectFilter !== undefined && (
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">{issue.project.name}</div>
+                        </td>
+                      )}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColorClass(issue.status.name)}`}>
+                          {issue.status.name}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getPriorityColorClass(issue.priority.name)}`}>
+                          {issue.priority.name}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {issue.assigned_to ? issue.assigned_to.name : '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {formatDate(issue.updated_on)}
+                      </td>
+                      
+                      {/* Fixed Actions Column */}
+                      <td className="sticky right-0 z-10 bg-white hover:bg-gray-50 px-6 py-4 whitespace-nowrap text-sm font-medium text-right">
+                        <div className="flex justify-end space-x-3">
+                          <Link
+                            to={`/issues/${issue.id}`}
+                            className="text-indigo-600 hover:text-indigo-900"
+                            title="View Issue"
+                          >
+                            <Eye size={16} />
+                          </Link>
+                          <button
+                            onClick={() => handleEditIssue(issue)}
+                            className="text-indigo-600 hover:text-indigo-900"
+                            title="Edit Issue"
+                          >
+                            <Edit size={16} />
+                          </button>
+                          <button
+                            onClick={() => setIssueToDelete(issue)}
+                            className="text-red-600 hover:text-red-900"
+                            title="Delete Issue"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
