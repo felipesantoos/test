@@ -1,16 +1,17 @@
-import React, { useState } from 'react';
-import { 
-  Search, 
-  Filter, 
-  Edit, 
-  Trash2, 
-  X, 
-  ArrowUpDown, 
-  Eye, 
+import React, { useState } from "react";
+import {
+  Search,
+  Filter,
+  Edit,
+  Trash2,
+  X,
+  ArrowUpDown,
+  Eye,
   ChevronDown,
-  ChevronUp
-} from 'lucide-react';
-import { DeleteIssueConfirmModal } from './modals/DeleteIssueConfirmModal';
+  ChevronUp,
+} from "lucide-react";
+import { DeleteIssueConfirmModal } from "./modals/DeleteIssueConfirmModal";
+import { Link } from "react-router-dom";
 
 interface IssueListProps {
   issues: any[];
@@ -41,7 +42,7 @@ interface IssueListProps {
   onViewIssue: (id: number) => void;
 }
 
-export const IssueList: React.FC<IssueListProps> = ({ 
+export const IssueList: React.FC<IssueListProps> = ({
   issues,
   loading,
   getStatusColorClass,
@@ -67,7 +68,7 @@ export const IssueList: React.FC<IssueListProps> = ({
   getUniqueAssignees,
   resetFilters,
   handleFilterChange,
-  onViewIssue
+  onViewIssue,
 }) => {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [sortConfig, setSortConfig] = useState<SortConfig[]>([]);
@@ -77,34 +78,36 @@ export const IssueList: React.FC<IssueListProps> = ({
   // Handle column sorting
   const handleSort = (columnId: string) => {
     // Find the column in the current sort config
-    const currentSortIndex = sortConfig.findIndex(sort => sort.key === columnId);
-    
+    const currentSortIndex = sortConfig.findIndex(
+      (sort) => sort.key === columnId
+    );
+
     // Create a new sort config array
     let newSortConfig = [...sortConfig];
-    
+
     if (currentSortIndex >= 0) {
       // Column is already in sort config
       const currentSort = sortConfig[currentSortIndex];
-      
-      if (currentSort.direction === 'asc') {
+
+      if (currentSort.direction === "asc") {
         // Change direction to desc
-        newSortConfig[currentSortIndex] = { key: columnId, direction: 'desc' };
+        newSortConfig[currentSortIndex] = { key: columnId, direction: "desc" };
       } else {
         // Remove this sort criteria
         newSortConfig.splice(currentSortIndex, 1);
       }
     } else {
       // Add new sort criteria
-      newSortConfig.push({ key: columnId, direction: 'asc' });
+      newSortConfig.push({ key: columnId, direction: "asc" });
     }
-    
+
     setSortConfig(newSortConfig);
   };
 
   // Handle issue deletion
   const handleDelete = async () => {
     if (!issueToDelete) return;
-    
+
     setLoadingDelete(true);
     try {
       await handleDeleteIssue(issueToDelete.id);
@@ -115,32 +118,36 @@ export const IssueList: React.FC<IssueListProps> = ({
   };
 
   // Get the current sort direction for a column
-  const getSortDirection = (columnId: string): 'asc' | 'desc' | null => {
-    const sort = sortConfig.find(s => s.key === columnId);
+  const getSortDirection = (columnId: string): "asc" | "desc" | null => {
+    const sort = sortConfig.find((s) => s.key === columnId);
     return sort ? sort.direction : null;
   };
 
   // Get sort indicator for column header
   const getSortIndicator = (columnId: string) => {
     const direction = getSortDirection(columnId);
-    const sortIndex = sortConfig.findIndex(s => s.key === columnId);
-    
-    if (direction === 'asc') {
+    const sortIndex = sortConfig.findIndex((s) => s.key === columnId);
+
+    if (direction === "asc") {
       return (
         <div className="flex items-center">
           <ChevronUp size={14} />
-          {sortIndex > 0 && <span className="text-xs ml-1">{sortIndex + 1}</span>}
+          {sortIndex > 0 && (
+            <span className="text-xs ml-1">{sortIndex + 1}</span>
+          )}
         </div>
       );
-    } else if (direction === 'desc') {
+    } else if (direction === "desc") {
       return (
         <div className="flex items-center">
           <ChevronDown size={14} />
-          {sortIndex > 0 && <span className="text-xs ml-1">{sortIndex + 1}</span>}
+          {sortIndex > 0 && (
+            <span className="text-xs ml-1">{sortIndex + 1}</span>
+          )}
         </div>
       );
     }
-    
+
     return null;
   };
 
@@ -150,34 +157,34 @@ export const IssueList: React.FC<IssueListProps> = ({
     if (sortConfig.length > 0) {
       for (const sort of sortConfig) {
         let aValue, bValue;
-        
+
         // Extract values based on sort key
         switch (sort.key) {
-          case 'id':
+          case "id":
             aValue = a.id;
             bValue = b.id;
             break;
-          case 'subject':
+          case "subject":
             aValue = a.subject;
             bValue = b.subject;
             break;
-          case 'project':
+          case "project":
             aValue = a.project?.name;
             bValue = b.project?.name;
             break;
-          case 'status':
+          case "status":
             aValue = a.status.name;
             bValue = b.status.name;
             break;
-          case 'priority':
-            aValue = a.priority.id; // Sort by priority ID for correct ordering
+          case "priority":
+            aValue = a.priority.id;
             bValue = b.priority.id;
             break;
-          case 'assignedTo':
-            aValue = a.assigned_to ? a.assigned_to.name : '';
-            bValue = b.assigned_to ? b.assigned_to.name : '';
+          case "assignedTo":
+            aValue = a.assigned_to ? a.assigned_to.name : "";
+            bValue = b.assigned_to ? b.assigned_to.name : "";
             break;
-          case 'updated':
+          case "updated":
             aValue = new Date(a.updated_on).getTime();
             bValue = new Date(b.updated_on).getTime();
             break;
@@ -185,17 +192,17 @@ export const IssueList: React.FC<IssueListProps> = ({
             aValue = a[sort.key];
             bValue = b[sort.key];
         }
-        
+
         // Compare values
         if (aValue < bValue) {
-          return sort.direction === 'asc' ? -1 : 1;
+          return sort.direction === "asc" ? -1 : 1;
         }
         if (aValue > bValue) {
-          return sort.direction === 'asc' ? 1 : -1;
+          return sort.direction === "asc" ? 1 : -1;
         }
       }
     }
-    
+
     // Default sort by ID if no sort config
     return a.id - b.id;
   });
@@ -224,37 +231,41 @@ export const IssueList: React.FC<IssueListProps> = ({
               className="border border-gray-300 rounded-md text-sm text-gray-700 py-2 pl-3 pr-8 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
             >
               <option value="all">All Statuses</option>
-              {issueStatuses.map(status => (
+              {issueStatuses.map((status) => (
                 <option key={status.id} value={status.name.toLowerCase()}>
                   {status.name}
                 </option>
               ))}
             </select>
-            
-            {projectFilter !== undefined && setProjectFilter !== undefined && projects && (
-              <select
-                value={projectFilter}
-                onChange={(e) => setProjectFilter(e.target.value)}
-                className="border border-gray-300 rounded-md text-sm text-gray-700 py-2 pl-3 pr-8 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-              >
-                <option value="all">All Projects</option>
-                {projects.map(project => (
-                  <option key={project.id} value={project.id}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
-            )}
-            
-            <button 
+
+            {projectFilter !== undefined &&
+              setProjectFilter !== undefined &&
+              projects && (
+                <select
+                  value={projectFilter}
+                  onChange={(e) => setProjectFilter(e.target.value)}
+                  className="border border-gray-300 rounded-md text-sm text-gray-700 py-2 pl-3 pr-8 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                  <option value="all">All Projects</option>
+                  {projects.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+
+            <button
               className="flex items-center space-x-1 px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50"
               onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
             >
               <Filter size={16} />
-              <span>{showAdvancedFilters ? 'Hide Filters' : 'More Filters'}</span>
+              <span>
+                {showAdvancedFilters ? "Hide Filters" : "More Filters"}
+              </span>
             </button>
-            
-            <button 
+
+            <button
               className="flex items-center space-x-1 px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50"
               onClick={handleFilterChange}
             >
@@ -263,13 +274,16 @@ export const IssueList: React.FC<IssueListProps> = ({
             </button>
           </div>
         </div>
-        
+
         {/* Advanced Filters */}
         {showAdvancedFilters && (
           <div className="mt-4 pt-4 border-t border-gray-200">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label htmlFor="priorityFilter" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="priorityFilter"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Priority
                 </label>
                 <select
@@ -279,16 +293,19 @@ export const IssueList: React.FC<IssueListProps> = ({
                   className="block w-full border border-gray-300 rounded-md text-sm text-gray-700 py-2 pl-3 pr-8 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
                 >
                   <option value="all">All Priorities</option>
-                  {priorities.map(priority => (
+                  {priorities.map((priority) => (
                     <option key={priority.id} value={priority.id}>
                       {priority.name}
                     </option>
                   ))}
                 </select>
               </div>
-              
+
               <div>
-                <label htmlFor="assigneeFilter" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="assigneeFilter"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Assigned To
                 </label>
                 <select
@@ -299,16 +316,19 @@ export const IssueList: React.FC<IssueListProps> = ({
                 >
                   <option value="all">All Assignees</option>
                   <option value="unassigned">Unassigned</option>
-                  {getUniqueAssignees().map(assignee => (
+                  {getUniqueAssignees().map((assignee) => (
                     <option key={assignee.id} value={assignee.id}>
                       {assignee.name}
                     </option>
                   ))}
                 </select>
               </div>
-              
+
               <div>
-                <label htmlFor="dateFilter" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="dateFilter"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Updated
                 </label>
                 <select
@@ -324,61 +344,108 @@ export const IssueList: React.FC<IssueListProps> = ({
                 </select>
               </div>
             </div>
-            
+
             {/* Active Filters */}
-            {(statusFilter !== 'all' || projectFilter !== 'all' || priorityFilter !== 'all' || 
-              assigneeFilter !== 'all' || dateFilter !== 'all' || sortConfig.length > 0) && (
+            {(statusFilter !== "all" ||
+              projectFilter !== "all" ||
+              priorityFilter !== "all" ||
+              assigneeFilter !== "all" ||
+              dateFilter !== "all" ||
+              sortConfig.length > 0) && (
               <div className="mt-4 flex flex-wrap gap-2">
-                <span className="text-sm font-medium text-gray-700">Active filters:</span>
-                
-                {statusFilter !== 'all' && (
+                <span className="text-sm font-medium text-gray-700">
+                  Active filters:
+                </span>
+
+                {statusFilter !== "all" && (
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                     Status: {statusFilter}
-                    <X size={14} className="ml-1 cursor-pointer" onClick={() => setStatusFilter('all')} />
+                    <X
+                      size={14}
+                      className="ml-1 cursor-pointer"
+                      onClick={() => setStatusFilter("all")}
+                    />
                   </span>
                 )}
-                
-                {projectFilter !== 'all' && projects && (
+
+                {projectFilter !== "all" && projects && (
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    Project: {projects.find(p => p.id.toString() === projectFilter)?.name || projectFilter}
-                    <X size={14} className="ml-1 cursor-pointer" onClick={() => setProjectFilter && setProjectFilter('all')} />
+                    Project:{" "}
+                    {projects.find((p) => p.id.toString() === projectFilter)
+                      ?.name || projectFilter}
+                    <X
+                      size={14}
+                      className="ml-1 cursor-pointer"
+                      onClick={() =>
+                        setProjectFilter && setProjectFilter("all")
+                      }
+                    />
                   </span>
                 )}
-                
-                {priorityFilter !== 'all' && (
+
+                {priorityFilter !== "all" && (
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                    Priority: {priorities.find(p => p.id.toString() === priorityFilter)?.name || priorityFilter}
-                    <X size={14} className="ml-1 cursor-pointer" onClick={() => setPriorityFilter('all')} />
+                    Priority:{" "}
+                    {priorities.find((p) => p.id.toString() === priorityFilter)
+                      ?.name || priorityFilter}
+                    <X
+                      size={14}
+                      className="ml-1 cursor-pointer"
+                      onClick={() => setPriorityFilter("all")}
+                    />
                   </span>
                 )}
-                
-                {assigneeFilter !== 'all' && (
+
+                {assigneeFilter !== "all" && (
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                    Assignee: {assigneeFilter === 'unassigned' ? 'Unassigned' : 
-                      getUniqueAssignees().find(a => a.id.toString() === assigneeFilter)?.name || assigneeFilter}
-                    <X size={14} className="ml-1 cursor-pointer" onClick={() => setAssigneeFilter('all')} />
+                    Assignee:{" "}
+                    {assigneeFilter === "unassigned"
+                      ? "Unassigned"
+                      : getUniqueAssignees().find(
+                          (a) => a.id.toString() === assigneeFilter
+                        )?.name || assigneeFilter}
+                    <X
+                      size={14}
+                      className="ml-1 cursor-pointer"
+                      onClick={() => setAssigneeFilter("all")}
+                    />
                   </span>
                 )}
-                
-                {dateFilter !== 'all' && (
+
+                {dateFilter !== "all" && (
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                    Updated: {dateFilter === 'today' ? 'Last 24 Hours' : 
-                      dateFilter === 'week' ? 'Last 7 Days' : 'Last 30 Days'}
-                    <X size={14} className="ml-1 cursor-pointer" onClick={() => setDateFilter('all')} />
+                    Updated:{" "}
+                    {dateFilter === "today"
+                      ? "Last 24 Hours"
+                      : dateFilter === "week"
+                      ? "Last 7 Days"
+                      : "Last 30 Days"}
+                    <X
+                      size={14}
+                      className="ml-1 cursor-pointer"
+                      onClick={() => setDateFilter("all")}
+                    />
                   </span>
                 )}
-                
+
                 {sortConfig.length > 0 && (
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                    Sorted by: {sortConfig.map((sort, index) => {
+                    Sorted by:{" "}
+                    {sortConfig.map((sort, index) => {
                       let fieldName = sort.key;
-                      if (fieldName === 'assignedTo') fieldName = 'Assigned To';
-                      return `${fieldName} (${sort.direction})${index < sortConfig.length - 1 ? ', ' : ''}`;
+                      if (fieldName === "assignedTo") fieldName = "Assigned To";
+                      return `${fieldName} (${sort.direction})${
+                        index < sortConfig.length - 1 ? ", " : ""
+                      }`;
                     })}
-                    <X size={14} className="ml-1 cursor-pointer" onClick={() => setSortConfig([])} />
+                    <X
+                      size={14}
+                      className="ml-1 cursor-pointer"
+                      onClick={() => setSortConfig([])}
+                    />
                   </span>
                 )}
-                
+
                 <button
                   onClick={resetFilters}
                   className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800"
@@ -399,123 +466,238 @@ export const IssueList: React.FC<IssueListProps> = ({
         </div>
       ) : sortedIssues.length === 0 ? (
         <div className="bg-white rounded-lg shadow p-8 text-center">
-          <p className="text-gray-500">No issues found matching your criteria.</p>
+          <p className="text-gray-500">
+            No issues found matching your criteria.
+          </p>
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="relative">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr className="divide-x divide-gray-200">
+                <thead>
+                  <tr>
                     {/* Fixed ID Column */}
-                    <th scope="col" className="sticky left-0 z-20 bg-gray-50 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('id')}>
+                    <th
+                      scope="col"
+                      className="sticky left-0 z-30 bg-gray-50 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer border-r border-gray-200"
+                      style={{
+                        width: "100px",
+                        minWidth: "100px",
+                        boxShadow: "4px 0 6px -2px rgba(0, 0, 0, 0.05)",
+                      }}
+                      onClick={() => handleSort("id")}
+                    >
                       <div className="flex items-center justify-between">
                         <span>ID</span>
-                        <span className="text-gray-400">{getSortIndicator('id')}</span>
+                        <span className="text-gray-400">
+                          {getSortIndicator("id")}
+                        </span>
                       </div>
                     </th>
-                    
+
                     {/* Fixed Subject Column */}
-                    <th scope="col" className="sticky left-[100px] z-20 bg-gray-50 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('subject')}>
+                    <th
+                      scope="col"
+                      className="sticky left-[100px] z-30 bg-gray-50 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer border-r border-gray-200"
+                      style={{
+                        width: "400px", // Set a fixed width
+                        minWidth: "400px", // Ensure it doesn't shrink below this width
+                        maxWidth: "400px", // Add max-width to restrict the column width
+                        boxShadow: "4px 0 6px -2px rgba(0, 0, 0, 0.05)",
+                      }}
+                      onClick={() => handleSort("subject")}
+                    >
                       <div className="flex items-center justify-between">
                         <span>Subject</span>
-                        <span className="text-gray-400">{getSortIndicator('subject')}</span>
+                        <span className="text-gray-400">
+                          {getSortIndicator("subject")}
+                        </span>
                       </div>
                     </th>
-                    
+
                     {/* Scrollable Columns */}
                     {projectFilter !== undefined && (
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('project')}>
+                      <th
+                        scope="col"
+                        className="bg-gray-50 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer border-r border-gray-200"
+                        style={{ minWidth: "200px" }}
+                        onClick={() => handleSort("project")}
+                      >
                         <div className="flex items-center justify-between">
                           <span>Project</span>
-                          <span className="text-gray-400">{getSortIndicator('project')}</span>
+                          <span className="text-gray-400">
+                            {getSortIndicator("project")}
+                          </span>
                         </div>
                       </th>
                     )}
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('status')}>
+                    <th
+                      scope="col"
+                      className="bg-gray-50 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer border-r border-gray-200"
+                      style={{ minWidth: "150px" }}
+                      onClick={() => handleSort("status")}
+                    >
                       <div className="flex items-center justify-between">
                         <span>Status</span>
-                        <span className="text-gray-400">{getSortIndicator('status')}</span>
+                        <span className="text-gray-400">
+                          {getSortIndicator("status")}
+                        </span>
                       </div>
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('priority')}>
+                    <th
+                      scope="col"
+                      className="bg-gray-50 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer border-r border-gray-200"
+                      style={{ minWidth: "150px" }}
+                      onClick={() => handleSort("priority")}
+                    >
                       <div className="flex items-center justify-between">
                         <span>Priority</span>
-                        <span className="text-gray-400">{getSortIndicator('priority')}</span>
+                        <span className="text-gray-400">
+                          {getSortIndicator("priority")}
+                        </span>
                       </div>
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('assignedTo')}>
+                    <th
+                      scope="col"
+                      className="bg-gray-50 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer border-r border-gray-200"
+                      style={{ minWidth: "200px" }}
+                      onClick={() => handleSort("assignedTo")}
+                    >
                       <div className="flex items-center justify-between">
                         <span>Assigned To</span>
-                        <span className="text-gray-400">{getSortIndicator('assignedTo')}</span>
+                        <span className="text-gray-400">
+                          {getSortIndicator("assignedTo")}
+                        </span>
                       </div>
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('updated')}>
+                    <th
+                      scope="col"
+                      className="bg-gray-50 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer border-r border-gray-200"
+                      style={{ minWidth: "150px" }}
+                      onClick={() => handleSort("updated")}
+                    >
                       <div className="flex items-center justify-between">
                         <span>Updated</span>
-                        <span className="text-gray-400">{getSortIndicator('updated')}</span>
+                        <span className="text-gray-400">
+                          {getSortIndicator("updated")}
+                        </span>
                       </div>
                     </th>
-                    
+
                     {/* Fixed Actions Column */}
-                    <th scope="col" className="sticky right-0 z-20 bg-gray-50 px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th
+                      scope="col"
+                      className="sticky right-0 z-30 bg-gray-50 px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200"
+                      style={{
+                        width: "120px",
+                        minWidth: "120px",
+                        boxShadow: "-4px 0 6px -2px rgba(0, 0, 0, 0.05)",
+                      }}
+                    >
                       Actions
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {sortedIssues.map((issue) => (
-                    <tr key={issue.id} className="divide-x divide-gray-200 hover:bg-gray-50">
+                    <tr key={issue.id} className="hover:bg-gray-50">
                       {/* Fixed ID Column */}
-                      <td className="sticky left-0 z-10 bg-white hover:bg-gray-50 px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td
+                        className="sticky left-0 z-20 bg-white px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200"
+                        style={{
+                          width: "100px",
+                          minWidth: "100px",
+                          boxShadow: "4px 0 6px -2px rgba(0, 0, 0, 0.05)",
+                        }}
+                      >
                         #{issue.id}
                       </td>
-                      
+
                       {/* Fixed Subject Column */}
-                      <td className="sticky left-[100px] z-10 bg-white hover:bg-gray-50 px-6 py-4 whitespace-nowrap">
-                        <div 
-                          className="text-sm font-medium text-gray-900 max-w-md truncate cursor-pointer hover:text-indigo-600"
+                      <td
+                        className="sticky left-[100px] z-20 bg-white px-6 py-4 whitespace-nowrap border-r border-gray-200"
+                        style={{
+                          width: "400px", // Match the width of the header
+                          minWidth: "400px", // Match the min-width of the header
+                          maxWidth: "400px", // Add max-width to restrict the column width
+                          boxShadow: "4px 0 6px -2px rgba(0, 0, 0, 0.05)",
+                        }}
+                      >
+                        <div
+                          className="text-sm font-medium text-gray-900 max-w-full truncate cursor-pointer hover:text-indigo-600"
                           title={issue.subject}
                           onClick={() => onViewIssue(issue.id)}
                         >
                           {issue.subject}
                         </div>
                       </td>
-                      
+
                       {/* Scrollable Columns */}
                       {projectFilter !== undefined && (
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{issue.project.name}</div>
+                        <td
+                          className="px-6 py-4 whitespace-nowrap border-r border-gray-200"
+                          style={{ minWidth: "200px" }}
+                        >
+                          <div className="text-sm text-gray-900">
+                            {issue.project.name}
+                          </div>
                         </td>
                       )}
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColorClass(issue.status.name)}`}>
+                      <td
+                        className="px-6 py-4 whitespace-nowrap border-r border-gray-200"
+                        style={{ minWidth: "150px" }}
+                      >
+                        <span
+                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColorClass(
+                            issue.status.name
+                          )}`}
+                        >
                           {issue.status.name}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getPriorityColorClass(issue.priority.name)}`}>
+                      <td
+                        className="px-6 py-4 whitespace-nowrap border-r border-gray-200"
+                        style={{ minWidth: "150px" }}
+                      >
+                        <span
+                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getPriorityColorClass(
+                            issue.priority.name
+                          )}`}
+                        >
                           {issue.priority.name}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {issue.assigned_to ? issue.assigned_to.name : '-'}
+                      <td
+                        className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200"
+                        style={{ minWidth: "200px" }}
+                      >
+                        {issue.assigned_to ? issue.assigned_to.name : "-"}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td
+                        className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200"
+                        style={{ minWidth: "150px" }}
+                      >
                         {formatDate(issue.updated_on)}
                       </td>
-                      
+
                       {/* Fixed Actions Column */}
-                      <td className="sticky right-0 z-10 bg-white hover:bg-gray-50 px-6 py-4 whitespace-nowrap text-sm font-medium text-right">
+                      <td
+                        className="sticky right-0 z-20 bg-white px-6 py-4 whitespace-nowrap text-sm font-medium text-right border-l border-gray-200"
+                        style={{
+                          width: "120px",
+                          minWidth: "120px",
+                          boxShadow: "-4px 0 6px -2px rgba(0, 0, 0, 0.05)",
+                        }}
+                      >
                         <div className="flex justify-end space-x-3">
-                          <button
-                            onClick={() => onViewIssue(issue.id)}
-                            className="text-indigo-600 hover:text-indigo-900"
-                            title="View Issue"
+                          <Link 
+                            to={`/issues/${issue.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-indigo-600 hover:text-indigo-800"
                           >
-                            <Eye size={16} />
-                          </button>
+                            <Eye size={14} />
+                          </Link>
                           <button
                             onClick={() => handleEditIssue(issue)}
                             className="text-indigo-600 hover:text-indigo-900"
@@ -557,5 +739,5 @@ export const IssueList: React.FC<IssueListProps> = ({
 // Interface for sort configuration
 interface SortConfig {
   key: string;
-  direction: 'asc' | 'desc';
+  direction: "asc" | "desc";
 }

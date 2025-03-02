@@ -42,6 +42,9 @@ export const IssuesTab = ({
   const [dateFilter, setDateFilter] = useState('all');
   const [isBulkCreatingIssues, setIsBulkCreatingIssues] = useState(false);
   const [loadingAction, setLoadingAction] = useState(false);
+
+  // State for viewing issue details
+  const [viewingIssueId, setViewingIssueId] = useState<number | null>(null);
   
   // Get unique assignees from issues
   const getUniqueAssignees = () => {
@@ -164,6 +167,7 @@ export const IssuesTab = ({
         getUniqueAssignees={getUniqueAssignees}
         resetFilters={resetFilters}
         handleFilterChange={handleFilterChange}
+        onViewIssue={setViewingIssueId}
       />
 
       {/* Bulk Create Issues Modal */}
