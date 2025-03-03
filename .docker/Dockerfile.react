@@ -1,0 +1,32 @@
+# Build Stage
+FROM node:18 AS builder
+
+WORKDIR /app
+
+# Copy package.json and install production dependencies
+RUN rm -rf node_modules package-lock.json
+COPY package.json package-lock.json ./
+RUN npm install --production
+RUN npm install vite --save-dev
+
+# Copy the entire project and build
+COPY . .
+RUN npm run build
+
+# Serve with Nginx
+FROM nginx:alpine
+
+WORKDIR /usr/share/nginx/html
+
+# Remove default Nginx static files
+RUN rm -rf ./*
+
+# Copy built React files
+COPY --from=builder /app/dist .
+
+# Copy custom Nginx config
+COPY .docker/nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 5173
+
+CMD ["nginx", "-g", "daemon off;"]

@@ -1,0 +1,17 @@
+FROM node:18
+
+WORKDIR /app
+
+# Copy package.json and install dependencies
+COPY package.json package-lock.json ./
+RUN npm install --production
+
+# Copy the rest of the backend source code
+COPY . .
+
+# Set environment variables
+ENV NODE_ENV=production
+
+EXPOSE 3001
+
+CMD ["node", "server/server.js"]
