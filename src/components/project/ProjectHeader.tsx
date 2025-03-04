@@ -10,9 +10,13 @@ interface ProjectHeaderProps {
     closed: number;
   };
   formatDate: (date: string) => string;
+  memberships?: any[]; // Add memberships prop
 }
 
-export const ProjectHeader = ({ project, projectProgress, issueStats, formatDate }: ProjectHeaderProps) => {
+export const ProjectHeader = ({ project, projectProgress, issueStats, formatDate, memberships }: ProjectHeaderProps) => {
+  // Calculate actual member count from memberships
+  const memberCount = memberships?.length || 0;
+
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
@@ -26,7 +30,7 @@ export const ProjectHeader = ({ project, projectProgress, issueStats, formatDate
             </div>
             <div className="flex items-center">
               <Users size={16} className="mr-2" />
-              {project.members_count || 0} members
+              {memberCount} members
             </div>
             <div className="flex items-center">
               <CheckSquare size={16} className="mr-2" />

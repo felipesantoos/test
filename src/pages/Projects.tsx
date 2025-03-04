@@ -14,6 +14,7 @@ export const Projects = () => {
     trackers,
     refreshData, 
     fetchProjects, 
+    fetchProjectMemberships, 
     fetchIssues,
     createProject
   } = useApi();
@@ -92,7 +93,7 @@ export const Projects = () => {
             // Count total and closed/resolved issues
             const totalIssues = projectIssues.length;
             const closedIssues = projectIssues.filter(issue => 
-              issue.status && (issue.status.name.toLowerCase() === 'closed')
+              issue.status && (issue.status.name.toLowerCase() === 'closed' || issue.status.name.toLowerCase() === 'resolved')
             ).length;
             
             // Calculate progress percentage
@@ -100,6 +101,9 @@ export const Projects = () => {
             
             // Determine if project is completed (100% progress)
             const isCompleted = progress === 100 && totalIssues > 0;
+
+            // Get project memberships
+            const projectMembershipData = await fetchProjectMemberships(parseInt(project.id));
             
             return {
               ...project,
@@ -107,7 +111,7 @@ export const Projects = () => {
               open_issues: totalIssues - closedIssues,
               closed_issues: closedIssues,
               progress: progress,
-              members_count: project.members?.length || 0,
+              members_count: projectMembershipData?.length || 0,
               isCompleted: isCompleted
             };
           })

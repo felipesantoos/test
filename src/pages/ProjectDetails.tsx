@@ -25,6 +25,7 @@ export const ProjectDetails = () => {
   const { 
     isConnected, 
     fetchProjectDetails, 
+    fetchProjectMemberships,
     fetchIssues,
     createIssue,
     updateIssue,
@@ -89,6 +90,10 @@ export const ProjectDetails = () => {
           setLoading(false);
           return;
         }
+
+        // Get project memberships
+        const projectMembershipData = await fetchProjectMemberships(parseInt(id));
+        projectData.memberships = projectMembershipData;
         
         setProject(projectData);
         setEditedProject({
@@ -707,7 +712,8 @@ export const ProjectDetails = () => {
         project={project} 
         projectProgress={projectProgress} 
         issueStats={issueStats} 
-        formatDate={formatDate} 
+        formatDate={formatDate}
+        memberships={project.memberships} // Pass memberships from project data
       />
       
       {/* Tabs */}
