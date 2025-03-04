@@ -35,7 +35,8 @@ export const ProjectDetails = () => {
     updateProject,
     issueStatuses,
     priorities,
-    trackers
+    trackers,
+    users
   } = useApi();
 
   // State
@@ -616,6 +617,55 @@ export const ProjectDetails = () => {
     }
   };
 
+  // Handle bulk update
+  const handleBulkUpdate = async (issueIds: number[], updates: any) => {
+    if (!isConnected) return;
+    
+    setLoadingAction(true);
+    
+    try {
+      // Create an array of promises for each issue update
+      const updatePromises = issueIds.map(id => 
+        updateIssue(id, { issue: updates })
+      );
+      
+      // Wait for all updates to complete
+      await Promise.all(updatePromises);
+      
+      // Refresh issues
+      const updatedIssues = await fetchIssues({ projectId: id });
+      setIssues(updatedIssues);
+      
+      // Recalculate project progress and stats
+      const totalIssues = updatedIssues.length;
+      const closedIssues = updatedIssues.filter(issue => 
+        issue.status && (issue.status.name.toLowerCase() === 'closed' || issue.status.name.toLowerCase() === 'rejected')
+      ).length;
+      const openIssues = totalIssues - closedIssues;
+      
+      setIssueStats({
+        total: totalIssues,
+        open: openIssues,
+        closed: closedIssues
+      });
+      
+      // Calculate progress percentage
+      const progress = totalIssues > 0 ? Math.round((closedIssues / totalIssues) * 100) : 0;
+      setProjectProgress(progress);
+      
+      // Process data for charts
+      processChartData(updatedIssues);
+      
+      // Show success message
+      alert('Issues updated successfully');
+    } catch (err) {
+      console.error('Error updating issues:', err);
+      alert('Failed to update some issues. Please try again.');
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
   if (!isConnected) {
     return (
       <div className="flex flex-col items-center justify-center h-full">
@@ -690,7 +740,9 @@ export const ProjectDetails = () => {
             trackers={trackers}
             statuses={issueStatuses}
             priorities={priorities}
+            users={users}
             handleBulkCreateIssues={handleBulkCreateIssues}
+            onBulkUpdate={handleBulkUpdate}
           />
         )}
 

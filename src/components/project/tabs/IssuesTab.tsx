@@ -18,7 +18,9 @@ interface IssuesTabProps {
   trackers: any[];
   statuses: any[];
   priorities: any[];
+  users: any[];
   handleBulkCreateIssues: (issues: any[]) => Promise<{success: any[], failed: any[]}>;
+  onBulkUpdate?: (issueIds: number[], updates: any) => Promise<void>;
 }
 
 export const IssuesTab = ({ 
@@ -34,7 +36,9 @@ export const IssuesTab = ({
   trackers,
   statuses,
   priorities,
-  handleBulkCreateIssues
+  users,
+  handleBulkCreateIssues,
+  onBulkUpdate
 }: IssuesTabProps) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -165,10 +169,12 @@ export const IssuesTab = ({
         setDateFilter={setDateFilter}
         issueStatuses={statuses}
         priorities={priorities}
+        users={users}
         getUniqueAssignees={getUniqueAssignees}
         resetFilters={resetFilters}
         handleFilterChange={handleFilterChange}
         onViewIssue={setViewingIssueId}
+        onBulkUpdate={onBulkUpdate}
       />
 
       {/* Bulk Create Issues Modal */}

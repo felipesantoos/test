@@ -129,9 +129,6 @@ export const IssueList: React.FC<IssueListProps> = ({
 
   // Handle bulk update
   const handleBulkUpdate = async (updates: any) => {
-    console.log(updates);
-    console.log(!onBulkUpdate);
-    console.log(selectedIssues.length);
     if (!onBulkUpdate || selectedIssues.length === 0) return;
     
     setLoadingBulkEdit(true);
@@ -681,13 +678,13 @@ export const IssueList: React.FC<IssueListProps> = ({
                         }}
                       >
                         <div className="flex justify-end space-x-3">
-                          <button
-                            onClick={() => onViewIssue(issue.id)}
-                            className="text-indigo-600 hover:text-indigo-900"
-                            title="View Issue"
+                          <Link 
+                            to={`/issues/${issue.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-indigo-600 hover:text-indigo-800"
                           >
                             <Eye size={16} />
-                          </button>
+                          </Link>
                           <button
                             onClick={() => handleEditIssue(issue)}
                             className="text-indigo-600 hover:text-indigo-900"

@@ -1,32 +1,31 @@
 import React, { useEffect, useState } from 'react';
 import { useApi } from '../context/ApiContext';
-import { AlertCircle, Plus, Upload } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { format } from 'date-fns';
+import { AlertCircle, Plus, Upload } from 'lucide-react';
 import { IssueList } from '../components/issue/IssueList';
-import { EditIssueModal } from '../components/project/modals/EditIssueModal';
-import { CreateIssueModal } from '../components/project/modals/CreateIssueModal';
 import { BulkCreateIssueModal } from '../components/issue/modals/BulkCreateIssueModal';
+import { EditIssueModal } from '../components/project/modals/EditIssueModal';
 import { IssueDetailsModal } from '../components/issue/modals/IssueDetailsModal';
+import { CreateIssueModal } from '../components/project/modals/CreateIssueModal';
 
 export const Issues = () => {
   const { 
     isConnected, 
     isLoading, 
     error, 
-    issues, 
     projects, 
-    priorities,
+    issues, 
+    users,
     issueStatuses,
     trackers,
-    users,
+    priorities,
     refreshData, 
     fetchIssues,
     updateIssue,
     deleteIssue,
     createIssue
   } = useApi();
-  
+
   // State for filters
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -67,74 +66,9 @@ export const Issues = () => {
     }
   }, [isConnected]);
 
-  // Update new issue project when project filter changes
-  useEffect(() => {
-    if (projectFilter !== 'all') {
-      setNewIssue(prev => ({
-        ...prev,
-        project_id: parseInt(projectFilter)
-      }));
-    } else if (projects.length > 0) {
-      setNewIssue(prev => ({
-        ...prev,
-        project_id: projects[0].id
-      }));
-    }
-  }, [projectFilter, projects]);
-
   // Filter issues when filters or issues change
   useEffect(() => {
-    const loadIssues = async () => {
-      if (!isConnected) return;
-      
-      setLoading(true);
-      
-      try {
-        const filters: any = {};
-        
-        if (statusFilter !== 'all') {
-          filters.status = statusFilter;
-        }
-        
-        if (projectFilter !== 'all') {
-          filters.projectId = projectFilter;
-        }
-        
-        if (priorityFilter !== 'all') {
-          filters.priorityId = priorityFilter;
-        }
-        
-        if (assigneeFilter !== 'all') {
-          filters.assignedTo = assigneeFilter;
-        }
-        
-        if (dateFilter === 'today') {
-          filters.updatedOn = '>t-1d';
-        } else if (dateFilter === 'week') {
-          filters.updatedOn = '>t-7d';
-        } else if (dateFilter === 'month') {
-          filters.updatedOn = '>t-30d';
-        }
-        
-        const fetchedIssues = await fetchIssues(filters);
-        
-        // Apply search filter client-side
-        const filtered = searchQuery 
-          ? fetchedIssues.filter(issue => 
-              issue.subject.toLowerCase().includes(searchQuery.toLowerCase())
-            )
-          : fetchedIssues;
-          
-        setFilteredIssues(filtered);
-      } catch (err) {
-        console.error('Error loading issues:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
     if (issues.length > 0) {
-      // Filter existing issues client-side if we already have them
       let filtered = [...issues];
       
       // Apply search filter
@@ -196,73 +130,40 @@ export const Issues = () => {
       
       setFilteredIssues(filtered);
     } else {
-      // Otherwise load from API
-      loadIssues();
+      setFilteredIssues([]);
     }
-  }, [issues, searchQuery, statusFilter, projectFilter, priorityFilter, assigneeFilter, dateFilter, isConnected]);
+  }, [issues, searchQuery, statusFilter, projectFilter, priorityFilter, assigneeFilter, dateFilter]);
 
-  // Apply filters and fetch issues from API
-  const handleFilterChange = async () => {
+  // Handle bulk update
+  const handleBulkUpdate = async (issueIds: number[], updates: any) => {
     if (!isConnected) return;
     
-    setLoading(true);
+    setLoadingAction(true);
     
     try {
-      const filters: any = {};
+      // Create an array of promises for each issue update
+      const updatePromises = issueIds.map(id => 
+        updateIssue(id, { issue: updates })
+      );
       
-      if (statusFilter !== 'all') {
-        filters.status = statusFilter;
-      }
+      // Wait for all updates to complete
+      await Promise.all(updatePromises);
       
-      if (projectFilter !== 'all') {
-        filters.projectId = projectFilter;
-      }
+      // Refresh the issues list
+      await refreshData();
       
-      if (priorityFilter !== 'all') {
-        filters.priorityId = priorityFilter;
-      }
-      
-      if (assigneeFilter !== 'all') {
-        filters.assignedTo = assigneeFilter;
-      }
-      
-      if (dateFilter === 'today') {
-        filters.updatedOn = '>t-1d';
-      } else if (dateFilter === 'week') {
-        filters.updatedOn = '>t-7d';
-      } else if (dateFilter === 'month') {
-        filters.updatedOn = '>t-30d';
-      }
-      
-      const fetchedIssues = await fetchIssues(filters);
-      
-      // Apply search filter client-side
-      const filtered = searchQuery 
-        ? fetchedIssues.filter(issue => 
-            issue.subject.toLowerCase().includes(searchQuery.toLowerCase())
-          )
-        : fetchedIssues;
-        
-      setFilteredIssues(filtered);
+      // Show success message
+      alert('Issues updated successfully');
     } catch (err) {
-      console.error('Error loading issues:', err);
+      console.error('Error updating issues:', err);
+      alert('Failed to update some issues. Please try again.');
     } finally {
-      setLoading(false);
+      setLoadingAction(false);
     }
-  };
-
-  // Reset all filters to default values
-  const resetFilters = () => {
-    setSearchQuery('');
-    setStatusFilter('all');
-    setProjectFilter('all');
-    setPriorityFilter('all');
-    setAssigneeFilter('all');
-    setDateFilter('all');
   };
 
   // Get color class for status badge
-  const getStatusColor = (status: string) => {
+  const getStatusColorClass = (status: string) => {
     switch (status.toLowerCase()) {
       case 'new':
         return 'bg-blue-100 text-blue-800';
@@ -274,13 +175,15 @@ export const Issues = () => {
         return 'bg-purple-100 text-purple-800';
       case 'closed':
         return 'bg-gray-100 text-gray-800';
+      case 'rejected':
+        return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
   };
 
   // Get color class for priority badge
-  const getPriorityColor = (priority: string) => {
+  const getPriorityColorClass = (priority: string) => {
     switch (priority.toLowerCase()) {
       case 'low':
         return 'bg-gray-100 text-gray-800';
@@ -297,116 +200,10 @@ export const Issues = () => {
     }
   };
 
-  // Handle issue edit
-  const handleEditIssue = (issue: any) => {
-    setSelectedIssue(issue);
-  };
-
-  // Handle issue delete
-  const handleDeleteIssue = async (issueId: number) => {
-    if (!isConnected) return;
-    
-    if (!confirm('Are you sure you want to delete this issue? This action cannot be undone.')) {
-      return;
-    }
-    
-    setLoading(true);
-    
-    try {
-      await deleteIssue(issueId);
-      
-      // Refresh issues
-      await refreshData();
-      
-      alert('Issue deleted successfully.');
-    } catch (err: any) {
-      console.error('Error deleting issue:', err);
-      alert('Failed to delete issue. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Handle creating a new issue
-  const handleCreateIssue = async () => {
-    if (!isConnected || !newIssue.subject || !newIssue.project_id) return;
-    
-    setLoadingAction(true);
-    
-    try {
-      const issueData = {
-        issue: newIssue
-      };
-      
-      await createIssue(issueData);
-      
-      // Refresh issues
-      await refreshData();
-      
-      // Reset form
-      setNewIssue({
-        subject: '',
-        description: '',
-        project_id: projectFilter !== 'all' ? parseInt(projectFilter) : (projects.length > 0 ? projects[0].id : 0),
-        status_id: 1,
-        priority_id: 2,
-        assigned_to_id: ''
-      });
-      
-      setIsCreatingIssue(false);
-    } catch (err: any) {
-      console.error('Error creating issue:', err);
-      alert('Failed to create issue. Please try again.');
-    } finally {
-      setLoadingAction(false);
-    }
-  };
-
-  // Handle bulk creating issues
-  const handleBulkCreateIssues = async (issues: any[]): Promise<{success: any[], failed: any[]}> => {
-    if (!isConnected || issues.length === 0) return { success: [], failed: [] };
-    
-    setLoadingAction(true);
-    
-    const successfulIssues: any[] = [];
-    const failedIssues: any[] = [];
-    
-    try {
-      // Process issues one by one to track which ones fail
-      for (const issueData of issues) {
-        try {
-          const result = await createIssue({ issue: issueData });
-          successfulIssues.push(result);
-        } catch (err: any) {
-          // Add error information to the failed issue
-          failedIssues.push({
-            ...issueData,
-            error: err.message || 'Failed to create issue'
-          });
-        }
-      }
-      
-      // Refresh issues if any were created successfully
-      if (successfulIssues.length > 0) {
-        await refreshData();
-      }
-      
-      return { success: successfulIssues, failed: failedIssues };
-    } catch (err: any) {
-      console.error('Error in bulk issue creation:', err);
-      throw new Error('Failed to process bulk issue creation');
-    } finally {
-      setLoadingAction(false);
-    }
-  };
-
   // Format date for display
   const formatDate = (dateString: string) => {
-    try {
-      return format(new Date(dateString), 'MMM d, yyyy');
-    } catch (e) {
-      return dateString;
-    }
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString();
   };
 
   // Get unique assignees from issues
@@ -420,6 +217,21 @@ export const Issues = () => {
     });
     
     return Array.from(assignees.values());
+  };
+
+  // Reset all filters to default values
+  const resetFilters = () => {
+    setSearchQuery('');
+    setStatusFilter('all');
+    setProjectFilter('all');
+    setPriorityFilter('all');
+    setAssigneeFilter('all');
+    setDateFilter('all');
+  };
+
+  // Handle filter change
+  const handleFilterChange = () => {
+    // No-op as we're filtering client-side
   };
 
   if (!isConnected) {
@@ -448,18 +260,7 @@ export const Issues = () => {
             Bulk Create
           </button>
           <button 
-            onClick={() => {
-              // Set default project based on filter or first available
-              const projectId = projectFilter !== 'all' 
-                ? parseInt(projectFilter) 
-                : (projects.length > 0 ? projects[0].id : 0);
-                
-              setNewIssue({
-                ...newIssue,
-                project_id: projectId
-              });
-              setIsCreatingIssue(true);
-            }}
+            onClick={() => setIsCreatingIssue(true)}
             className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors flex items-center"
           >
             <Plus size={16} className="mr-2" />
@@ -472,11 +273,11 @@ export const Issues = () => {
       <IssueList
         issues={filteredIssues}
         loading={loading || isLoading}
-        getStatusColorClass={getStatusColor}
-        getPriorityColorClass={getPriorityColor}
+        getStatusColorClass={getStatusColorClass}
+        getPriorityColorClass={getPriorityColorClass}
         formatDate={formatDate}
-        handleDeleteIssue={handleDeleteIssue}
-        handleEditIssue={handleEditIssue}
+        handleDeleteIssue={deleteIssue}
+        handleEditIssue={setSelectedIssue}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         statusFilter={statusFilter}
@@ -497,6 +298,7 @@ export const Issues = () => {
         resetFilters={resetFilters}
         handleFilterChange={handleFilterChange}
         onViewIssue={setViewingIssueId}
+        onBulkUpdate={handleBulkUpdate}
       />
 
       {/* Create Issue Modal */}
@@ -504,7 +306,39 @@ export const Issues = () => {
         <CreateIssueModal
           newIssue={newIssue}
           setNewIssue={setNewIssue}
-          handleCreateIssue={handleCreateIssue}
+          handleCreateIssue={async () => {
+            if (!isConnected || !newIssue.subject || !newIssue.project_id) return;
+            
+            setLoadingAction(true);
+            
+            try {
+              const issueData = {
+                issue: newIssue
+              };
+              
+              await createIssue(issueData);
+              
+              // Refresh issues
+              await refreshData();
+              
+              // Reset form
+              setNewIssue({
+                subject: '',
+                description: '',
+                project_id: projectFilter !== 'all' ? parseInt(projectFilter) : (projects.length > 0 ? projects[0].id : 0),
+                status_id: 1,
+                priority_id: 2,
+                assigned_to_id: ''
+              });
+              
+              setIsCreatingIssue(false);
+            } catch (err: any) {
+              console.error('Error creating issue:', err);
+              alert('Failed to create issue. Please try again.');
+            } finally {
+              setLoadingAction(false);
+            }
+          }}
           setIsCreatingIssue={setIsCreatingIssue}
           loadingAction={loadingAction}
           projects={projects}
@@ -515,7 +349,42 @@ export const Issues = () => {
       {isBulkCreatingIssues && (
         <BulkCreateIssueModal
           projectId={projectFilter !== 'all' ? parseInt(projectFilter) : (projects.length > 0 ? projects[0].id : 0)}
-          handleBulkCreateIssues={handleBulkCreateIssues}
+          handleBulkCreateIssues={async (issues) => {
+            if (!isConnected || issues.length === 0) return { success: [], failed: [] };
+            
+            setLoadingAction(true);
+            
+            const successfulIssues: any[] = [];
+            const failedIssues: any[] = [];
+            
+            try {
+              // Process issues one by one to track which ones fail
+              for (const issueData of issues) {
+                try {
+                  const result = await createIssue({ issue: issueData });
+                  successfulIssues.push(result);
+                } catch (err: any) {
+                  // Add error information to the failed issue
+                  failedIssues.push({
+                    ...issueData,
+                    error: err.message || 'Failed to create issue'
+                  });
+                }
+              }
+              
+              // Refresh issues if any were created successfully
+              if (successfulIssues.length > 0) {
+                await refreshData();
+              }
+              
+              return { success: successfulIssues, failed: failedIssues };
+            } catch (err: any) {
+              console.error('Error in bulk issue creation:', err);
+              throw new Error('Failed to process bulk issue creation');
+            } finally {
+              setLoadingAction(false);
+            }
+          }}
           setBulkCreatingIssues={setIsBulkCreatingIssues}
           loadingAction={loadingAction}
           trackers={trackers}
@@ -525,21 +394,13 @@ export const Issues = () => {
         />
       )}
 
-      {/* Issue Details Modal */}
-      {viewingIssueId && (
-        <IssueDetailsModal
-          issueId={viewingIssueId}
-          onClose={() => setViewingIssueId(null)}
-        />
-      )}
-
       {/* Edit Issue Modal */}
       {selectedIssue && (
         <EditIssueModal
           selectedIssue={selectedIssue}
           setSelectedIssue={setSelectedIssue}
           handleUpdateIssue={async () => {
-            if (!selectedIssue || !selectedIssue.subject) return;
+            if (!isConnected || !selectedIssue || !selectedIssue.subject) return;
             
             setLoadingAction(true);
             
@@ -567,6 +428,14 @@ export const Issues = () => {
             }
           }}
           loadingAction={loadingAction}
+        />
+      )}
+
+      {/* Issue Details Modal */}
+      {viewingIssueId && (
+        <IssueDetailsModal
+          issueId={viewingIssueId}
+          onClose={() => setViewingIssueId(null)}
         />
       )}
     </div>
