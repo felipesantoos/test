@@ -461,46 +461,38 @@ export const IssueList: React.FC<IssueListProps> = ({
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="relative">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead>
-                  <tr>
-                    {/* Select All Checkbox */}
-                    <th scope="col" className="w-12 px-6 py-3 bg-gray-50">
-                      <div className="flex items-center">
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                          checked={selectedIssues.length === sortedIssues.length}
-                          onChange={handleSelectAll}
-                        />
-                      </div>
-                    </th>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  {/* Select All Checkbox */}
+                  <th scope="col" className="sticky left-0 z-30 bg-gray-50 px-6">
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                        checked={selectedIssues.length === sortedIssues.length}
+                        onChange={handleSelectAll}
+                      />
+                    </div>
+                  </th>
 
-                    {/* Fixed ID Column */}
-                    <th 
-                      scope="col" 
-                      className="sticky left-0 z-30 bg-gray-50 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer border-r border-gray-200"
-                      style={{ width: "100px", minWidth: "100px", boxShadow: '4px 0 6px -2px rgba(0, 0, 0, 0.05)' }}
-                      onClick={() => handleSort('id')}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span>ID</span>
-                        <span className="text-gray-400">{getSortIndicator('id')}</span>
-                      </div>
-                    </th>
+                  {/* ID Column */}
+                  <th 
+                    scope="col" 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                    onClick={() => handleSort('id')}
+                  >
+                    <div className="flex items-center">
+                      <span>ID</span>
+                      {getSortIndicator('id')}
+                    </div>
+                  </th>
 
-                    {/* Fixed Subject Column */}
-                    <th 
+                  {/* Fixed Subject Column */}
+                  <th 
                       scope="col" 
-                      className="sticky left-[156px] z-30 bg-gray-50 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer border-r border-gray-200"
-                      style={{ 
-                        width: "400px",
-                        minWidth: "400px",
-                        maxWidth: "400px",
-                        boxShadow: '4px 0 6px -2px rgba(0, 0, 0, 0.05)'
-                      }}
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
                       onClick={() => handleSort('subject')}
                     >
                       <div className="flex items-center justify-between">
@@ -568,8 +560,8 @@ export const IssueList: React.FC<IssueListProps> = ({
                       </div>
                     </th>
 
-                    {/* Fixed Actions Column */}
-                    <th 
+                  {/* Actions Column */}
+                  <th 
                       scope="col" 
                       className="sticky right-0 z-30 bg-gray-50 px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200"
                       style={{ 
@@ -578,45 +570,46 @@ export const IssueList: React.FC<IssueListProps> = ({
                         boxShadow: '-4px 0 6px -2px rgba(0, 0, 0, 0.05)'
                       }}
                     >
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {sortedIssues.map((issue) => (
-                    <tr key={issue.id} className="hover:bg-gray-50">
-                      {/* Checkbox */}
-                      <td className="w-12 px-6 py-4">
-                        <div className="flex items-center">
-                          <input
-                            type="checkbox"
-                            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                            checked={selectedIssues.includes(issue.id)}
-                            onChange={() => handleSelectIssue(issue.id)}
-                          />
-                        </div>
-                      </td>
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {sortedIssues.map((issue) => (
+                  <tr key={issue.id} className="hover:bg-gray-50">
+                    {/* Checkbox */}
+                    <td
+                      scope="col"
+                      className="sticky left-0 z-30 bg-gray-50 px-6 border-r border-gray-200"
+                    >
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                          checked={selectedIssues.includes(issue.id)}
+                          onChange={() => handleSelectIssue(issue.id)}
+                        />
+                      </div>
+                    </td>
 
-                      {/* Fixed ID Column */}
-                      <td 
-                        className="sticky left-0 z-20 bg-white px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200"
+                    {/* ID Column */}
+                    <td 
+                        className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200"
                         style={{ 
                           width: "100px",
-                          minWidth: "100px",
-                          boxShadow: '4px 0 6px -2px rgba(0, 0, 0, 0.05)'
+                          minWidth: "100px"
                         }}
                       >
-                        #{issue.id}
-                      </td>
+                      #{issue.id}
+                    </td>
 
-                      {/* Fixed Subject Column */}
-                      <td 
-                        className="sticky left-[156px] z-20 bg-white px-6 py-4 border-r border-gray-200"
+                    {/* Fixed Subject Column */}
+                    <td 
+                        className="px-6 py-4 border-r border-gray-200"
                         style={{ 
                           width: "400px",
                           minWidth: "400px",
-                          maxWidth: "400px",
-                          boxShadow: '4px 0 6px -2px rgba(0, 0, 0, 0.05)'
+                          maxWidth: "400px"
                         }}
                       >
                         <div
@@ -668,8 +661,8 @@ export const IssueList: React.FC<IssueListProps> = ({
                         {formatDate(issue.updated_on)}
                       </td>
 
-                      {/* Fixed Actions Column */}
-                      <td 
+                    {/* Actions Column */}
+                    <td 
                         className="sticky right-0 z-20 bg-white px-6 py-4 whitespace-nowrap text-sm font-medium text-right border-l border-gray-200"
                         style={{ 
                           width: "120px",
@@ -677,35 +670,35 @@ export const IssueList: React.FC<IssueListProps> = ({
                           boxShadow: '-4px 0 6px -2px rgba(0, 0, 0, 0.05)'
                         }}
                       >
-                        <div className="flex justify-end space-x-3">
-                          <Link 
-                            to={`/issues/${issue.id}`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-indigo-600 hover:text-indigo-800"
-                          >
-                            <Eye size={16} />
-                          </Link>
-                          <button
-                            onClick={() => handleEditIssue(issue)}
-                            className="text-indigo-600 hover:text-indigo-900"
-                            title="Edit Issue"
-                          >
-                            <Edit size={16} />
-                          </button>
-                          <button
-                            onClick={() => setIssueToDelete(issue)}
-                            className="text-red-600 hover:text-red-900"
-                            title="Delete Issue"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      <div className="flex justify-end space-x-3">
+                        <Link 
+                          to={`/issues/${issue.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-indigo-600 hover:text-indigo-800"
+                          title="View Issue"
+                        >
+                          <Eye size={16} />
+                        </Link>
+                        <button
+                          onClick={() => handleEditIssue(issue)}
+                          className="text-indigo-600 hover:text-indigo-900"
+                          title="Edit Issue"
+                        >
+                          <Edit size={16} />
+                        </button>
+                        <button
+                          onClick={() => setIssueToDelete(issue)}
+                          className="text-red-600 hover:text-red-900"
+                          title="Delete Issue"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
