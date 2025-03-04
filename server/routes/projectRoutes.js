@@ -87,15 +87,27 @@ router.put('/:id', async (req, res) => {
   }
 
   try {
+    // Ensure the project data is properly wrapped in a "project" object
+    const formattedData = projectData.project ? projectData : { project: projectData };
+
     const response = await createRedmineRequest(
       authToken, 
       redmineUrl, 
       `/projects/${id}.json`, 
       {}, 
       'put', 
-      projectData
+      formattedData
     );
-    return res.status(200).json({ success: true });
+
+    // Check if the project was updated successfully
+    const updatedProject = await createRedmineRequest(
+      authToken,
+      redmineUrl,
+      `/projects/${id}.json`,
+      { include: 'trackers,issue_categories,enabled_modules' }
+    );
+
+    return res.json(updatedProject.data);
   } catch (error) {
     console.error(`Error updating project ${id}:`, error.message);
     return res.status(422).json({ 
