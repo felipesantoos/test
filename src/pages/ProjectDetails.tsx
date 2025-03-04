@@ -38,7 +38,8 @@ export const ProjectDetails = () => {
     issueStatuses,
     priorities,
     trackers,
-    users
+    users,
+    refreshData
   } = useApi();
 
   // State
@@ -75,6 +76,13 @@ export const ProjectDetails = () => {
   const [priorityData, setPriorityData] = useState<any[]>([]);
   const [issuesOverTimeData, setIssuesOverTimeData] = useState<any[]>([]);
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
+
+  // Add new effect to load required data
+  useEffect(() => {
+    if (isConnected && (!issueStatuses.length || !priorities.length || !trackers.length || !users.length)) {
+      refreshData();
+    }
+  }, [isConnected, issueStatuses.length, priorities.length, trackers.length, users.length, refreshData]);
 
   // Load project details and issues
   useEffect(() => {
@@ -419,9 +427,6 @@ export const ProjectDetails = () => {
       };
       
       await updateIssue(selectedIssue.id, issueData);
-
-      // Show success message
-      setSuccessMessage('Issue updated successfully');
       
       // Refresh issues
       const updatedIssues = await fetchIssues({ projectId: id });
@@ -523,9 +528,6 @@ export const ProjectDetails = () => {
     
     try {
       await deleteIssue(issueId);
-
-      // Show success message
-      setSuccessMessage('Issue deleted successfully');
       
       // Refresh issues
       const updatedIssues = await fetchIssues({ projectId: id });
