@@ -419,6 +419,9 @@ export const ProjectDetails = () => {
       };
       
       await updateIssue(selectedIssue.id, issueData);
+
+      // Show success message
+      setSuccessMessage('Issue updated successfully');
       
       // Refresh issues
       const updatedIssues = await fetchIssues({ projectId: id });
@@ -516,14 +519,13 @@ export const ProjectDetails = () => {
   const handleDeleteIssue = async (issueId: number) => {
     if (!isConnected) return;
     
-    if (!confirm('Are you sure you want to delete this issue? This action cannot be undone.')) {
-      return;
-    }
-    
     setLoadingAction(true);
     
     try {
       await deleteIssue(issueId);
+
+      // Show success message
+      setSuccessMessage('Issue deleted successfully');
       
       // Refresh issues
       const updatedIssues = await fetchIssues({ projectId: id });
