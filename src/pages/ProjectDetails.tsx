@@ -622,6 +622,33 @@ export const ProjectDetails = () => {
     }
   };
 
+  // Handle bulk delete
+  const handleBulkDelete = async (issueIds: number[]) => {
+    if (!isConnected) return;
+    
+    setLoadingAction(true);
+    
+    try {
+      // Create an array of promises for each issue deletion
+      const deletePromises = issueIds.map(id => deleteIssue(id));
+      
+      // Wait for all deletions to complete
+      await Promise.all(deletePromises);
+      
+      // Refresh the project data to update the issues list
+      const projectIssues = await fetchIssues({ projectId: parseInt(id || '0') });
+      setIssues(projectIssues);
+      
+      // Show success message
+      alert('Issues deleted successfully');
+    } catch (err) {
+      console.error('Error deleting issues:', err);
+      alert('Failed to delete some issues. Please try again.');
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
   // Handle bulk update
   const handleBulkUpdate = async (issueIds: number[], updates: any) => {
     if (!isConnected) return;
@@ -749,6 +776,7 @@ export const ProjectDetails = () => {
             users={users}
             handleBulkCreateIssues={handleBulkCreateIssues}
             onBulkUpdate={handleBulkUpdate}
+            handleBulkDelete={handleBulkDelete}
           />
         )}
 

@@ -59,6 +59,32 @@ export const Issues = () => {
   const [isBulkCreatingIssues, setIsBulkCreatingIssues] = useState(false);
   const [loadingAction, setLoadingAction] = useState(false);
 
+  // Handle bulk delete
+  const handleBulkDelete = async (issueIds: number[]) => {
+    if (!isConnected) return;
+    
+    setLoadingAction(true);
+    
+    try {
+      // Create an array of promises for each issue deletion
+      const deletePromises = issueIds.map(id => deleteIssue(id));
+      
+      // Wait for all deletions to complete
+      await Promise.all(deletePromises);
+      
+      // Refresh the issues list
+      await refreshData();
+      
+      // Show success message
+      alert('Issues deleted successfully');
+    } catch (err) {
+      console.error('Error deleting issues:', err);
+      alert('Failed to delete some issues. Please try again.');
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
   // Load issues on initial render
   useEffect(() => {
     if (isConnected && issues.length === 0) {
@@ -299,6 +325,7 @@ export const Issues = () => {
         handleFilterChange={handleFilterChange}
         onViewIssue={setViewingIssueId}
         onBulkUpdate={handleBulkUpdate}
+        handleBulkDelete={handleBulkDelete}
       />
 
       {/* Create Issue Modal */}

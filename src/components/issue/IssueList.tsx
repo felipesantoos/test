@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { DeleteIssueConfirmModal } from "./modals/DeleteIssueConfirmModal";
 import { BulkEditIssueModal } from "./modals/BulkEditIssueModal";
+import { BulkDeleteConfirmModal } from './modals/BulkDeleteConfirmModal';
 import { Link } from "react-router-dom";
 import "./styles.css";
 
@@ -47,6 +48,7 @@ interface IssueListProps {
   handleFilterChange: () => void;
   onViewIssue: (id: number) => void;
   onBulkUpdate?: (issueIds: number[], updates: any) => Promise<void>; // Add bulk update handler
+  handleBulkDelete?: (issueIds: number[]) => Promise<void>; // Add this line
 }
 
 export const IssueList: React.FC<IssueListProps> = ({
@@ -77,7 +79,8 @@ export const IssueList: React.FC<IssueListProps> = ({
   resetFilters,
   handleFilterChange,
   onViewIssue,
-  onBulkUpdate
+  onBulkUpdate,
+  handleBulkDelete
 }) => {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [sortConfig, setSortConfig] = useState<SortConfig[]>([]);
@@ -86,6 +89,8 @@ export const IssueList: React.FC<IssueListProps> = ({
   const [selectedIssues, setSelectedIssues] = useState<number[]>([]);
   const [showBulkEditModal, setShowBulkEditModal] = useState(false);
   const [loadingBulkEdit, setLoadingBulkEdit] = useState(false);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [loadingBulkDelete, setLoadingBulkDelete] = useState(false);
 
   // Handle column sorting
   const handleSort = (columnId: string) => {
@@ -138,6 +143,20 @@ export const IssueList: React.FC<IssueListProps> = ({
       setShowBulkEditModal(false);
     } finally {
       setLoadingBulkEdit(false);
+    }
+  };
+
+  // Handle bulk delete
+  const handleBulkDeleteConfirm = async () => {
+    if (!handleBulkDelete || selectedIssues.length === 0) return;
+    
+    setLoadingBulkDelete(true);
+    try {
+      await handleBulkDelete(selectedIssues);
+      setSelectedIssues([]);
+      setShowBulkDeleteModal(false);
+    } finally {
+      setLoadingBulkDelete(false);
     }
   };
 
@@ -309,15 +328,24 @@ export const IssueList: React.FC<IssueListProps> = ({
               <span>Apply Filters</span>
             </button>
 
-            {/* Bulk Edit Button */}
+            {/* Bulk Actions */}
             {selectedIssues.length > 0 && (
-              <button
-                onClick={() => setShowBulkEditModal(true)}
-                className="flex items-center space-x-1 px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
-              >
-                <Settings size={16} />
-                <span>Bulk Edit ({selectedIssues.length})</span>
-              </button>
+              <>
+                <button
+                  onClick={() => setShowBulkEditModal(true)}
+                  className="flex items-center space-x-1 px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+                >
+                  <Settings size={16} />
+                  <span>Bulk Edit ({selectedIssues.length})</span>
+                </button>
+                <button
+                  onClick={() => setShowBulkDeleteModal(true)}
+                  className="flex items-center space-x-1 px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700"
+                >
+                  <Trash2 size={16} />
+                  <span>Delete ({selectedIssues.length})</span>
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -723,6 +751,16 @@ export const IssueList: React.FC<IssueListProps> = ({
           statuses={issueStatuses}
           priorities={priorities}
           users={users}
+        />
+      )}
+
+      {/* Bulk Delete Modal */}
+      {showBulkDeleteModal && (
+        <BulkDeleteConfirmModal
+          selectedIssues={sortedIssues.filter(issue => selectedIssues.includes(issue.id))}
+          onClose={() => setShowBulkDeleteModal(false)}
+          onConfirm={handleBulkDeleteConfirm}
+          isLoading={loadingBulkDelete}
         />
       )}
     </div>
