@@ -18,6 +18,7 @@ import { ArchiveConfirmModal } from '../components/project/modals/ArchiveConfirm
 import { EditProjectModal } from '../components/project/modals/EditProjectModal';
 import { format, parseISO, subDays, isAfter, isBefore, isEqual, startOfDay } from 'date-fns';
 import { GitHubIntegrationTab } from '../components/project/tabs/GitHubIntegrationTab';
+import { SuccessNotification } from '../components/shared/SuccessNotification';
 
 export const ProjectDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -49,6 +50,7 @@ export const ProjectDetails = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [projectProgress, setProjectProgress] = useState(0);
   const [issueStats, setIssueStats] = useState({ total: 0, open: 0, closed: 0 });
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   
   // Modals state
   const [isCreatingIssue, setIsCreatingIssue] = useState(false);
@@ -640,7 +642,7 @@ export const ProjectDetails = () => {
       setIssues(projectIssues);
       
       // Show success message
-      alert('Issues deleted successfully');
+      setSuccessMessage('Issues deleted successfully');
     } catch (err) {
       console.error('Error deleting issues:', err);
       alert('Failed to delete some issues. Please try again.');
@@ -689,7 +691,7 @@ export const ProjectDetails = () => {
       processChartData(updatedIssues);
       
       // Show success message
-      alert('Issues updated successfully');
+      setSuccessMessage('Issues updated successfully');
     } catch (err) {
       console.error('Error updating issues:', err);
       alert('Failed to update some issues. Please try again.');
@@ -734,13 +736,21 @@ export const ProjectDetails = () => {
 
   return (
     <div className="space-y-6">
+      {/* Success Notification */}
+      {successMessage && (
+        <SuccessNotification
+          message={successMessage}
+          onClose={() => setSuccessMessage(null)}
+        />
+      )}
+      
       {/* Project Header */}
       <ProjectHeader 
         project={project} 
         projectProgress={projectProgress} 
         issueStats={issueStats} 
         formatDate={formatDate}
-        memberships={project.memberships} // Pass memberships from project data
+        memberships={project.memberships}
       />
       
       {/* Tabs */}

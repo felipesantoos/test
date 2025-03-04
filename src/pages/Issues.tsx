@@ -7,6 +7,7 @@ import { BulkCreateIssueModal } from '../components/issue/modals/BulkCreateIssue
 import { EditIssueModal } from '../components/project/modals/EditIssueModal';
 import { IssueDetailsModal } from '../components/issue/modals/IssueDetailsModal';
 import { CreateIssueModal } from '../components/project/modals/CreateIssueModal';
+import { SuccessNotification } from '../components/shared/SuccessNotification';
 
 export const Issues = () => {
   const { 
@@ -59,6 +60,32 @@ export const Issues = () => {
   const [isBulkCreatingIssues, setIsBulkCreatingIssues] = useState(false);
   const [loadingAction, setLoadingAction] = useState(false);
 
+  // Add new state for success notification
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Handle bulk delete
+  const handleDeleteIssue = async (id: number) => {
+    if (!isConnected) return;
+    
+    setLoadingAction(true);
+    
+    try {
+      // Delete issue
+      await deleteIssue(id);  
+      
+      // Refresh the issues list
+      await refreshData();
+      
+      // Show success message
+      setSuccessMessage('Issue deleted successfully');
+    } catch (err) {
+      console.error('Error deleting issue:', err);
+      alert('Failed to delete the issue. Please try again.');
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
   // Handle bulk delete
   const handleBulkDelete = async (issueIds: number[]) => {
     if (!isConnected) return;
@@ -76,7 +103,7 @@ export const Issues = () => {
       await refreshData();
       
       // Show success message
-      alert('Issues deleted successfully');
+      setSuccessMessage('Issues deleted successfully');
     } catch (err) {
       console.error('Error deleting issues:', err);
       alert('Failed to delete some issues. Please try again.');
@@ -179,7 +206,7 @@ export const Issues = () => {
       await refreshData();
       
       // Show success message
-      alert('Issues updated successfully');
+      setSuccessMessage('Issues updated successfully');
     } catch (err) {
       console.error('Error updating issues:', err);
       alert('Failed to update some issues. Please try again.');
@@ -275,6 +302,14 @@ export const Issues = () => {
 
   return (
     <div className="space-y-6">
+      {/* Success Notification */}
+      {successMessage && (
+        <SuccessNotification
+          message={successMessage}
+          onClose={() => setSuccessMessage(null)}
+        />
+      )}
+
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800">Issues</h1>
         <div className="flex gap-2">
@@ -302,7 +337,7 @@ export const Issues = () => {
         getStatusColorClass={getStatusColorClass}
         getPriorityColorClass={getPriorityColorClass}
         formatDate={formatDate}
-        handleDeleteIssue={deleteIssue}
+        handleDeleteIssue={handleDeleteIssue}
         handleEditIssue={setSelectedIssue}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
@@ -446,7 +481,8 @@ export const Issues = () => {
               await refreshData();
               setSelectedIssue(null);
               
-              alert('Issue updated successfully.');
+              // Show success message
+              setSuccessMessage('Issue updated successfully');
             } catch (err) {
               console.error('Error updating issue:', err);
               alert('Failed to update issue. Please try again.');
