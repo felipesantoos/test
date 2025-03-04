@@ -19,6 +19,7 @@ export const Issues = () => {
     priorities,
     issueStatuses,
     trackers,
+    users,
     refreshData, 
     fetchIssues,
     updateIssue,
@@ -491,6 +492,7 @@ export const Issues = () => {
         projects={projects}
         issueStatuses={issueStatuses}
         priorities={priorities}
+        users={users}
         getUniqueAssignees={getUniqueAssignees}
         resetFilters={resetFilters}
         handleFilterChange={handleFilterChange}
