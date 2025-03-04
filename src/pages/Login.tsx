@@ -38,7 +38,7 @@ export const Login = () => {
             <Server size={48} className="text-indigo-600" />
           </div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Sign in to Redmine Dashboard
+            Sign in to DIT Manager
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
             Connect to your Redmine instance to access analytics and dashboards

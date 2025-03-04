@@ -1,4 +1,4 @@
-# Redmine Dashboard & Analytics
+# DIT Manager
 
 A comprehensive analytics platform that integrates with the Redmine REST API to provide real-time insights into projects and issues.
 

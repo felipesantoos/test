@@ -1,72 +1,34 @@
 version: '3.8'
 
 services:
-  frontend:
+  dit-manager-frontend:
     build:
       context: .
       dockerfile: ./.docker/Dockerfile.react
-    container_name: frontend
+    container_name: dit-manager-frontend
     restart: always
     ports:
       - "5173:5173"
     env_file:
       - .env
     depends_on:
-      - backend
+      - dit-manager-backend
     networks:
-      - redmine-network
+      - dit-manager-network
 
-  backend:
+  dit-manager-backend:
     build:
       context: .
       dockerfile: ./.docker/Dockerfile.server
-    container_name: backend
+    container_name: dit-manager-backend
     restart: always
     ports:
       - "3001:3001"
     env_file:
       - .env
-    depends_on:
-      - redmine-app
     networks:
-      - redmine-network
-
-  redmine-database:
-    image: postgres:15
-    container_name: redmine-database
-    restart: always
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ../redmine-6.0.3/init-scripts:/docker-entrypoint-initdb.d
-    ports:
-      - "5432:5432"
-    networks:
-      - redmine-network
-
-  redmine-app:
-    build:
-      context: ./redmine-6.0.3
-      dockerfile: ./.docker/Dockerfile.redmine
-    container_name: redmine-app
-    restart: always
-    environment:
-      RAILS_ENV: production
-      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@redmine-database:5432/${POSTGRES_DB}
-    depends_on:
-      - redmine-database
-    ports:
-      - "3000:3000"
-    networks:
-      - redmine-network
-
-volumes:
-  postgres_data:
-    driver: local
+      - dit-manager-network
 
 networks:
-  redmine-network:
+  dit-manager-network:
     driver: bridge
