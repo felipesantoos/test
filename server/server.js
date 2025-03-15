@@ -11,6 +11,8 @@ import groupRoutes from './routes/groupRoutes.js';
 import membershipRoutes from './routes/membershipRoutes.js';
 import roleRoutes from './routes/roleRoutes.js';
 import otherRoutes from './routes/otherRoutes.js';
+import uploadRoutes from './routes/uploadRoutes.js';
+import downloadRoutes from './routes/downloadRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -30,6 +32,8 @@ app.use('/api/users', userRoutes);
 app.use('/api/groups', groupRoutes);
 app.use('/api/memberships', membershipRoutes);
 app.use('/api/roles', roleRoutes);
+app.use('/api/uploads', uploadRoutes);
+app.use('/api/downloads', downloadRoutes);
 app.use('/api', otherRoutes);
 
 // Start the server

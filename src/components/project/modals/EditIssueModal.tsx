@@ -1,34 +1,77 @@
 import React, { useEffect, useState } from 'react';
 import { MarkdownEditor } from '../../shared/MarkdownEditor';
 import { UserSelect } from '../../shared/UserSelect';
+import { FileUpload } from '../../shared/FileUpload';
+import { Attachments } from '../../shared/Attachments';
 import { useApi } from '../../../context/ApiContext';
 
+interface IssueData {
+  id: number;
+  subject: string;
+  description?: string;
+  status: {
+    id: number;
+    name: string;
+  };
+  priority: {
+    id: number;
+    name: string;
+  };
+  assigned_to?: {
+    id: number | string;
+    name: string;
+  } | null;
+  project?: {
+    id: number;
+    name: string;
+  };
+  attachments?: Array<{
+    id: number;
+    filename: string;
+    filesize: number;
+    content_type: string;
+    description?: string;
+    content_url: string;
+  }>;
+  uploads?: Array<{
+    token: string;
+    filename: string;
+    content_type: string;
+  }>;
+}
+
 interface EditIssueModalProps {
-  selectedIssue: any;
-  setSelectedIssue: (issue: any) => void;
+  selectedIssue: IssueData;
+  setSelectedIssue: (issue: IssueData) => void;
   handleUpdateIssue: () => void;
   loadingAction: boolean;
   onCancel?: () => void;
   users: any[]; // Global users list for additional details
 }
 
-export const EditIssueModal = ({ 
+export const EditIssueModal: React.FC<EditIssueModalProps> = ({ 
   selectedIssue, 
   setSelectedIssue, 
   handleUpdateIssue, 
   loadingAction,
   onCancel,
   users
-}: EditIssueModalProps) => {
+}) => {
   const { fetchProjectMemberships } = useApi();
   const [projectMembers, setProjectMembers] = useState<any[]>([]);
+  const [uploads, setUploads] = useState<Array<{
+    token: string;
+    filename: string;
+    content_type: string;
+    description?: string;
+  }>>([]);
 
-  // When the issue has a project, fetch its memberships.
+  // When the issue has a project, fetch its memberships
   useEffect(() => {
     if (selectedIssue?.project?.id) {
       fetchProjectMemberships(selectedIssue.project.id)
         .then((memberships) => {
-          // Only include memberships that have a valid user object.
+          // Only include memberships that have a valid user object
           const members = memberships
             .filter((m: any) => m.user)
             .map((m: any) => m.user);
@@ -42,6 +85,53 @@ export const EditIssueModal = ({
       setProjectMembers([]);
     }
   }, [selectedIssue?.project?.id, fetchProjectMemberships]);
+
+  // Handle file upload completion
+  const handleUploadComplete = (upload: { token: string; filename: string; content_type: string }) => {
+    setUploads(prev => [...prev, upload]);
+    
+    // Add the upload to the issue data
+    setSelectedIssue({
+      ...selectedIssue,
+      uploads: [
+        ...(selectedIssue.uploads || []),
+        {
+          token: upload.token,
+          filename: upload.filename,
+          content_type: upload.content_type
+        }
+      ]
+    });
+  };
+
+  // Handle removing an upload
+  const handleRemoveUpload = (token: string) => {
+    setUploads(prev => prev.filter(u => u.token !== token));
+    
+    // Remove the upload from the issue data
+    setSelectedIssue({
+      ...selectedIssue,
+      uploads: selectedIssue.uploads?.filter(u => u.token !== token) || []
+    });
+  };
+
+  // Handle attachment deletion
+  const handleAttachmentDelete = (attachmentId: number) => {
+    setSelectedIssue({
+      ...selectedIssue,
+      attachments: selectedIssue.attachments?.filter(a => a.id !== attachmentId) || []
+    });
+  };
+
+  // Handle attachment update
+  const handleAttachmentUpdate = (attachmentId: number, description: string) => {
+    setSelectedIssue({
+      ...selectedIssue,
+      attachments: selectedIssue.attachments?.map(a => 
+        a.id === attachmentId ? { ...a, description } : a
+      ) || []
+    });
+  };
 
   return (
     <div className="fixed inset-0 overflow-y-auto z-50">
@@ -150,7 +240,7 @@ export const EditIssueModal = ({
                         onChange={(userId) => 
                           setSelectedIssue({ 
                             ...selectedIssue, 
-                            assigned_to: userId ? { id: userId } : null
+                            assigned_to: userId ? { id: userId, name: '' } : null
                           })
                         }
                         placeholder="Select assignee..."
@@ -158,6 +248,51 @@ export const EditIssueModal = ({
                     ) : (
                       <div className="text-gray-500 text-sm">
                         Select a project to choose an assignee
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Existing Attachments */}
+                  {selectedIssue.attachments && selectedIssue.attachments.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Current Attachments
+                      </label>
+                      <Attachments
+                        attachments={selectedIssue.attachments}
+                        onDelete={handleAttachmentDelete}
+                        onUpdate={handleAttachmentUpdate}
+                      />
+                    </div>
+                  )}
+
+                  {/* New Attachments */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Add Attachments
+                    </label>
+                    <FileUpload
+                      onUploadComplete={handleUploadComplete}
+                      multiple={true}
+                      maxSize={5 * 1024 * 1024} // 5MB
+                    />
+                    {uploads.length > 0 && (
+                      <div className="mt-2">
+                        <Attachments
+                          attachments={uploads.map(upload => {
+                            const attachmentId = parseInt(upload.token.split('.')[0]);
+                            return {
+                              id: attachmentId,
+                              filename: upload.filename,
+                              filesize: 0,
+                              content_type: upload.content_type,
+                              description: upload.description || '',
+                              content_url: `${import.meta.env.VITE_REDMINE_URL}/attachments/download/${attachmentId}/${upload.filename}`
+                            };
+                          })}
+                          onDelete={(id) => handleRemoveUpload(uploads.find(u => parseInt(u.token.split('.')[0]) === id)?.token || '')}
+                          readOnly={false}
+                        />
                       </div>
                     )}
                   </div>
@@ -177,7 +312,7 @@ export const EditIssueModal = ({
             </button>
             <button
               type="button"
-              onClick={onCancel || (() => setSelectedIssue(null))}
+              onClick={onCancel || (() => setSelectedIssue(selectedIssue))}
               className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
             >
               Cancel

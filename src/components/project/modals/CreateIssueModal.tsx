@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { MarkdownEditor } from '../../shared/MarkdownEditor';
 import { UserSelect } from '../../shared/UserSelect';
+import { FileUpload } from '../../shared/FileUpload';
+import { Attachments } from '../../shared/Attachments';
 import { useApi } from '../../../context/ApiContext';
 
 interface CreateIssueModalProps {
@@ -13,7 +15,7 @@ interface CreateIssueModalProps {
   users: any[]; // Users list for lookup (to show email, etc.)
 }
 
-export const CreateIssueModal = ({ 
+export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({ 
   newIssue, 
   setNewIssue, 
   handleCreateIssue, 
@@ -21,11 +23,12 @@ export const CreateIssueModal = ({
   loadingAction,
   projects,
   users
-}: CreateIssueModalProps) => {
+}) => {
   const { fetchProjectMemberships } = useApi();
   const [projectMembers, setProjectMembers] = useState<any[]>([]);
+  const [uploads, setUploads] = useState<any[]>([]);
 
-  // When a project is selected, fetch its memberships and extract users.
+  // When a project is selected, fetch its memberships and extract users
   useEffect(() => {
     if (newIssue.project_id) {
       fetchProjectMemberships(newIssue.project_id)
@@ -45,6 +48,31 @@ export const CreateIssueModal = ({
     }
   }, [newIssue.project_id, fetchProjectMemberships]);
 
+  // Handle file upload completion
+  const handleUploadComplete = (upload: any) => {
+    setUploads(prev => [...prev, upload]);
+  };
+
+  // Handle removing an upload
+  const handleRemoveUpload = (token: string) => {
+    setUploads(prev => prev.filter(u => u.token !== token));
+  };
+
+  // Handle form submission
+  const handleSubmit = () => {
+    // Add uploads to the issue data
+    const issueData = {
+      ...newIssue,
+      uploads: uploads.map(upload => ({
+        token: upload.token,
+        filename: upload.filename,
+        content_type: upload.content_type
+      }))
+    };
+    setNewIssue(issueData);
+    handleCreateIssue();
+  };
+
   return (
     <div className="fixed inset-0 overflow-y-auto z-50">
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
@@ -52,7 +80,9 @@ export const CreateIssueModal = ({
           <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
         </div>
         
-        <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">
+          &#8203;
+        </span>
         
         <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
           <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
@@ -179,6 +209,38 @@ export const CreateIssueModal = ({
                       </div>
                     )}
                   </div>
+
+                  {/* File Attachments */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Attachments
+                    </label>
+                    <FileUpload
+                      onUploadComplete={handleUploadComplete}
+                      multiple={true}
+                      maxSize={5 * 1024 * 1024} // 5MB
+                    />
+                    {uploads.length > 0 && (
+                      <div className="mt-2">
+                        <Attachments
+                          attachments={uploads.map(upload => {
+                            // Extract the attachment ID from the token (e.g., "7167" from "7167.ed1ccdb093229ca1bd0b043618d88743")
+                            const attachmentId = parseInt(upload.token.split('.')[0]);
+                            return {
+                              id: attachmentId,
+                              filename: upload.filename,
+                              filesize: 0, // Size not available from upload token
+                              content_type: upload.content_type,
+                              description: upload.description || '',
+                              content_url: `${import.meta.env.VITE_REDMINE_URL}/attachments/download/${attachmentId}/${upload.filename}`
+                            };
+                          })}
+                          onDelete={(id) => handleRemoveUpload(uploads.find(u => parseInt(u.token.split('.')[0]) === id)?.token || '')}
+                          readOnly={false}
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -187,7 +249,7 @@ export const CreateIssueModal = ({
           <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
             <button
               type="button"
-              onClick={handleCreateIssue}
+              onClick={handleSubmit}
               disabled={!newIssue.subject || !newIssue.project_id || loadingAction}
               className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm disabled:bg-indigo-400"
             >
