@@ -5,4 +5,10 @@ export default {
     extend: {},
   },
   plugins: [],
+  // Enable prose classes for Markdown content
+  safelist: [
+    'prose',
+    'max-w-none',
+    'markdown-preview'
+  ]
 };

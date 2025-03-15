@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { X, Paperclip, Link2, Eye, MessageSquare, Clock, Tag, AlertCircle, Edit } from 'lucide-react';
 import { useApi } from '../../../context/ApiContext';
 import { EditIssueModal } from '../../project/modals/EditIssueModal';
+import { MarkdownEditor } from '../../shared/MarkdownEditor';
 
 interface IssueDetailsModalProps {
   issueId: number;
@@ -258,9 +259,11 @@ export const IssueDetailsModal: React.FC<IssueDetailsModalProps> = ({ issueId, o
                         
                         <div>
                           <h4 className="text-sm font-medium text-gray-500 mb-1">Description</h4>
-                          <div className="bg-gray-50 p-3 rounded-md text-sm text-gray-900 whitespace-pre-wrap">
-                            {issue.description || 'No description provided.'}
-                          </div>
+                          <MarkdownEditor
+                            value={issue.description || ''}
+                            onChange={() => {}}
+                            preview={true}
+                          />
                         </div>
                         
                         {issue.attachments && issue.attachments.length > 0 && (
@@ -318,9 +321,11 @@ export const IssueDetailsModal: React.FC<IssueDetailsModalProps> = ({ issueId, o
                                 </div>
                                 
                                 {journal.notes && (
-                                  <div className="bg-gray-50 p-3 rounded-md text-sm text-gray-900 whitespace-pre-wrap mb-2">
-                                    {journal.notes}
-                                  </div>
+                                  <MarkdownEditor
+                                    value={journal.notes}
+                                    onChange={() => {}}
+                                    preview={true}
+                                  />
                                 )}
                                 
                                 {journal.details && journal.details.length > 0 && (
