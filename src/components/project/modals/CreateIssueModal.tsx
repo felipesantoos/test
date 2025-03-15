@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { MarkdownEditor } from '../../shared/MarkdownEditor';
+import { UserSelect } from '../../shared/UserSelect';
+import { useApi } from '../../../context/ApiContext';
 
 interface CreateIssueModalProps {
   newIssue: any;
@@ -8,6 +10,7 @@ interface CreateIssueModalProps {
   setIsCreatingIssue: (isCreating: boolean) => void;
   loadingAction: boolean;
   projects?: any[]; // Optional projects list for selection
+  users: any[]; // Users list for lookup (to show email, etc.)
 }
 
 export const CreateIssueModal = ({ 
@@ -16,8 +19,32 @@ export const CreateIssueModal = ({
   handleCreateIssue, 
   setIsCreatingIssue, 
   loadingAction,
-  projects
+  projects,
+  users
 }: CreateIssueModalProps) => {
+  const { fetchProjectMemberships } = useApi();
+  const [projectMembers, setProjectMembers] = useState<any[]>([]);
+
+  // When a project is selected, fetch its memberships and extract users.
+  useEffect(() => {
+    if (newIssue.project_id) {
+      fetchProjectMemberships(newIssue.project_id)
+        .then((memberships) => {
+          // Only include memberships that have a user object
+          const members = memberships
+            .filter(m => m.user)
+            .map(m => m.user);
+          setProjectMembers(members);
+        })
+        .catch((error) => {
+          console.error('Error fetching project memberships:', error);
+          setProjectMembers([]);
+        });
+    } else {
+      setProjectMembers([]);
+    }
+  }, [newIssue.project_id, fetchProjectMemberships]);
+
   return (
     <div className="fixed inset-0 overflow-y-auto z-50">
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
@@ -46,7 +73,9 @@ export const CreateIssueModal = ({
                         id="project_id"
                         className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                         value={newIssue.project_id}
-                        onChange={(e) => setNewIssue({ ...newIssue, project_id: parseInt(e.target.value) })}
+                        onChange={(e) =>
+                          setNewIssue({ ...newIssue, project_id: parseInt(e.target.value) })
+                        }
                         required
                       >
                         <option value="">Select a project</option>
@@ -68,7 +97,9 @@ export const CreateIssueModal = ({
                       id="subject"
                       className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                       value={newIssue.subject}
-                      onChange={(e) => setNewIssue({ ...newIssue, subject: e.target.value })}
+                      onChange={(e) =>
+                        setNewIssue({ ...newIssue, subject: e.target.value })
+                      }
                       required
                     />
                   </div>
@@ -79,7 +110,9 @@ export const CreateIssueModal = ({
                     </label>
                     <MarkdownEditor
                       value={newIssue.description}
-                      onChange={(value) => setNewIssue({ ...newIssue, description: value || '' })}
+                      onChange={(value) =>
+                        setNewIssue({ ...newIssue, description: value || '' })
+                      }
                       height={300}
                     />
                   </div>
@@ -93,7 +126,9 @@ export const CreateIssueModal = ({
                         id="status"
                         className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                         value={newIssue.status_id}
-                        onChange={(e) => setNewIssue({ ...newIssue, status_id: parseInt(e.target.value) })}
+                        onChange={(e) =>
+                          setNewIssue({ ...newIssue, status_id: parseInt(e.target.value) })
+                        }
                       >
                         <option value={1}>New</option>
                         <option value={2}>In Progress</option>
@@ -111,7 +146,9 @@ export const CreateIssueModal = ({
                         id="priority"
                         className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                         value={newIssue.priority_id}
-                        onChange={(e) => setNewIssue({ ...newIssue, priority_id: parseInt(e.target.value) })}
+                        onChange={(e) =>
+                          setNewIssue({ ...newIssue, priority_id: parseInt(e.target.value) })
+                        }
                       >
                         <option value={1}>Low</option>
                         <option value={2}>Normal</option>
@@ -123,17 +160,24 @@ export const CreateIssueModal = ({
                   </div>
                   
                   <div>
-                    <label htmlFor="assignedTo" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       Assigned To
                     </label>
-                    <input
-                      type="text"
-                      id="assignedTo"
-                      className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                      value={newIssue.assigned_to_id}
-                      onChange={(e) => setNewIssue({ ...newIssue, assigned_to_id: e.target.value })}
-                      placeholder="User ID (optional)"
-                    />
+                    {newIssue.project_id ? (
+                      <UserSelect
+                        users={users}
+                        projectMembers={projectMembers}
+                        selectedUserId={newIssue.assigned_to_id}
+                        onChange={(userId) =>
+                          setNewIssue({ ...newIssue, assigned_to_id: userId })
+                        }
+                        placeholder="Select assignee..."
+                      />
+                    ) : (
+                      <div className="text-gray-500 text-sm">
+                        Select a project to choose an assignee
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

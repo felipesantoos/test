@@ -404,6 +404,7 @@ export const Issues = () => {
           setIsCreatingIssue={setIsCreatingIssue}
           loadingAction={loadingAction}
           projects={projects}
+          users={users}
         />
       )}
 
@@ -491,6 +492,7 @@ export const Issues = () => {
             }
           }}
           loadingAction={loadingAction}
+          users={users}
         />
       )}
 

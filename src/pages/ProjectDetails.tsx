@@ -858,6 +858,7 @@ export const ProjectDetails = () => {
           handleCreateIssue={handleCreateIssue}
           setIsCreatingIssue={setIsCreatingIssue}
           loadingAction={loadingAction}
+          users={users}
         />
       )}
 
@@ -867,6 +868,7 @@ export const ProjectDetails = () => {
           setSelectedIssue={setSelectedIssue}
           handleUpdateIssue={handleUpdateIssue}
           loadingAction={loadingAction}
+          users={users}
         />
       )}
 

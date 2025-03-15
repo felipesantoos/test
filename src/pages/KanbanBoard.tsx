@@ -595,6 +595,7 @@ export const KanbanBoard = () => {
           setIsCreatingIssue={setIsCreatingIssue}
           loadingAction={loadingAction}
           projects={projects}
+          users={users}
         />
       )}
 
@@ -605,6 +606,7 @@ export const KanbanBoard = () => {
           setSelectedIssue={setSelectedIssue}
           handleUpdateIssue={handleUpdateIssue}
           loadingAction={loadingAction}
+          users={users}
         />
       )}
 

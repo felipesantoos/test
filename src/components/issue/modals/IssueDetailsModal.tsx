@@ -11,7 +11,7 @@ interface IssueDetailsModalProps {
 }
 
 export const IssueDetailsModal: React.FC<IssueDetailsModalProps> = ({ issueId, onClose }) => {
-  const { fetchIssueDetails, updateIssue, refreshData } = useApi();
+  const { users, fetchIssueDetails, updateIssue, refreshData } = useApi();
   const [issue, setIssue] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -127,6 +127,7 @@ export const IssueDetailsModal: React.FC<IssueDetailsModalProps> = ({ issueId, o
         handleUpdateIssue={handleUpdateIssue}
         loadingAction={loadingAction}
         onCancel={() => setIsEditing(false)}
+        users={users}
       />
     );
   }
