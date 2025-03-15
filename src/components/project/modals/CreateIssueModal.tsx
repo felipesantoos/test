@@ -4,6 +4,7 @@ import { UserSelect } from '../../shared/UserSelect';
 import { FileUpload } from '../../shared/FileUpload';
 import { Attachments } from '../../shared/Attachments';
 import { useApi } from '../../../context/ApiContext';
+import { getAttachmentDetails } from '../../../services/attachmentService';
 
 interface CreateIssueModalProps {
   newIssue: any;
@@ -26,7 +27,17 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
 }) => {
   const { fetchProjectMemberships } = useApi();
   const [projectMembers, setProjectMembers] = useState<any[]>([]);
-  const [uploads, setUploads] = useState<any[]>([]);
+  const [uploads, setUploads] = useState<Array<{
+    token: string;
+    filename: string;
+    content_type: string;
+    description?: string;
+    filesize?: number;
+    content_url?: string;
+  }>>([]);
+
+  // Get Redmine URL from localStorage
+  const redmineUrl = localStorage.getItem('redmine_url') || '';
 
   // When a project is selected, fetch its memberships and extract users
   useEffect(() => {
@@ -49,13 +60,45 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
   }, [newIssue.project_id, fetchProjectMemberships]);
 
   // Handle file upload completion
-  const handleUploadComplete = (upload: any) => {
-    setUploads(prev => [...prev, upload]);
+  const handleUploadComplete = async (upload: { token: string; filename: string; content_type: string }) => {
+    try {
+      // Get attachment details
+      const attachmentId = parseInt(upload.token.split('.')[0]);
+      const attachmentDetails = await getAttachmentDetails(attachmentId);
+
+      // Add the upload with complete details
+      const completeUpload = {
+        ...upload,
+        filesize: attachmentDetails.filesize,
+        content_url: attachmentDetails.content_url,
+        description: attachmentDetails.description || ''
+      };
+
+      setUploads(prev => [...prev, completeUpload]);
+
+      // Update the issue data with the new upload
+      setNewIssue((prev: any)  => ({
+        ...prev,
+        uploads: [...(prev.uploads || []), completeUpload]
+      }));
+    } catch (err) {
+      console.error('Error getting attachment details:', err);
+      // Still add the upload even if we couldn't get details
+      setUploads(prev => [...prev, upload]);
+      setNewIssue((prev: any) => ({
+        ...prev,
+        uploads: [...(prev.uploads || []), upload]
+      }));
+    }
   };
 
   // Handle removing an upload
   const handleRemoveUpload = (token: string) => {
     setUploads(prev => prev.filter(u => u.token !== token));
+    setNewIssue((prev: any) => ({
+      ...prev,
+      uploads: prev.uploads?.filter((u: any) => u.token !== token) || []
+    }));
   };
 
   // Handle form submission
@@ -66,7 +109,8 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
       uploads: uploads.map(upload => ({
         token: upload.token,
         filename: upload.filename,
-        content_type: upload.content_type
+        content_type: upload.content_type,
+        description: upload.description
       }))
     };
     setNewIssue(issueData);
@@ -103,9 +147,7 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
                         id="project_id"
                         className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                         value={newIssue.project_id}
-                        onChange={(e) =>
-                          setNewIssue({ ...newIssue, project_id: parseInt(e.target.value) })
-                        }
+                        onChange={(e) => setNewIssue({ ...newIssue, project_id: parseInt(e.target.value) })}
                         required
                       >
                         <option value="">Select a project</option>
@@ -127,9 +169,7 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
                       id="subject"
                       className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                       value={newIssue.subject}
-                      onChange={(e) =>
-                        setNewIssue({ ...newIssue, subject: e.target.value })
-                      }
+                      onChange={(e) => setNewIssue({ ...newIssue, subject: e.target.value })}
                       required
                     />
                   </div>
@@ -140,9 +180,7 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
                     </label>
                     <MarkdownEditor
                       value={newIssue.description}
-                      onChange={(value) =>
-                        setNewIssue({ ...newIssue, description: value || '' })
-                      }
+                      onChange={(value) => setNewIssue({ ...newIssue, description: value || '' })}
                       height={300}
                     />
                   </div>
@@ -156,9 +194,7 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
                         id="status"
                         className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                         value={newIssue.status_id}
-                        onChange={(e) =>
-                          setNewIssue({ ...newIssue, status_id: parseInt(e.target.value) })
-                        }
+                        onChange={(e) => setNewIssue({ ...newIssue, status_id: parseInt(e.target.value) })}
                       >
                         <option value={1}>New</option>
                         <option value={2}>In Progress</option>
@@ -176,9 +212,7 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
                         id="priority"
                         className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                         value={newIssue.priority_id}
-                        onChange={(e) =>
-                          setNewIssue({ ...newIssue, priority_id: parseInt(e.target.value) })
-                        }
+                        onChange={(e) => setNewIssue({ ...newIssue, priority_id: parseInt(e.target.value) })}
                       >
                         <option value={1}>Low</option>
                         <option value={2}>Normal</option>
@@ -198,9 +232,7 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
                         users={users}
                         projectMembers={projectMembers}
                         selectedUserId={newIssue.assigned_to_id}
-                        onChange={(userId) =>
-                          setNewIssue({ ...newIssue, assigned_to_id: userId })
-                        }
+                        onChange={(userId) => setNewIssue({ ...newIssue, assigned_to_id: userId })}
                         placeholder="Select assignee..."
                       />
                     ) : (
@@ -223,18 +255,14 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
                     {uploads.length > 0 && (
                       <div className="mt-2">
                         <Attachments
-                          attachments={uploads.map(upload => {
-                            // Extract the attachment ID from the token (e.g., "7167" from "7167.ed1ccdb093229ca1bd0b043618d88743")
-                            const attachmentId = parseInt(upload.token.split('.')[0]);
-                            return {
-                              id: attachmentId,
-                              filename: upload.filename,
-                              filesize: 0, // Size not available from upload token
-                              content_type: upload.content_type,
-                              description: upload.description || '',
-                              content_url: `${import.meta.env.VITE_REDMINE_URL}/attachments/download/${attachmentId}/${upload.filename}`
-                            };
-                          })}
+                          attachments={uploads.map(upload => ({
+                            id: parseInt(upload.token.split('.')[0]),
+                            filename: upload.filename,
+                            filesize: upload.filesize || 0,
+                            content_type: upload.content_type,
+                            description: upload.description || '',
+                            content_url: upload.content_url || `${redmineUrl}/attachments/download/${upload.token.split('.')[0]}/${upload.filename}`
+                          }))}
                           onDelete={(id) => handleRemoveUpload(uploads.find(u => parseInt(u.token.split('.')[0]) === id)?.token || '')}
                           readOnly={false}
                         />

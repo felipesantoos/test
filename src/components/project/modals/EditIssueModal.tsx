@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MarkdownEditor } from '../../shared/MarkdownEditor';
 import { UserSelect } from '../../shared/UserSelect';
 import { FileUpload } from '../../shared/FileUpload';
 import { Attachments } from '../../shared/Attachments';
 import { useApi } from '../../../context/ApiContext';
+import { getAttachmentDetails } from '../../../services/attachmentService';
 
 interface IssueData {
   id: number;
@@ -37,6 +38,9 @@ interface IssueData {
     token: string;
     filename: string;
     content_type: string;
+    description?: string;
+    filesize?: number;
+    content_url?: string;
   }>;
 }
 
@@ -64,7 +68,12 @@ export const EditIssueModal: React.FC<EditIssueModalProps> = ({
     filename: string;
     content_type: string;
     description?: string;
+    filesize?: number;
+    content_url?: string;
   }>>([]);
+
+  // Get Redmine URL from localStorage
+  const redmineUrl = localStorage.getItem('redmine_url') || '';
 
   // When the issue has a project, fetch its memberships
   useEffect(() => {
@@ -86,29 +95,49 @@ export const EditIssueModal: React.FC<EditIssueModalProps> = ({
     }
   }, [selectedIssue?.project?.id, fetchProjectMemberships]);
 
+  // Initialize uploads from existing attachments
+  useEffect(() => {
+    if (selectedIssue?.uploads) {
+      setUploads(selectedIssue.uploads);
+    }
+  }, [selectedIssue?.uploads]);
+
   // Handle file upload completion
-  const handleUploadComplete = (upload: { token: string; filename: string; content_type: string }) => {
-    setUploads(prev => [...prev, upload]);
-    
-    // Add the upload to the issue data
-    setSelectedIssue({
-      ...selectedIssue,
-      uploads: [
-        ...(selectedIssue.uploads || []),
-        {
-          token: upload.token,
-          filename: upload.filename,
-          content_type: upload.content_type
-        }
-      ]
-    });
+  const handleUploadComplete = async (upload: { token: string; filename: string; content_type: string }) => {
+    try {
+      // Get attachment details
+      const attachmentId = parseInt(upload.token.split('.')[0]);
+      const attachmentDetails = await getAttachmentDetails(attachmentId);
+
+      // Add the upload with complete details
+      const completeUpload = {
+        ...upload,
+        filesize: attachmentDetails.filesize,
+        content_url: attachmentDetails.content_url,
+        description: attachmentDetails.description || ''
+      };
+
+      setUploads(prev => [...prev, completeUpload]);
+
+      // Update the issue data with the new upload
+      setSelectedIssue({
+        ...selectedIssue,
+        uploads: [...(selectedIssue.uploads || []), completeUpload]
+      });
+    } catch (err) {
+      console.error('Error getting attachment details:', err);
+      // Still add the upload even if we couldn't get details
+      setUploads(prev => [...prev, upload]);
+      setSelectedIssue({
+        ...selectedIssue,
+        uploads: [...(selectedIssue.uploads || []), upload]
+      });
+    }
   };
 
   // Handle removing an upload
   const handleRemoveUpload = (token: string) => {
     setUploads(prev => prev.filter(u => u.token !== token));
-    
-    // Remove the upload from the issue data
     setSelectedIssue({
       ...selectedIssue,
       uploads: selectedIssue.uploads?.filter(u => u.token !== token) || []
@@ -131,6 +160,22 @@ export const EditIssueModal: React.FC<EditIssueModalProps> = ({
         a.id === attachmentId ? { ...a, description } : a
       ) || []
     });
+  };
+
+  // Handle form submission
+  const handleSubmit = () => {
+    // Add uploads to the issue data
+    const issueData = {
+      ...selectedIssue,
+      uploads: uploads.map(upload => ({
+        token: upload.token,
+        filename: upload.filename,
+        content_type: upload.content_type,
+        description: upload.description
+      }))
+    };
+    setSelectedIssue(issueData);
+    handleUpdateIssue();
   };
 
   return (
@@ -279,17 +324,14 @@ export const EditIssueModal: React.FC<EditIssueModalProps> = ({
                     {uploads.length > 0 && (
                       <div className="mt-2">
                         <Attachments
-                          attachments={uploads.map(upload => {
-                            const attachmentId = parseInt(upload.token.split('.')[0]);
-                            return {
-                              id: attachmentId,
-                              filename: upload.filename,
-                              filesize: 0,
-                              content_type: upload.content_type,
-                              description: upload.description || '',
-                              content_url: `${import.meta.env.VITE_REDMINE_URL}/attachments/download/${attachmentId}/${upload.filename}`
-                            };
-                          })}
+                          attachments={uploads.map(upload => ({
+                            id: parseInt(upload.token.split('.')[0]),
+                            filename: upload.filename,
+                            filesize: upload.filesize || 0,
+                            content_type: upload.content_type,
+                            description: upload.description || '',
+                            content_url: upload.content_url || `${redmineUrl}/attachments/download/${upload.token.split('.')[0]}/${upload.filename}`
+                          }))}
                           onDelete={(id) => handleRemoveUpload(uploads.find(u => parseInt(u.token.split('.')[0]) === id)?.token || '')}
                           readOnly={false}
                         />
@@ -304,7 +346,7 @@ export const EditIssueModal: React.FC<EditIssueModalProps> = ({
           <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
             <button
               type="button"
-              onClick={handleUpdateIssue}
+              onClick={handleSubmit}
               disabled={!selectedIssue.subject || loadingAction}
               className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm disabled:bg-indigo-400"
             >

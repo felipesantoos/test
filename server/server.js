@@ -13,6 +13,7 @@ import roleRoutes from './routes/roleRoutes.js';
 import otherRoutes from './routes/otherRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
 import downloadRoutes from './routes/downloadRoutes.js';
+import attachmentRoutes from './routes/attachmentRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -34,6 +35,7 @@ app.use('/api/memberships', membershipRoutes);
 app.use('/api/roles', roleRoutes);
 app.use('/api/uploads', uploadRoutes);
 app.use('/api/downloads', downloadRoutes);
+app.use('/api/attachments', attachmentRoutes);
 app.use('/api', otherRoutes);
 
 // Start the server
