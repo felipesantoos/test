@@ -335,6 +335,16 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     try {
       const authToken = getAuthToken();
       
+      // If there are uploads, ensure they have the required fields
+      if (issueData.issue.uploads && issueData.issue.uploads.length > 0) {
+        issueData.issue.uploads = issueData.issue.uploads.map((upload: any) => ({
+          token: upload.token,
+          filename: upload.filename,
+          content_type: upload.content_type,
+          description: upload.description
+        }));
+      }
+
       const response = await axios.post(`${SERVER_URL}/api/issues`, issueData, {
         params: { 
           authToken,
@@ -358,6 +368,16 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     try {
       const authToken = getAuthToken();
       
+      // If there are uploads, ensure they have the required fields
+      if (issueData.issue.uploads && issueData.issue.uploads.length > 0) {
+        issueData.issue.uploads = issueData.issue.uploads.map((upload: any) => ({
+          token: upload.token,
+          filename: upload.filename,
+          content_type: upload.content_type,
+          description: upload.description
+        }));
+      }
+
       await axios.put(`${SERVER_URL}/api/issues/${id}`, issueData, {
         params: { 
           authToken,

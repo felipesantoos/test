@@ -13,7 +13,7 @@ interface CreateIssueModalProps {
   setIsCreatingIssue: (isCreating: boolean) => void;
   loadingAction: boolean;
   projects?: any[]; // Optional projects list for selection
-  users: any[]; // Users list for lookup (to show email, etc.)
+  users: any[]; // Users list for lookup
 }
 
 export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({ 
@@ -36,10 +36,7 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
     content_url?: string;
   }>>([]);
 
-  // Get Redmine URL from localStorage
-  const redmineUrl = localStorage.getItem('redmine_url') || '';
-
-  // When a project is selected, fetch its memberships and extract users
+  // When a project is selected, fetch its memberships
   useEffect(() => {
     if (newIssue.project_id) {
       fetchProjectMemberships(newIssue.project_id)
@@ -85,6 +82,7 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
       console.error('Error getting attachment details:', err);
       // Still add the upload even if we couldn't get details
       setUploads(prev => [...prev, upload]);
+      // Update the issue data with the new upload
       setNewIssue((prev: any) => ({
         ...prev,
         uploads: [...(prev.uploads || []), upload]
@@ -261,7 +259,7 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
                             filesize: upload.filesize || 0,
                             content_type: upload.content_type,
                             description: upload.description || '',
-                            content_url: upload.content_url || `${redmineUrl}/attachments/download/${upload.token.split('.')[0]}/${upload.filename}`
+                            content_url: upload.content_url || ''
                           }))}
                           onDelete={(id) => handleRemoveUpload(uploads.find(u => parseInt(u.token.split('.')[0]) === id)?.token || '')}
                           readOnly={false}

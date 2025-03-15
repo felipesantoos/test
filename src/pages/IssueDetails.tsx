@@ -26,6 +26,7 @@ import { format } from 'date-fns';
 import { IssueTabs } from '../components/issue/IssueTabs';
 import { MarkdownEditor } from '../components/shared/MarkdownEditor';
 import { UserSelect } from '../components/shared/UserSelect';
+import { downloadAttachment } from '../services/attachmentService';
 
 export const IssueDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -52,6 +53,16 @@ export const IssueDetails = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [loadingAction, setLoadingAction] = useState(false);
   const [activeTab, setActiveTab] = useState('details');
+
+  // Handle file download
+  const handleDownload = async (attachmentId: number, filename: string) => {
+    try {
+      await downloadAttachment(attachmentId, filename);
+    } catch (err) {
+      console.error('Error downloading attachment:', err);
+      alert('Failed to download attachment');
+    }
+  };
 
   // Load issue details
   useEffect(() => {
@@ -855,7 +866,8 @@ export const IssueDetails = () => {
                           <div className="flex items-center justify-between">
                             <h4 className="font-medium">
                               <a 
-                                href={attachment.content_url} 
+                                href={"#"} 
+                                onClick={() => handleDownload(attachment.id, attachment.filename)}
                                 target="_blank" 
                                 rel="noopener noreferrer"
                                 className="text-indigo-600 hover:text-indigo-800"

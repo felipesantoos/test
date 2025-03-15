@@ -4,6 +4,7 @@ import { X, Paperclip, Link2, Eye, MessageSquare, Clock, Tag, AlertCircle, Edit 
 import { useApi } from '../../../context/ApiContext';
 import { EditIssueModal } from '../../project/modals/EditIssueModal';
 import { MarkdownEditor } from '../../shared/MarkdownEditor';
+import { downloadAttachment } from '../../../services/attachmentService';
 
 interface IssueDetailsModalProps {
   issueId: number;
@@ -19,6 +20,16 @@ export const IssueDetailsModal: React.FC<IssueDetailsModalProps> = ({ issueId, o
   const [isEditing, setIsEditing] = useState(false);
   const [loadingAction, setLoadingAction] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Handle file download
+  const handleDownload = async (attachmentId: number, filename: string) => {
+    try {
+      await downloadAttachment(attachmentId, filename);
+    } catch (err) {
+      console.error('Error downloading attachment:', err);
+      alert('Failed to download attachment');
+    }
+  };
 
   useEffect(() => {
     const loadIssueDetails = async () => {
@@ -275,7 +286,8 @@ export const IssueDetailsModal: React.FC<IssueDetailsModalProps> = ({ issueId, o
                                 <li key={attachment.id} className="flex items-center text-sm">
                                   <Paperclip size={16} className="text-gray-400 mr-2" />
                                   <a 
-                                    href={attachment.content_url} 
+                                    href={"#"} 
+                                    onClick={() => handleDownload(attachment.id, attachment.filename)}
                                     target="_blank" 
                                     rel="noopener noreferrer"
                                     className="text-indigo-600 hover:text-indigo-800"
