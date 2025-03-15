@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useApi } from '../context/ApiContext';
-import { Search, Filter, ArrowUpDown, Calendar, Users, CheckSquare, AlertCircle, Plus, X, Clock, SortAsc, SortDesc, CalendarDays, CalendarClock, User } from 'lucide-react';
+import { Search, Filter, ArrowUpDown, Calendar, Users, CheckSquare, AlertCircle, Plus, X, Clock, SortAsc, SortDesc, CalendarDays, CalendarClock, User, ChevronLeft, ChevronRight } from 'lucide-react';
 import { CreateProjectModal } from '../components/project/modals/CreateProjectModal';
 import { format, subDays, isAfter } from 'date-fns';
 
@@ -18,6 +18,11 @@ export const Projects = () => {
     fetchIssues,
     createProject
   } = useApi();
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalProjects, setTotalProjects] = useState(0);
+  const [projectsPerPage] = useState(9);
   
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredProjects, setFilteredProjects] = useState<any[]>([]);
@@ -77,16 +82,28 @@ export const Projects = () => {
     }
   }, [projects]);
 
-  // Calculate progress for each project based on issues
+  // Load projects with pagination
   useEffect(() => {
-    const calculateProjectProgress = async () => {
-      if (!isConnected || projects.length === 0) return;
+    const loadProjects = async () => {
+      if (!isConnected) return;
       
       setLoading(true);
       
       try {
+        const response = await fetchProjects({
+          offset: (currentPage - 1) * projectsPerPage,
+          limit: projectsPerPage,
+          // Add any active filters
+          status: filters.status !== 'all' ? filters.status : undefined,
+          name: searchQuery || undefined,
+          // Add other filters as needed
+        });
+
+        setTotalProjects(response.total_count);
+        
+        // Process projects with progress and memberships
         const enhancedProjects = await Promise.all(
-          projects.map(async (project) => {
+          response.projects.map(async (project) => {
             // Fetch all issues for this project
             const projectIssues = await fetchIssues({ projectId: project.id });
             
@@ -103,7 +120,7 @@ export const Projects = () => {
             const isCompleted = progress === 100 && totalIssues > 0;
 
             // Get project memberships
-            const projectMembershipData = await fetchProjectMemberships(parseInt(project.id));
+            const projectMembershipData = await fetchProjectMemberships(project.id);
             
             return {
               ...project,
@@ -118,18 +135,16 @@ export const Projects = () => {
         );
         
         setProjectsWithProgress(enhancedProjects);
-        
-        // Apply filters and sorting
-        applyFiltersAndSort(enhancedProjects);
+        setFilteredProjects(enhancedProjects);
       } catch (err) {
-        console.error('Error calculating project progress:', err);
+        console.error('Error loading projects:', err);
       } finally {
         setLoading(false);
       }
     };
-    
-    calculateProjectProgress();
-  }, [projects, isConnected]);
+
+    loadProjects();
+  }, [isConnected, currentPage, projectsPerPage, searchQuery, filters]);
 
   // Apply filters and sorting when they change
   useEffect(() => {
@@ -676,7 +691,7 @@ export const Projects = () => {
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                     Visibility: {filters.isPublic === 'public' ? 'Public' : 'Private'}
                     <X 
-                      size={14} 
+                                            size={14} 
                       className="ml-1 cursor-pointer" 
                       onClick={() => setFilters({...filters, isPublic: 'all'})} 
                     />
@@ -821,6 +836,96 @@ export const Projects = () => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalProjects > projectsPerPage && (
+        <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+          <div className="flex-1 flex justify-between sm:hidden">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(totalProjects / projectsPerPage)))}
+              disabled={currentPage === Math.ceil(totalProjects / projectsPerPage)}
+              className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+            >
+              Next
+            </button>
+          </div>
+          <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm text-gray-700">
+                Showing{' '}
+                <span className="font-medium">
+                  {Math.min((currentPage - 1) * projectsPerPage + 1, totalProjects)}
+                </span>{' '}
+                to{' '}
+                <span className="font-medium">
+                  {Math.min(currentPage * projectsPerPage, totalProjects)}
+                </span>{' '}
+                of{' '}
+                <span className="font-medium">{totalProjects}</span>{' '}
+                projects
+              </p>
+            </div>
+            <div>
+              <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                >
+                  <span className="sr-only">Previous</span>
+                  <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+                </button>
+                
+                {/* Page numbers */}
+                {[...Array(Math.min(5, Math.ceil(totalProjects / projectsPerPage)))].map((_, idx) => {
+                  let pageNumber;
+                  const totalPages = Math.ceil(totalProjects / projectsPerPage);
+                  
+                  if (totalPages <= 5) {
+                    pageNumber = idx + 1;
+                  } else if (currentPage <= 3) {
+                    pageNumber = idx + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNumber = totalPages - 4 + idx;
+                  } else {
+                    pageNumber = currentPage - 2 + idx;
+                  }
+
+                  return (
+                    <button
+                      key={pageNumber}
+                      onClick={() => setCurrentPage(pageNumber)}
+                      className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                        currentPage === pageNumber
+                          ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
+                          : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                      }`}
+                    >
+                      {pageNumber}
+                    </button>
+                  );
+                })}
+                
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(totalProjects / projectsPerPage)))}
+                  disabled={currentPage === Math.ceil(totalProjects / projectsPerPage)}
+                  className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                >
+                  <span className="sr-only">Next</span>
+                  <ChevronRight className="h-5 w-5" aria-hidden="true" />
+                </button>
+              </nav>
+            </div>
+          </div>
         </div>
       )}
 

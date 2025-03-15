@@ -5,6 +5,13 @@ import { useAuth } from './AuthContext';
 // Use environment variable with fallback
 const SERVER_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
+interface ProjectsResponse {
+  projects: any[];
+  total_count: number;
+  offset?: number;
+  limit?: number;
+}
+
 interface ApiContextType {
   isConnected: boolean;
   isLoading: boolean;
@@ -18,7 +25,7 @@ interface ApiContextType {
   roles: any[];
   refreshData: () => Promise<void>;
   fetchIssues: (filters?: any) => Promise<any[]>;
-  fetchProjects: (filters?: any) => Promise<any[]>;
+  fetchProjects: (filters?: any) => Promise<ProjectsResponse>;
   fetchIssueDetails: (id: number) => Promise<any>;
   fetchProjectDetails: (id: number) => Promise<any>;
   fetchProjectMemberships: (projectId: number) => Promise<any[]>;
@@ -197,10 +204,10 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // Fetch projects with filters
-  const fetchProjects = async (filters: any = {}): Promise<any[]> => {
+  const fetchProjects = async (filters: any = {}): Promise<ProjectsResponse> => {
     if (!isConnected && isAuthenticated && redmineUrl) {
       const connected = await testConnection();
-      if (!connected) return [];
+      if (!connected) return { projects: [], total_count: 0 };
     }
 
     try {
@@ -213,10 +220,16 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
           ...filters
         }
       });
-      return response.data.projects || [];
+      
+      return {
+        projects: response.data.projects || [],
+        total_count: response.data.total_count || 0,
+        offset: response.data.offset,
+        limit: response.data.limit
+      };
     } catch (err: any) {
       console.error('Error fetching projects:', err);
-      return [];
+      return { projects: [], total_count: 0 };
     }
   };
 

@@ -79,10 +79,15 @@ export const ProjectDetails = () => {
 
   // Add new effect to load required data
   useEffect(() => {
-    if (isConnected && (!issueStatuses.length || !priorities.length || !trackers.length || !users.length)) {
+    const hasRequiredData = issueStatuses.length > 0 && 
+                           priorities.length > 0 && 
+                           trackers.length > 0 && 
+                           users.length > 0;
+                           
+    if (isConnected && !hasRequiredData && !loading) {
       refreshData();
     }
-  }, [isConnected, issueStatuses.length, priorities.length, trackers.length, users.length, refreshData]);
+  }, [isConnected, issueStatuses.length, priorities.length, trackers.length, users.length, loading, refreshData]);
 
   // Load project details and issues
   useEffect(() => {
