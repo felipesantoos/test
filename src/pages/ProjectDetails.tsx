@@ -52,6 +52,8 @@ export const ProjectDetails = () => {
   const [projectProgress, setProjectProgress] = useState(0);
   const [issueStats, setIssueStats] = useState({ total: 0, open: 0, closed: 0 });
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  // Add this near the top of the component with other state declarations
+  const [hasLoadedInitialData, setHasLoadedInitialData] = useState(false);
   
   // Modals state
   const [isCreatingIssue, setIsCreatingIssue] = useState(false);
@@ -77,17 +79,18 @@ export const ProjectDetails = () => {
   const [issuesOverTimeData, setIssuesOverTimeData] = useState<any[]>([]);
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
 
-  // Add new effect to load required data
+  // Replace the problematic useEffect with this version
   useEffect(() => {
     const hasRequiredData = issueStatuses.length > 0 && 
                            priorities.length > 0 && 
                            trackers.length > 0 && 
                            users.length > 0;
                            
-    if (isConnected && !hasRequiredData && !loading) {
+    if (isConnected && !hasRequiredData && !loading && !hasLoadedInitialData) {
+      setHasLoadedInitialData(true); // Set flag to prevent multiple refreshes
       refreshData();
     }
-  }, [isConnected, issueStatuses.length, priorities.length, trackers.length, users.length, loading, refreshData]);
+}, [isConnected, loading]); // Only watch connection status and loading state
 
   // Load project details and issues
   useEffect(() => {
