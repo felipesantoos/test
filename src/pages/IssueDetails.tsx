@@ -27,6 +27,7 @@ import { IssueTabs } from '../components/issue/IssueTabs';
 import { MarkdownEditor } from '../components/shared/MarkdownEditor';
 import { UserSelect } from '../components/shared/UserSelect';
 import { downloadAttachment } from '../services/attachmentService';
+import { AttachmentsTab } from '../components/issue/tabs/AttachmentsTab';
 
 export const IssueDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -850,62 +851,37 @@ export const IssueDetails = () => {
 
         {/* Attachments Tab */}
         {activeTab === 'attachments' && (
-          <div className="space-y-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Attachments</h3>
-            
-            {issue.attachments && issue.attachments.length > 0 ? (
-              <div className="bg-gray-50 rounded-md overflow-hidden">
-                <ul className="divide-y divide-gray-200">
-                  {issue.attachments.map((attachment: any) => (
-                    <li key={attachment.id} className="p-4 hover:bg-gray-100">
-                      <div className="flex items-start">
-                        <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center mr-4 flex-shrink-0">
-                          <Paperclip size={20} className="text-indigo-600" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between">
-                            <h4 className="font-medium">
-                              <a 
-                                href={"#"} 
-                                onClick={() => handleDownload(attachment.id, attachment.filename)}
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="text-indigo-600 hover:text-indigo-800"
-                              >
-                                {attachment.filename}
-                              </a>
-                            </h4>
-                            <span className="text-sm text-gray-500">{formatDateTime(attachment.created_on)}</span>
-                          </div>
-                          <div className="mt-1 flex items-center text-sm text-gray-500">
-                            <span className="mr-3">
-                              {formatFileSize(attachment.filesize)}
-                            </span>
-                            <span>
-                              {attachment.content_type}
-                            </span>
-                          </div>
-                          <div className="mt-2 text-sm">
-                            <span className="text-gray-500">Uploaded by: </span>
-                            <span className="font-medium">{attachment.author.name}</span>
-                          </div>
-                          {attachment.description && (
-                            <div className="mt-2 text-sm text-gray-700">
-                              {attachment.description}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : (
-              <div className="bg-gray-50 p-6 rounded-md text-center">
-                <p className="text-gray-500">No attachments for this issue</p>
-              </div>
-            )}
-          </div>
+          <AttachmentsTab
+            projectId={issue.project.id}
+            attachments={issue.attachments || []}
+            onAttachmentDelete={(attachmentId) => {
+              setIssue((prev: any) => ({
+                ...prev,
+                attachments: prev.attachments.filter((a: any) => a.id !== attachmentId)
+              }));
+            }}
+            onAttachmentUpdate={(attachmentId, description) => {
+              setIssue((prev: any) => ({
+                ...prev,
+                attachments: prev.attachments.map((a: any) => 
+                  a.id === attachmentId ? { ...a, description } : a
+                )
+              }));
+            }}
+            onUploadComplete={(upload) => {
+              setIssue((prev: any) => ({
+                ...prev,
+                attachments: [...(prev.attachments || []), {
+                  id: parseInt(upload.token.split('.')[0]),
+                  filename: upload.filename,
+                  content_type: upload.content_type,
+                  created_on: new Date().toISOString(),
+                  description: '',
+                  content_url: `${issue.redmine_url}/attachments/download/${upload.token.split('.')[0]}/${upload.filename}`
+                }]
+              }));
+            }}
+          />
         )}
 
         {/* Relations Tab */}
