@@ -19,6 +19,7 @@ import { EditProjectModal } from '../components/project/modals/EditProjectModal'
 import { format, parseISO, subDays, isAfter, isBefore, isEqual, startOfDay } from 'date-fns';
 import { GitHubIntegrationTab } from '../components/project/tabs/GitHubIntegrationTab';
 import { SuccessNotification } from '../components/shared/SuccessNotification';
+import { AttachmentsTab } from '../components/issue/tabs/AttachmentsTab';
 
 export const ProjectDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -90,7 +91,7 @@ export const ProjectDetails = () => {
       setHasLoadedInitialData(true); // Set flag to prevent multiple refreshes
       refreshData();
     }
-}, [isConnected, loading]); // Only watch connection status and loading state
+  }, [isConnected, loading]); // Only watch connection status and loading state
 
   // Load project details and issues
   useEffect(() => {
@@ -838,6 +839,41 @@ export const ProjectDetails = () => {
           <GitHubIntegrationTab 
             projectId={parseInt(id || '0')}
             issues={issues}
+          />
+        )}
+
+        {/* Attachments Tab */}
+        {activeTab === 'attachments' && (
+          <AttachmentsTab 
+            projectId={parseInt(id || '0')}
+            attachments={project.attachments || []}
+            onAttachmentDelete={(attachmentId: any) => {
+              setProject((prev: any) => ({
+                ...prev,
+                attachments: prev.attachments.filter((a: any) => a.id !== attachmentId)
+              }));
+            }}
+            onAttachmentUpdate={(attachmentId: any, description: any) => {
+              setProject((prev: any) => ({
+                ...prev,
+                attachments: prev.attachments.map((a: any) => 
+                  a.id === attachmentId ? { ...a, description } : a
+                )
+              }));
+            }}
+            onUploadComplete={(upload: any) => {
+              setProject((prev: any) => ({
+                ...prev,
+                attachments: [...(prev.attachments || []), {
+                  id: parseInt(upload.token.split('.')[0]),
+                  filename: upload.filename,
+                  content_type: upload.content_type,
+                  created_on: new Date().toISOString(),
+                  description: '',
+                  content_url: `${project.redmine_url}/attachments/download/${upload.token.split('.')[0]}/${upload.filename}`
+                }]
+              }));
+            }}
           />
         )}
 

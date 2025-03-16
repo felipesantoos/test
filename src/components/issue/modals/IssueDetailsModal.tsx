@@ -5,6 +5,7 @@ import { useApi } from '../../../context/ApiContext';
 import { EditIssueModal } from '../../project/modals/EditIssueModal';
 import { MarkdownEditor } from '../../shared/MarkdownEditor';
 import { downloadAttachment } from '../../../services/attachmentService';
+import { AttachmentsTab } from '../tabs/AttachmentsTab';
 
 interface IssueDetailsModalProps {
   issueId: number;
@@ -16,20 +17,10 @@ export const IssueDetailsModal: React.FC<IssueDetailsModalProps> = ({ issueId, o
   const [issue, setIssue] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'details' | 'history' | 'relations'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'history' | 'relations' | 'attachments'>('details');
   const [isEditing, setIsEditing] = useState(false);
   const [loadingAction, setLoadingAction] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-
-  // Handle file download
-  const handleDownload = async (attachmentId: number, filename: string) => {
-    try {
-      await downloadAttachment(attachmentId, filename);
-    } catch (err) {
-      console.error('Error downloading attachment:', err);
-      alert('Failed to download attachment');
-    }
-  };
 
   useEffect(() => {
     const loadIssueDetails = async () => {
@@ -235,6 +226,16 @@ export const IssueDetailsModal: React.FC<IssueDetailsModalProps> = ({ issueId, o
                           History
                         </button>
                         <button
+                          onClick={() => setActiveTab('attachments')}
+                          className={`py-2 px-4 text-center border-b-2 font-medium text-sm ${
+                            activeTab === 'attachments'
+                              ? 'border-indigo-500 text-indigo-600'
+                              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                          }`}
+                        >
+                          Attachments
+                        </button>
+                        <button
                           onClick={() => setActiveTab('relations')}
                           className={`py-2 px-4 text-center border-b-2 font-medium text-sm ${
                             activeTab === 'relations'
@@ -277,42 +278,6 @@ export const IssueDetailsModal: React.FC<IssueDetailsModalProps> = ({ issueId, o
                             preview={true}
                           />
                         </div>
-                        
-                        {issue.attachments && issue.attachments.length > 0 && (
-                          <div>
-                            <h4 className="text-sm font-medium text-gray-500 mb-1">Attachments</h4>
-                            <ul className="space-y-2">
-                              {issue.attachments.map((attachment: any) => (
-                                <li key={attachment.id} className="flex items-center text-sm">
-                                  <Paperclip size={16} className="text-gray-400 mr-2" />
-                                  <a 
-                                    href={"#"} 
-                                    onClick={() => handleDownload(attachment.id, attachment.filename)}
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="text-indigo-600 hover:text-indigo-800"
-                                  >
-                                    {attachment.filename} ({Math.round(attachment.filesize / 1024)} KB)
-                                  </a>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                        
-                        {issue.watchers && issue.watchers.length > 0 && (
-                          <div>
-                            <h4 className="text-sm font-medium text-gray-500 mb-1">Watchers</h4>
-                            <div className="flex flex-wrap gap-2">
-                              {issue.watchers.map((watcher: any) => (
-                                <div key={watcher.id} className="flex items-center text-sm bg-gray-100 px-2 py-1 rounded-full">
-                                  <Eye size={14} className="text-gray-500 mr-1" />
-                                  <span>{watcher.name}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
                       </div>
                     )}
                     
@@ -362,6 +327,40 @@ export const IssueDetailsModal: React.FC<IssueDetailsModalProps> = ({ issueId, o
                           <p className="text-sm text-gray-500">No history available.</p>
                         )}
                       </div>
+                    )}
+                    
+                    {activeTab === 'attachments' && (
+                      <AttachmentsTab
+                        projectId={issue.project.id}
+                        attachments={issue.attachments || []}
+                        onAttachmentDelete={(attachmentId) => {
+                          setIssue((prev: any) => ({
+                            ...prev,
+                            attachments: prev.attachments.filter((a: any) => a.id !== attachmentId)
+                          }));
+                        }}
+                        onAttachmentUpdate={(attachmentId, description) => {
+                          setIssue((prev: any) => ({
+                            ...prev,
+                            attachments: prev.attachments.map((a: any) => 
+                              a.id === attachmentId ? { ...a, description } : a
+                            )
+                          }));
+                        }}
+                        onUploadComplete={(upload) => {
+                          setIssue((prev: any) => ({
+                            ...prev,
+                            attachments: [...(prev.attachments || []), {
+                              id: parseInt(upload.token.split('.')[0]),
+                              filename: upload.filename,
+                              content_type: upload.content_type,
+                              created_on: new Date().toISOString(),
+                              description: '',
+                              content_url: `${issue.redmine_url}/attachments/download/${upload.token.split('.')[0]}/${upload.filename}`
+                            }]
+                          }));
+                        }}
+                      />
                     )}
                     
                     {activeTab === 'relations' && (

@@ -34,6 +34,18 @@ interface AttachmentResponse {
   created_on: string;
 }
 
+// Get attachment binary URL
+export const getAttachmentBinaryUrl = (attachmentId: number): string => {
+  const authToken = getAuthToken();
+  const redmineUrl = getRedmineUrl();
+  
+  if (!authToken || !redmineUrl) {
+    throw new Error('Authentication required');
+  }
+
+  return `${SERVER_URL}/api/attachments/${attachmentId}/raw?authToken=${encodeURIComponent(authToken)}&redmineUrl=${encodeURIComponent(redmineUrl)}`;
+};
+
 // Upload a file and get a token
 export const uploadFile = async (file: File): Promise<UploadResponse> => {
   const authToken = getAuthToken();
