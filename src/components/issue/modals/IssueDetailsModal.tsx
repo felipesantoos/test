@@ -7,6 +7,44 @@ import { MarkdownEditor } from '../../shared/MarkdownEditor';
 import { downloadAttachment } from '../../../services/attachmentService';
 import { AttachmentsTab } from '../tabs/AttachmentsTab';
 
+interface IssueData {
+  id: number;
+  subject: string;
+  description?: string;
+  status: {
+    id: number;
+    name: string;
+  };
+  priority: {
+    id: number;
+    name: string;
+  };
+  assigned_to?: {
+    id: number | string;
+    name: string;
+  } | null;
+  project?: {
+    id: number;
+    name: string;
+  };
+  attachments?: Array<{
+    id: number;
+    filename: string;
+    filesize: number;
+    content_type: string;
+    description?: string;
+    content_url: string;
+  }>;
+  uploads?: Array<{
+    token: string;
+    filename: string;
+    content_type: string;
+    description?: string;
+    filesize?: number;
+    content_url?: string;
+  }>;
+}
+
 interface IssueDetailsModalProps {
   issueId: number;
   onClose: () => void;
@@ -42,23 +80,15 @@ export const IssueDetailsModal: React.FC<IssueDetailsModalProps> = ({ issueId, o
   }, [issueId, fetchIssueDetails, refreshTrigger]);
 
   // Handle updating an issue
-  const handleUpdateIssue = async () => {
-    if (!issue || !issue.subject) return;
+  const handleUpdateIssue = async (newIssueData: IssueData) => {
+    if (!newIssueData || !newIssueData.subject) return;
     
     setLoadingAction(true);
     
     try {
-      const issueData = {
-        issue: {
-          subject: issue.subject,
-          description: issue.description,
-          status_id: issue.status.id,
-          priority_id: issue.priority.id,
-          assigned_to_id: issue.assigned_to?.id || null
-        }
-      };
+      const issueData = {issue: newIssueData};
       
-      await updateIssue(issue.id, issueData);
+      await updateIssue(newIssueData.id, issueData);
       
       // Refresh the issue details and the main data
       setRefreshTrigger(prev => prev + 1);

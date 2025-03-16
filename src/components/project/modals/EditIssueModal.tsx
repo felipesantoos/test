@@ -47,7 +47,7 @@ interface IssueData {
 interface EditIssueModalProps {
   selectedIssue: IssueData;
   setSelectedIssue: (issue: IssueData) => void;
-  handleUpdateIssue: () => void;
+  handleUpdateIssue: (issueData: IssueData) => void;
   loadingAction: boolean;
   onCancel?: () => void;
   users: any[]; // Global users list for additional details
@@ -175,7 +175,7 @@ export const EditIssueModal: React.FC<EditIssueModalProps> = ({
       }))
     };
     setSelectedIssue(issueData);
-    handleUpdateIssue();
+    handleUpdateIssue(issueData);
   };
 
   return (

@@ -462,23 +462,15 @@ export const Issues = () => {
         <EditIssueModal
           selectedIssue={selectedIssue}
           setSelectedIssue={setSelectedIssue}
-          handleUpdateIssue={async () => {
-            if (!isConnected || !selectedIssue || !selectedIssue.subject) return;
+          handleUpdateIssue={async (newIssueData) => {
+            if (!isConnected || !newIssueData || !newIssueData.subject) return;
             
             setLoadingAction(true);
             
             try {
-              const issueData = {
-                issue: {
-                  subject: selectedIssue.subject,
-                  description: selectedIssue.description,
-                  status_id: selectedIssue.status.id,
-                  priority_id: selectedIssue.priority.id,
-                  assigned_to_id: selectedIssue.assigned_to?.id || null
-                }
-              };
+              const issueData = {issue: newIssueData};
               
-              await updateIssue(selectedIssue.id, issueData);
+              await updateIssue(newIssueData.id, issueData);
               await refreshData();
               setSelectedIssue(null);
               

@@ -367,7 +367,6 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       const authToken = getAuthToken();
-      
       // If there are uploads, ensure they have the required fields
       if (issueData.issue.uploads && issueData.issue.uploads.length > 0) {
         issueData.issue.uploads = issueData.issue.uploads.map((upload: any) => ({
