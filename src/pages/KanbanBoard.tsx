@@ -608,6 +608,7 @@ export const KanbanBoard = () => {
           handleUpdateIssue={handleUpdateIssue}
           loadingAction={loadingAction}
           users={users}
+          onCancel={() => setSelectedIssue(null)}
         />
       )}
 

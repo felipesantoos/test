@@ -494,6 +494,7 @@ export const Issues = () => {
           }}
           loadingAction={loadingAction}
           users={users}
+          onCancel={() => setSelectedIssue(null)}
         />
       )}
 
