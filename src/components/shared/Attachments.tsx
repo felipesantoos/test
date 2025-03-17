@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Paperclip, Download, Trash2, Edit2, Save, X, FileText, Image, File as FileIcon } from 'lucide-react';
-import { deleteAttachment, updateAttachment, downloadAttachment } from '../../services/attachmentService';
+import { Paperclip, Download, Trash2, Edit2, Save, X, FileText, Image, File as FileIcon, Copy } from 'lucide-react';
+import { deleteAttachment, updateAttachment, downloadAttachment, getAttachmentBinaryUrl } from '../../services/attachmentService';
 
 interface AttachmentsProps {
   attachments: any[];
@@ -73,6 +73,22 @@ export const Attachments: React.FC<AttachmentsProps> = ({
     } catch (err) {
       console.error('Error downloading attachment:', err);
       alert('Failed to download attachment');
+    }
+  };
+
+  // Handle copying the attachment URL to clipboard
+  const handleCopyUrl = (attachmentId: number) => {
+    try {
+      const url = getAttachmentBinaryUrl(attachmentId);
+      navigator.clipboard.writeText(url)
+        .then(() => alert('Attachment URL copied to clipboard!'))
+        .catch((err) => {
+          console.error('Failed to copy URL:', err);
+          alert('Failed to copy URL');
+        });
+    } catch (err) {
+      console.error('Error getting attachment URL:', err);
+      alert('Failed to get attachment URL');
     }
   };
 
@@ -149,7 +165,13 @@ export const Attachments: React.FC<AttachmentsProps> = ({
               >
                 <Download size={16} />
               </button>
-              
+              <button
+                onClick={() => handleCopyUrl(attachment.id)}
+                className="text-gray-400 hover:text-gray-600"
+                title="Copy URL"
+              >
+                <Copy size={16} />
+              </button>
               {editingId !== attachment.id && (
                 <button
                   onClick={() => {
@@ -162,7 +184,6 @@ export const Attachments: React.FC<AttachmentsProps> = ({
                   <Edit2 size={16} />
                 </button>
               )}
-              
               <button
                 onClick={() => handleDelete(attachment.id)}
                 disabled={loading}

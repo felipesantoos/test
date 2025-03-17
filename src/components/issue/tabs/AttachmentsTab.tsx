@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FileUpload } from '../../shared/FileUpload';
-import { Paperclip, Download, Trash2, Edit2, Save, X, FileText, Image as ImageIcon, File, Eye } from 'lucide-react';
+import { Paperclip, Download, Trash2, Edit2, Save, X, FileText, Image as ImageIcon, File, Eye, Copy } from 'lucide-react';
 import { downloadAttachment, deleteAttachment, updateAttachment, getAttachmentBinaryUrl } from '../../../services/attachmentService';
 import { useApi } from '../../../context/ApiContext';
 
@@ -82,17 +82,29 @@ export const AttachmentsTab: React.FC<AttachmentsTabProps> = ({
     }
   };
 
+  // Handle copying the attachment URL to clipboard
+  const handleCopyUrl = (attachmentId: number) => {
+    try {
+      const url = getAttachmentBinaryUrl(attachmentId);
+      navigator.clipboard.writeText(url)
+        .then(() => alert('Attachment URL copied to clipboard!'))
+        .catch((err) => {
+          console.error('Failed to copy URL:', err);
+          alert('Failed to copy URL');
+        });
+    } catch (err) {
+      console.error('Error getting attachment URL:', err);
+      alert('Failed to get attachment URL');
+    }
+  };
+
   // Handle file upload completion
   const handleUploadComplete = async (upload: { token: string; filename: string; content_type: string }) => {
-    // First call the parent's onUploadComplete if provided
     onUploadComplete?.(upload);
 
-    // If we have an issueId, update the issue with the new attachment
     if (issueId) {
       try {
         setLoading(true);
-        
-        // Update the issue with the new upload
         await updateIssue(issueId, {
           issue: {
             uploads: [{
@@ -227,6 +239,13 @@ export const AttachmentsTab: React.FC<AttachmentsTabProps> = ({
                         title="Download"
                       >
                         <Download size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleCopyUrl(attachment.id)}
+                        className="text-gray-400 hover:text-gray-600"
+                        title="Copy URL"
+                      >
+                        <Copy size={16} />
                       </button>
                       <button
                         onClick={() => {
