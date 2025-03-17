@@ -843,41 +843,6 @@ export const ProjectDetails = () => {
           />
         )}
 
-        {/* Attachments Tab */}
-        {activeTab === 'attachments' && (
-          <AttachmentsTab 
-            projectId={parseInt(id || '0')}
-            attachments={project.attachments || []}
-            onAttachmentDelete={(attachmentId: any) => {
-              setProject((prev: any) => ({
-                ...prev,
-                attachments: prev.attachments.filter((a: any) => a.id !== attachmentId)
-              }));
-            }}
-            onAttachmentUpdate={(attachmentId: any, description: any) => {
-              setProject((prev: any) => ({
-                ...prev,
-                attachments: prev.attachments.map((a: any) => 
-                  a.id === attachmentId ? { ...a, description } : a
-                )
-              }));
-            }}
-            onUploadComplete={(upload: any) => {
-              setProject((prev: any) => ({
-                ...prev,
-                attachments: [...(prev.attachments || []), {
-                  id: parseInt(upload.token.split('.')[0]),
-                  filename: upload.filename,
-                  content_type: upload.content_type,
-                  created_on: new Date().toISOString(),
-                  description: '',
-                  content_url: `${project.redmine_url}/attachments/download/${upload.token.split('.')[0]}/${upload.filename}`
-                }]
-              }));
-            }}
-          />
-        )}
-
         {/* Settings Tab */}
         {activeTab === 'settings' && (
           <SettingsTab 

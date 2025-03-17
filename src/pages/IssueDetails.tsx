@@ -852,7 +852,7 @@ export const IssueDetails = () => {
         {/* Attachments Tab */}
         {activeTab === 'attachments' && (
           <AttachmentsTab
-            projectId={issue.project.id}
+            issueId={issue.id}
             attachments={issue.attachments || []}
             onAttachmentDelete={(attachmentId) => {
               setIssue((prev: any) => ({

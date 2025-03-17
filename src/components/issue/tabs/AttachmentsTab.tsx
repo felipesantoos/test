@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { FileUpload } from '../../shared/FileUpload';
 import { Paperclip, Download, Trash2, Edit2, Save, X, FileText, Image as ImageIcon, File, Eye } from 'lucide-react';
 import { downloadAttachment, deleteAttachment, updateAttachment, getAttachmentBinaryUrl } from '../../../services/attachmentService';
+import { useApi } from '../../../context/ApiContext';
 
 interface AttachmentsTabProps {
-  projectId: number;
+  issueId?: number; // Add issueId prop
   attachments: any[];
   onAttachmentDelete?: (attachmentId: number) => void;
   onAttachmentUpdate?: (attachmentId: number, description: string) => void;
@@ -12,12 +13,13 @@ interface AttachmentsTabProps {
 }
 
 export const AttachmentsTab: React.FC<AttachmentsTabProps> = ({
-  projectId,
+  issueId,
   attachments,
   onAttachmentDelete,
   onAttachmentUpdate,
   onUploadComplete
 }) => {
+  const { updateIssue } = useApi();
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingDescription, setEditingDescription] = useState('');
   const [loading, setLoading] = useState(false);
@@ -80,6 +82,35 @@ export const AttachmentsTab: React.FC<AttachmentsTabProps> = ({
     }
   };
 
+  // Handle file upload completion
+  const handleUploadComplete = async (upload: { token: string; filename: string; content_type: string }) => {
+    // First call the parent's onUploadComplete if provided
+    onUploadComplete?.(upload);
+
+    // If we have an issueId, update the issue with the new attachment
+    if (issueId) {
+      try {
+        setLoading(true);
+        
+        // Update the issue with the new upload
+        await updateIssue(issueId, {
+          issue: {
+            uploads: [{
+              token: upload.token,
+              filename: upload.filename,
+              content_type: upload.content_type
+            }]
+          }
+        });
+      } catch (err) {
+        console.error('Error updating issue with new attachment:', err);
+        alert('Failed to attach file to issue');
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
   // Check if file is an image
   const isImage = (contentType: string) => {
     return contentType.startsWith('image/');
@@ -102,7 +133,7 @@ export const AttachmentsTab: React.FC<AttachmentsTabProps> = ({
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-lg font-semibold mb-4">Upload New Files</h2>
         <FileUpload
-          onUploadComplete={onUploadComplete ?? (() => {})}
+          onUploadComplete={handleUploadComplete}
           multiple={true}
           maxSize={5 * 1024 * 1024} // 5MB
         />
