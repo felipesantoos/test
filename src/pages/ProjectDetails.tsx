@@ -419,15 +419,24 @@ export const ProjectDetails = () => {
   };
 
   // Handle updating an issue
-  const handleUpdateIssue = async (newIssueData: any) => {
-    if (!isConnected || !newIssueData || !newIssueData.subject) return;
+  const handleUpdateIssue = async () => {
+    if (!isConnected || !selectedIssue || !selectedIssue.subject) return;
     
     setLoadingAction(true);
     
     try {
-      const issueData = {issue: newIssueData};
+      const issueData = {
+        issue: {
+          subject: selectedIssue.subject,
+          description: selectedIssue.description,
+          status_id: selectedIssue.status.id,
+          priority_id: selectedIssue.priority.id,
+          assigned_to_id: selectedIssue.assigned_to?.id || null,
+          uploads: selectedIssue.uploads
+        }
+      };
       
-      await updateIssue(newIssueData.id, issueData);
+      await updateIssue(selectedIssue.id, issueData);
       
       // Refresh issues
       const updatedIssues = await fetchIssues({ projectId: id });

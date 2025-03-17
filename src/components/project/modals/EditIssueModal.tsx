@@ -47,10 +47,10 @@ interface IssueData {
 interface EditIssueModalProps {
   selectedIssue: IssueData;
   setSelectedIssue: (issue: IssueData) => void;
-  handleUpdateIssue: (issueData: IssueData) => void;
+  handleUpdateIssue: () => void;
   loadingAction: boolean;
   onCancel?: () => void;
-  users: any[]; // Global users list for additional details
+  users: any[]; // Users list for lookup
 }
 
 export const EditIssueModal: React.FC<EditIssueModalProps> = ({ 
@@ -61,7 +61,7 @@ export const EditIssueModal: React.FC<EditIssueModalProps> = ({
   onCancel,
   users
 }) => {
-  const { fetchProjectMemberships } = useApi();
+  const { fetchProjectMemberships, issueStatuses, priorities } = useApi();
   const [projectMembers, setProjectMembers] = useState<any[]>([]);
   const [uploads, setUploads] = useState<Array<{
     token: string;
@@ -80,10 +80,10 @@ export const EditIssueModal: React.FC<EditIssueModalProps> = ({
     if (selectedIssue?.project?.id) {
       fetchProjectMemberships(selectedIssue.project.id)
         .then((memberships) => {
-          // Only include memberships that have a valid user object
+          // Only include memberships that have a user object
           const members = memberships
-            .filter((m: any) => m.user)
-            .map((m: any) => m.user);
+            .filter(m => m.user)
+            .map(m => m.user);
           setProjectMembers(members);
         })
         .catch((error) => {
@@ -175,7 +175,7 @@ export const EditIssueModal: React.FC<EditIssueModalProps> = ({
       }))
     };
     setSelectedIssue(issueData);
-    handleUpdateIssue(issueData);
+    handleUpdateIssue();
   };
 
   return (
@@ -199,12 +199,12 @@ export const EditIssueModal: React.FC<EditIssueModalProps> = ({
                 
                 <div className="space-y-4">
                   <div>
-                    <label htmlFor="editSubject" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-1">
                       Subject *
                     </label>
                     <input
                       type="text"
-                      id="editSubject"
+                      id="subject"
                       className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                       value={selectedIssue.subject}
                       onChange={(e) => setSelectedIssue({ ...selectedIssue, subject: e.target.value })}
@@ -213,7 +213,7 @@ export const EditIssueModal: React.FC<EditIssueModalProps> = ({
                   </div>
                   
                   <div>
-                    <label htmlFor="editDescription" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
                       Description
                     </label>
                     <MarkdownEditor
@@ -225,11 +225,11 @@ export const EditIssueModal: React.FC<EditIssueModalProps> = ({
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label htmlFor="editStatus" className="block text-sm font-medium text-gray-700 mb-1">
+                      <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
                         Status
                       </label>
                       <select
-                        id="editStatus"
+                        id="status"
                         className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                         value={selectedIssue.status.id}
                         onChange={(e) => setSelectedIssue({ 
@@ -240,20 +240,20 @@ export const EditIssueModal: React.FC<EditIssueModalProps> = ({
                           } 
                         })}
                       >
-                        <option value={1}>New</option>
-                        <option value={2}>In Progress</option>
-                        <option value={3}>Resolved</option>
-                        <option value={4}>Feedback</option>
-                        <option value={5}>Closed</option>
+                        {issueStatuses.map(status => (
+                          <option key={status.id} value={status.id}>
+                            {status.name}
+                          </option>
+                        ))}
                       </select>
                     </div>
                     
                     <div>
-                      <label htmlFor="editPriority" className="block text-sm font-medium text-gray-700 mb-1">
+                      <label htmlFor="priority" className="block text-sm font-medium text-gray-700 mb-1">
                         Priority
                       </label>
                       <select
-                        id="editPriority"
+                        id="priority"
                         className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                         value={selectedIssue.priority.id}
                         onChange={(e) => setSelectedIssue({ 
@@ -264,11 +264,11 @@ export const EditIssueModal: React.FC<EditIssueModalProps> = ({
                           } 
                         })}
                       >
-                        <option value={1}>Low</option>
-                        <option value={2}>Normal</option>
-                        <option value={3}>High</option>
-                        <option value={4}>Urgent</option>
-                        <option value={5}>Immediate</option>
+                        {priorities.map(priority => (
+                          <option key={priority.id} value={priority.id}>
+                            {priority.name}
+                          </option>
+                        ))}
                       </select>
                     </div>
                   </div>

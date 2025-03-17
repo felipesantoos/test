@@ -80,15 +80,24 @@ export const IssueDetailsModal: React.FC<IssueDetailsModalProps> = ({ issueId, o
   }, [issueId, fetchIssueDetails, refreshTrigger]);
 
   // Handle updating an issue
-  const handleUpdateIssue = async (newIssueData: IssueData) => {
-    if (!newIssueData || !newIssueData.subject) return;
+  const handleUpdateIssue = async () => {
+    if (!issue || !issue.subject) return;
     
     setLoadingAction(true);
     
     try {
-      const issueData = {issue: newIssueData};
+      const issueData = {
+        issue: {
+          subject: issue.subject,
+          description: issue.description,
+          status_id: issue.status.id,
+          priority_id: issue.priority.id,
+          assigned_to_id: issue.assigned_to?.id || null,
+          uploads: issue.uploads
+        }
+      };
       
-      await updateIssue(newIssueData.id, issueData);
+      await updateIssue(issue.id, issueData);
       
       // Refresh the issue details and the main data
       setRefreshTrigger(prev => prev + 1);

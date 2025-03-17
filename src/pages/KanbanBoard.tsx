@@ -392,7 +392,8 @@ export const KanbanBoard = () => {
           description: selectedIssue.description,
           status_id: selectedIssue.status.id,
           priority_id: selectedIssue.priority.id,
-          assigned_to_id: selectedIssue.assigned_to?.id || null
+          assigned_to_id: selectedIssue.assigned_to?.id || null,
+          uploads: selectedIssue.uploads
         }
       };
       
