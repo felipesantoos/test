@@ -105,7 +105,6 @@ router.put('/:id', async (req, res) => {
   const { authToken, redmineUrl } = req.query;
   const { id } = req.params;
   const issueData = req.body;
-  console.log(issueData);
   
   if (!authToken || !redmineUrl) {
     return res.status(400).json({ error: 'Authentication token and Redmine URL are required' });
