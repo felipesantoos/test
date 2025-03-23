@@ -44,6 +44,7 @@ interface ApiContextType {
   addProjectMember: (projectId: number, memberData: any) => Promise<any>;
   updateMembership: (membershipId: number, membershipData: any) => Promise<boolean>;
   deleteMembership: (membershipId: number) => Promise<boolean>;
+  fetchEpics: () => Promise<any>;
 }
 
 const ApiContext = createContext<ApiContextType | undefined>(undefined);
@@ -666,6 +667,28 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Update epics
+  const fetchEpics = async (): Promise<any> => {
+    if (!isConnected && isAuthenticated && redmineUrl) {
+      const connected = await testConnection();
+      if (!connected) return false;
+    }
+
+    try {
+      const authToken = getAuthToken();
+      await axios.get(`${SERVER_URL}/api/custom_fields/epics`, {
+        params: { 
+          authToken,
+          redmineUrl 
+        }
+      });
+      return true;
+    } catch (err: any) {
+      console.error(`Error updating epics:`, err);
+      throw new Error(err.response?.data?.error || `Failed to update epics`);
+    }
+  };
+
   // Initial connection test if authenticated
   useEffect(() => {
     if (isAuthenticated && redmineUrl) {
@@ -704,7 +727,8 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     deleteProject,
     addProjectMember,
     updateMembership,
-    deleteMembership
+    deleteMembership,
+    fetchEpics,
   };
 
   return <ApiContext.Provider value={value}>{children}</ApiContext.Provider>;
