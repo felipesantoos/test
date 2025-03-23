@@ -134,6 +134,9 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
   // Handle adding a new epic
   const handleAddNewEpic = () => {
     if (newEpicValue.trim()) {
+      // Add the new epic to the dropdown options
+      setEpics(prev => [...prev, newEpicValue.trim()]);
+      
       // Update custom fields with the new epic
       setNewIssue((prev: any) => ({
         ...prev,
@@ -142,6 +145,7 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
           { id: import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID, name: 'Epic', value: newEpicValue.trim() }
         ]
       }));
+      
       setNewEpicValue('');
       setIsAddingNewEpic(false);
     }
