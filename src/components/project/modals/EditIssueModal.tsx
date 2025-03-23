@@ -6,6 +6,7 @@ import { Attachments } from '../../shared/Attachments';
 import { useApi } from '../../../context/ApiContext';
 import { getAttachmentDetails } from '../../../services/attachmentService';
 import { EpicSelect } from '../../shared/EpicSelect';
+import { SprintSelect } from '../../shared/SprintSelect';
 
 interface IssueData {
   id: number;
@@ -67,7 +68,15 @@ export const EditIssueModal: React.FC<EditIssueModalProps> = ({
   onCancel,
   users
 }) => {
-  const { fetchProjectMemberships, issueStatuses, priorities, fetchEpics } = useApi();
+  const { 
+    fetchProjectMemberships, 
+    issueStatuses, 
+    priorities, 
+    fetchEpics,
+    fetchSprints,
+    createSprint 
+  } = useApi();
+  
   const [projectMembers, setProjectMembers] = useState<any[]>([]);
   const [uploads, setUploads] = useState<Array<{
     token: string;
@@ -78,6 +87,7 @@ export const EditIssueModal: React.FC<EditIssueModalProps> = ({
     content_url?: string;
   }>>([]);
   const [epics, setEpics] = useState<string[]>([]);
+  const [sprints, setSprints] = useState<any[]>([]);
   const [newEpicValue, setNewEpicValue] = useState('');
   const [isAddingNewEpic, setIsAddingNewEpic] = useState(false);
 
@@ -111,18 +121,22 @@ export const EditIssueModal: React.FC<EditIssueModalProps> = ({
     }
   }, [selectedIssue?.uploads]);
 
-  // Fetch epics when component mounts
+  // Fetch epics and sprints when component mounts
   useEffect(() => {
-    const loadEpics = async () => {
+    const loadData = async () => {
       try {
-        const epics = await fetchEpics();
-        setEpics(epics || []);
+        const [epicsData, sprintsData] = await Promise.all([
+          fetchEpics(),
+          fetchSprints()
+        ]);
+        setEpics(epicsData || []);
+        setSprints(sprintsData || []);
       } catch (err) {
-        console.error('Error loading epics:', err);
+        console.error('Error loading data:', err);
       }
     };
-    loadEpics();
-  }, [fetchEpics]);
+    loadData();
+  }, [fetchEpics, fetchSprints]);
 
   // Handle file upload completion
   const handleUploadComplete = async (upload: { token: string; filename: string; content_type: string }) => {
@@ -193,30 +207,42 @@ export const EditIssueModal: React.FC<EditIssueModalProps> = ({
       setSelectedIssue({
         ...selectedIssue,
         custom_fields: [
-          ...(selectedIssue.custom_fields?.filter((field: any) => field.id != import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID) || []),
-          { id: import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID, name: 'Epic', value }
+          ...(selectedIssue.custom_fields?.filter((field: any) => 
+            field.id != import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID && 
+            field.id != import.meta.env.VITE_SPRINT_CUSTOM_FIELD_ID
+          ) || []),
+          { id: import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID, name: 'Epic', value },
+          { id: import.meta.env.VITE_SPRINT_CUSTOM_FIELD_ID, name: 'Sprint', value: getCurrentSprint() }
         ]
       });
     }
   };
 
-  // Handle adding a new epic
-  const handleAddNewEpic = () => {
-    if (newEpicValue.trim()) {
-      // Add the new epic to the dropdown options
-      setEpics(prev => [...prev, newEpicValue.trim()]);
-      
-      // Update custom fields with the new epic
-      setSelectedIssue({
-        ...selectedIssue,
-        custom_fields: [
-          ...(selectedIssue.custom_fields?.filter((field: any) => field.id != import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID) || []),
-          { id: import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID, name: 'Epic', value: newEpicValue.trim() }
-        ]
-      });
-      
-      setNewEpicValue('');
-      setIsAddingNewEpic(false);
+  // Handle sprint selection or new sprint creation
+  const handleSprintChange = (value: string) => {
+    // Update custom fields with the selected sprint
+    setSelectedIssue({
+      ...selectedIssue,
+      custom_fields: [
+        ...(selectedIssue.custom_fields?.filter((field: any) => 
+          field.id != import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID && 
+          field.id != import.meta.env.VITE_SPRINT_CUSTOM_FIELD_ID
+        ) || []),
+        { id: import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID, name: 'Epic', value: getCurrentEpic() },
+        { id: import.meta.env.VITE_SPRINT_CUSTOM_FIELD_ID, name: 'Sprint', value }
+      ]
+    });
+  };
+
+  // Handle adding a new sprint
+  const handleAddNewSprint = async (sprintData: any) => {
+    try {
+      const newSprint = await createSprint(sprintData);
+      setSprints(prev => [...prev, newSprint]);
+      handleSprintChange(newSprint.name);
+    } catch (err) {
+      console.error('Error creating sprint:', err);
+      alert('Failed to create sprint');
     }
   };
 
@@ -224,6 +250,12 @@ export const EditIssueModal: React.FC<EditIssueModalProps> = ({
   const getCurrentEpic = () => {
     const epicField = selectedIssue.custom_fields?.find((field: any) => field.id == import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID);
     return epicField?.value || '';
+  };
+
+  // Get current sprint value
+  const getCurrentSprint = () => {
+    const sprintField = selectedIssue.custom_fields?.find((field: any) => field.id == import.meta.env.VITE_SPRINT_CUSTOM_FIELD_ID);
+    return sprintField?.value || '';
   };
 
   // Handle form submission
@@ -293,11 +325,28 @@ export const EditIssueModal: React.FC<EditIssueModalProps> = ({
                         setSelectedIssue({
                           ...selectedIssue,
                           custom_fields: [
-                            ...(selectedIssue.custom_fields?.filter((field: any) => field.id != import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID) || []),
-                            { id: import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID, name: 'Epic', value }
+                            ...(selectedIssue.custom_fields?.filter((field: any) => 
+                              field.id != import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID && 
+                              field.id != import.meta.env.VITE_SPRINT_CUSTOM_FIELD_ID
+                            ) || []),
+                            { id: import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID, name: 'Epic', value },
+                            { id: import.meta.env.VITE_SPRINT_CUSTOM_FIELD_ID, name: 'Sprint', value: getCurrentSprint() }
                           ]
                         });
                       }}
+                    />
+                  </div>
+
+                  {/* Sprint Field */}
+                  <div>
+                    <label htmlFor="sprint" className="block text-sm font-medium text-gray-700 mb-1">
+                      Sprint
+                    </label>
+                    <SprintSelect
+                      sprints={sprints}
+                      selectedSprint={getCurrentSprint()}
+                      onChange={handleSprintChange}
+                      onAddNewSprint={handleAddNewSprint}
                     />
                   </div>
                   

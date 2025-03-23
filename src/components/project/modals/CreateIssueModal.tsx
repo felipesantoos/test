@@ -6,6 +6,7 @@ import { Attachments } from '../../shared/Attachments';
 import { useApi } from '../../../context/ApiContext';
 import { getAttachmentDetails } from '../../../services/attachmentService';
 import { EpicSelect } from '../../shared/EpicSelect';
+import { SprintSelect } from '../../shared/SprintSelect';
 
 interface CreateIssueModalProps {
   newIssue: any;
@@ -26,7 +27,13 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
   projects,
   users
 }) => {
-  const { fetchProjectMemberships, fetchEpics } = useApi();
+  const { 
+    fetchProjectMemberships, 
+    fetchEpics,
+    fetchSprints,
+    createSprint 
+  } = useApi();
+  
   const [projectMembers, setProjectMembers] = useState<any[]>([]);
   const [uploads, setUploads] = useState<Array<{
     token: string;
@@ -37,6 +44,7 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
     content_url?: string;
   }>>([]);
   const [epics, setEpics] = useState<string[]>([]);
+  const [sprints, setSprints] = useState<any[]>([]);
   const [newEpicValue, setNewEpicValue] = useState('');
   const [isAddingNewEpic, setIsAddingNewEpic] = useState(false);
 
@@ -60,18 +68,22 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
     }
   }, [newIssue.project_id, fetchProjectMemberships]);
 
-  // Fetch epics when component mounts
+  // Fetch epics and sprints when component mounts
   useEffect(() => {
-    const loadEpics = async () => {
+    const loadData = async () => {
       try {
-        const epics = await fetchEpics();
-        setEpics(epics || []);
+        const [epicsData, sprintsData] = await Promise.all([
+          fetchEpics(),
+          fetchSprints()
+        ]);
+        setEpics(epicsData || []);
+        setSprints(sprintsData || []);
       } catch (err) {
-        console.error('Error loading epics:', err);
+        console.error('Error loading data:', err);
       }
     };
-    loadEpics();
-  }, [fetchEpics]);
+    loadData();
+  }, [fetchEpics, fetchSprints]);
 
   // Handle file upload completion
   const handleUploadComplete = async (upload: { token: string; filename: string; content_type: string }) => {
@@ -152,10 +164,44 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
     }
   };
 
+  // Handle sprint selection or new sprint creation
+  const handleSprintChange = (value: string) => {
+    // Update custom fields with the selected sprint
+    setNewIssue((prev: any) => ({
+      ...prev,
+      custom_fields: [
+        ...(prev.custom_fields?.filter((field: any) => 
+          field.id != import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID && 
+          field.id != import.meta.env.VITE_SPRINT_CUSTOM_FIELD_ID
+        ) || []),
+        { id: import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID, name: 'Epic', value: getCurrentEpic() },
+        { id: import.meta.env.VITE_SPRINT_CUSTOM_FIELD_ID, name: 'Sprint', value }
+      ]
+    }));
+  };
+
+  // Handle adding a new sprint
+  const handleAddNewSprint = async (sprintData: any) => {
+    try {
+      const newSprint = await createSprint(sprintData);
+      setSprints(prev => [...prev, newSprint]);
+      handleSprintChange(newSprint.name);
+    } catch (err) {
+      console.error('Error creating sprint:', err);
+      alert('Failed to create sprint');
+    }
+  };
+
   // Get current epic value
   const getCurrentEpic = () => {
     const epicField = newIssue.custom_fields?.find((field: any) => field.id == import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID);
     return epicField?.value || '';
+  };
+
+  // Get current sprint value
+  const getCurrentSprint = () => {
+    const sprintField = newIssue.custom_fields?.find((field: any) => field.id == import.meta.env.VITE_SPRINT_CUSTOM_FIELD_ID);
+    return sprintField?.value || '';
   };
 
   return (
@@ -237,6 +283,19 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
                           ]
                         }));
                       }}
+                    />
+                  </div>
+
+                  {/* Sprint Field */}
+                  <div>
+                    <label htmlFor="sprint" className="block text-sm font-medium text-gray-700 mb-1">
+                      Sprint
+                    </label>
+                    <SprintSelect
+                      sprints={sprints}
+                      selectedSprint={getCurrentSprint()}
+                      onChange={handleSprintChange}
+                      onAddNewSprint={handleAddNewSprint}
                     />
                   </div>
                   
