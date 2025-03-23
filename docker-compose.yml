@@ -29,9 +29,31 @@ services:
       - "3001:3001"
     env_file:
       - .env
+    depends_on:
+      - dit-manager-db
+    networks:
+      - dit-manager-network
+
+  dit-manager-db:
+    build:
+      context: .
+      dockerfile: ./.docker/Dockerfile.postgres
+    container_name: dit-manager-db
+    restart: always
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_DB: dit_manager
+      POSTGRES_USER: dit_manager
+      POSTGRES_PASSWORD: dit_manager_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     networks:
       - dit-manager-network
 
 networks:
   dit-manager-network:
     driver: bridge
+
+volumes:
+  postgres_data:

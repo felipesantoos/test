@@ -15,6 +15,7 @@ import uploadRoutes from './routes/uploadRoutes.js';
 import downloadRoutes from './routes/downloadRoutes.js';
 import attachmentRoutes from './routes/attachmentRoutes.js';
 import customFieldRoutes from './routes/customFieldRoutes.js';
+import sprintRoutes from './routes/sprintRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -38,6 +39,7 @@ app.use('/api/uploads', uploadRoutes);
 app.use('/api/downloads', downloadRoutes);
 app.use('/api/attachments', attachmentRoutes);
 app.use('/api/custom_fields', customFieldRoutes);
+app.use('/api/sprints', sprintRoutes);
 app.use('/api', otherRoutes);
 
 // Start the server
