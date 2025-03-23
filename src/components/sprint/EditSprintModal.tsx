@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AlertCircle } from 'lucide-react';
+import { format } from 'date-fns';
 
 interface EditSprintModalProps {
   sprint: any;
@@ -14,10 +15,11 @@ export const EditSprintModal: React.FC<EditSprintModalProps> = ({
   onClose,
   loading
 }) => {
+  // Initialize state with current sprint data
   const [sprintData, setSprintData] = useState({
     name: sprint.name,
-    start_date: sprint.start_date,
-    end_date: sprint.end_date
+    start_date: format(new Date(sprint.start_date), 'yyyy-MM-dd'),
+    end_date: format(new Date(sprint.end_date), 'yyyy-MM-dd')
   });
   
   const [error, setError] = useState<string | null>(null);
@@ -109,7 +111,7 @@ export const EditSprintModal: React.FC<EditSprintModalProps> = ({
                       <input
                         type="date"
                         id="end_date"
-                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm: text-sm"
+                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                         value={sprintData.end_date}
                         onChange={(e) => setSprintData({ ...sprintData, end_date: e.target.value })}
                         required
