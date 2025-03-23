@@ -667,22 +667,22 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Update epics
+  // Get epics
   const fetchEpics = async (): Promise<any> => {
     if (!isConnected && isAuthenticated && redmineUrl) {
       const connected = await testConnection();
-      if (!connected) return false;
+      if (!connected) return;
     }
 
     try {
       const authToken = getAuthToken();
-      await axios.get(`${SERVER_URL}/api/custom_fields/epics`, {
+      const response = await axios.get(`${SERVER_URL}/api/custom_fields/epics`, {
         params: { 
           authToken,
           redmineUrl 
         }
       });
-      return true;
+      return response.data.epics || [];
     } catch (err: any) {
       console.error(`Error updating epics:`, err);
       throw new Error(err.response?.data?.error || `Failed to update epics`);

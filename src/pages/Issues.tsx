@@ -53,7 +53,10 @@ export const Issues = () => {
     project_id: 0,
     status_id: 1,
     priority_id: 2,
-    assigned_to_id: ''
+    assigned_to_id: '',
+    custom_fields: [
+      { id: import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID, name: 'Epic', value: '' }
+    ]
   });
   
   // State for bulk creating issues
@@ -390,7 +393,10 @@ export const Issues = () => {
                 project_id: projectFilter !== 'all' ? parseInt(projectFilter) : (projects.length > 0 ? projects[0].id : 0),
                 status_id: 1,
                 priority_id: 2,
-                assigned_to_id: ''
+                assigned_to_id: '',
+                custom_fields: [
+                  { id: import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID, name: 'Epic', value: '' }
+                ]
               });
               
               setIsCreatingIssue(false);
@@ -475,7 +481,8 @@ export const Issues = () => {
                   status_id: selectedIssue.status.id,
                   priority_id: selectedIssue.priority.id,
                   assigned_to_id: selectedIssue.assigned_to?.id || null,
-                  uploads: selectedIssue.uploads
+                  uploads: selectedIssue.uploads,
+                  custom_fields: selectedIssue.custom_fields
                 }
               };
               

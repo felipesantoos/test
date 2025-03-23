@@ -25,7 +25,7 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
   projects,
   users
 }) => {
-  const { fetchProjectMemberships } = useApi();
+  const { fetchProjectMemberships, fetchEpics } = useApi();
   const [projectMembers, setProjectMembers] = useState<any[]>([]);
   const [uploads, setUploads] = useState<Array<{
     token: string;
@@ -35,6 +35,9 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
     filesize?: number;
     content_url?: string;
   }>>([]);
+  const [epics, setEpics] = useState<string[]>([]);
+  const [newEpicValue, setNewEpicValue] = useState('');
+  const [isAddingNewEpic, setIsAddingNewEpic] = useState(false);
 
   // When a project is selected, fetch its memberships
   useEffect(() => {
@@ -55,6 +58,19 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
       setProjectMembers([]);
     }
   }, [newIssue.project_id, fetchProjectMemberships]);
+
+  // Fetch epics when component mounts
+  useEffect(() => {
+    const loadEpics = async () => {
+      try {
+        const epics = await fetchEpics();
+        setEpics(epics || []);
+      } catch (err) {
+        console.error('Error loading epics:', err);
+      }
+    };
+    loadEpics();
+  }, [fetchEpics]);
 
   // Handle file upload completion
   const handleUploadComplete = async (upload: { token: string; filename: string; content_type: string }) => {
@@ -99,20 +115,42 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
     }));
   };
 
-  // Handle form submission
-  const handleSubmit = () => {
-    // Add uploads to the issue data
-    const issueData = {
-      ...newIssue,
-      uploads: uploads.map(upload => ({
-        token: upload.token,
-        filename: upload.filename,
-        content_type: upload.content_type,
-        description: upload.description
-      }))
-    };
-    setNewIssue(issueData);
-    handleCreateIssue();
+  // Handle epic selection or new epic creation
+  const handleEpicChange = (value: string) => {
+    if (value === 'new') {
+      setIsAddingNewEpic(true);
+    } else {
+      // Update custom fields with the selected epic
+      setNewIssue((prev: any) => ({
+        ...prev,
+        custom_fields: [
+          ...(prev.custom_fields?.filter((field: any) => field.id != import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID) || []),
+          { id: import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID, name: 'Epic', value }
+        ]
+      }));
+    }
+  };
+
+  // Handle adding a new epic
+  const handleAddNewEpic = () => {
+    if (newEpicValue.trim()) {
+      // Update custom fields with the new epic
+      setNewIssue((prev: any) => ({
+        ...prev,
+        custom_fields: [
+          ...(prev.custom_fields?.filter((field: any) => field.id != import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID) || []),
+          { id: import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID, name: 'Epic', value: newEpicValue.trim() }
+        ]
+      }));
+      setNewEpicValue('');
+      setIsAddingNewEpic(false);
+    }
+  };
+
+  // Get current epic value
+  const getCurrentEpic = () => {
+    const epicField = newIssue.custom_fields?.find((field: any) => field.id == import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID);
+    return epicField?.value || '';
   };
 
   return (
@@ -170,6 +208,51 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
                       onChange={(e) => setNewIssue({ ...newIssue, subject: e.target.value })}
                       required
                     />
+                  </div>
+
+                  {/* Epic Field */}
+                  <div>
+                    <label htmlFor="epic" className="block text-sm font-medium text-gray-700 mb-1">
+                      Epic
+                    </label>
+                    {isAddingNewEpic ? (
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          className="block flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                          value={newEpicValue}
+                          onChange={(e) => setNewEpicValue(e.target.value)}
+                          placeholder="Enter new epic name"
+                        />
+                        <button
+                          onClick={handleAddNewEpic}
+                          className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        >
+                          Add
+                        </button>
+                        <button
+                          onClick={() => setIsAddingNewEpic(false)}
+                          className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <select
+                        id="epic"
+                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        value={getCurrentEpic()}
+                        onChange={(e) => handleEpicChange(e.target.value)}
+                      >
+                        <option value="">Select an epic</option>
+                        {epics.map((epic, index) => (
+                          <option key={index} value={epic}>
+                            {epic}
+                          </option>
+                        ))}
+                        <option value="new">+ Add new epic</option>
+                      </select>
+                    )}
                   </div>
                   
                   <div>
@@ -275,7 +358,7 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
           <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
             <button
               type="button"
-              onClick={handleSubmit}
+              onClick={handleCreateIssue}
               disabled={!newIssue.subject || !newIssue.project_id || loadingAction}
               className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm disabled:bg-indigo-400"
             >
