@@ -22,7 +22,7 @@ router.get('/', async (req, res) => {
       project_id: projectId,
       assigned_to_id: assignedTo,
       offset: offset || 0,
-      limit: limit || 100,
+      limit: limit || 1000000,
       sort: sort,
       issue_id: issueId,
       tracker_id: trackerId,
