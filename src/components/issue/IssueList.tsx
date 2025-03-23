@@ -62,7 +62,8 @@ interface IssueListProps {
   onBulkUpdate?: (issueIds: number[], updates: any) => Promise<void>;
   handleBulkDelete?: (issueIds: number[]) => Promise<void>;
   getEpicValue: (issue: any) => string;
-  getUniqueEpics: () => string[]
+  getUniqueEpics: () => string[];
+  onStatusChange?: (issueId: number, newStatusId: number) => Promise<void>;
 }
 
 export const IssueList: React.FC<IssueListProps> = ({
@@ -98,7 +99,8 @@ export const IssueList: React.FC<IssueListProps> = ({
   onBulkUpdate,
   handleBulkDelete,
   getEpicValue,
-  getUniqueEpics
+  getUniqueEpics,
+  onStatusChange  // new prop
 }) => {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [sortConfig, setSortConfig] = useState<SortConfig[]>([]);
@@ -109,6 +111,7 @@ export const IssueList: React.FC<IssueListProps> = ({
   const [loadingBulkEdit, setLoadingBulkEdit] = useState(false);
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
   const [loadingBulkDelete, setLoadingBulkDelete] = useState(false);
+  const [editingStatusIssueId, setEditingStatusIssueId] = useState<number | null>(null);
   
   // New state for toggling closed issues
   const [showClosed, setShowClosed] = useState(false);
@@ -744,9 +747,35 @@ export const IssueList: React.FC<IssueListProps> = ({
                       className="px-6 py-4 whitespace-nowrap border-r border-gray-200"
                       style={{ minWidth: "150px" }}
                     >
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColorClass(issue.status.name)}`}>
-                        {issue.status.name}
-                      </span>
+                      {editingStatusIssueId === issue.id ? (
+                        <select 
+                          value={issue.status.id}
+                          onChange={async (e) => {
+                            const newStatusId = Number(e.target.value);
+                            if (onStatusChange) {
+                              await onStatusChange(issue.id, newStatusId);
+                            }
+                            setEditingStatusIssueId(null);
+                          }}
+                          onBlur={() => setEditingStatusIssueId(null)}
+                          className="block w-full border border-gray-300 rounded-md text-xs text-gray-700 py-1 px-2 focus:outline-none"
+                        >
+                          {issueStatuses.map((status) => (
+                            <option key={status.id} value={status.id}>
+                              {status.name}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span 
+                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColorClass(issue.status.name)}`}
+                          onClick={() => setEditingStatusIssueId(issue.id)}
+                          style={{ cursor: "pointer" }}
+                          title="Click to edit status"
+                        >
+                          {issue.status.name}
+                        </span>
+                      )}
                     </td>
                     <td 
                       className="px-6 py-4 whitespace-nowrap border-r border-gray-200"

@@ -296,6 +296,11 @@ export const Issues = () => {
     return Array.from(epics).sort();
   };
 
+  const onStatusChange = async (issueId: any, newStatusId: any) => {
+    await updateIssue(issueId, { issue: { status_id: newStatusId } });
+    await refreshData();
+  }
+
   // Reset all filters to default values
   const resetFilters = () => {
     setSearchQuery('');
@@ -389,6 +394,7 @@ export const Issues = () => {
         handleBulkDelete={handleBulkDelete}
         getEpicValue={getEpicValue}
         getUniqueEpics={getUniqueEpics}
+        onStatusChange={onStatusChange}
       />
 
       {/* Create Issue Modal */}
