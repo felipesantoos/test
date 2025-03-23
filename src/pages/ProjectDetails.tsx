@@ -40,6 +40,7 @@ export const ProjectDetails = () => {
     priorities,
     trackers,
     users,
+    sprints,
     refreshData
   } = useApi();
 
@@ -799,6 +800,7 @@ export const ProjectDetails = () => {
             statuses={issueStatuses}
             priorities={priorities}
             users={users}
+            sprints={sprints}
             handleBulkCreateIssues={handleBulkCreateIssues}
             onBulkUpdate={handleBulkUpdate}
             handleBulkDelete={handleBulkDelete}

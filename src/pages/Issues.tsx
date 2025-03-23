@@ -20,6 +20,7 @@ export const Issues = () => {
     issueStatuses,
     trackers,
     priorities,
+    sprints,
     refreshData, 
     fetchIssues,
     updateIssue,
@@ -349,7 +350,14 @@ export const Issues = () => {
   // Get sprint value from custom fields
   const getSprintValue = (issue: any) => {
     const sprintField = issue.custom_fields?.find((field: any) => field.id == import.meta.env.VITE_SPRINT_CUSTOM_FIELD_ID);
-    return sprintField?.value || '-';
+    const sprintId = sprintField?.value;
+    
+    // If no sprint ID, return default value
+    if (!sprintId) return '-';
+
+    // Find the sprint by ID in the sprints array
+    const sprint = sprints.find(s => s.id === sprintId);
+    return sprint ? sprint.name : '-';
   };
 
   // Get unique sprints from issues

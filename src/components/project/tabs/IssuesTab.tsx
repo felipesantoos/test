@@ -19,6 +19,7 @@ interface IssuesTabProps {
   statuses: any[];
   priorities: any[];
   users: any[];
+  sprints: any[];
   handleBulkCreateIssues: (issues: any[]) => Promise<{success: any[], failed: any[]}>;
   onBulkUpdate?: (issueIds: number[], updates: any) => Promise<void>;
   handleBulkDelete?: (issueIds: number[]) => Promise<void>;
@@ -40,6 +41,7 @@ export const IssuesTab = ({
   statuses,
   priorities,
   users,
+  sprints,
   handleBulkCreateIssues,
   onBulkUpdate,
   handleBulkDelete,
@@ -95,7 +97,14 @@ export const IssuesTab = ({
   // Get sprint value from custom fields
   const getSprintValue = (issue: any) => {
     const sprintField = issue.custom_fields?.find((field: any) => field.id == import.meta.env.VITE_SPRINT_CUSTOM_FIELD_ID);
-    return sprintField?.value || '-';
+    const sprintId = sprintField?.value;
+    
+    // If no sprint ID, return default value
+    if (!sprintId) return '-';
+
+    // Find the sprint by ID in the sprints array
+    const sprint = sprints.find(s => s.id === sprintId);
+    return sprint ? sprint.name : '-';
   };
 
   // Get unique sprints from issues
