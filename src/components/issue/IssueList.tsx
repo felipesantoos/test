@@ -109,6 +109,9 @@ export const IssueList: React.FC<IssueListProps> = ({
   const [loadingBulkEdit, setLoadingBulkEdit] = useState(false);
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
   const [loadingBulkDelete, setLoadingBulkDelete] = useState(false);
+  
+  // New state for toggling closed issues
+  const [showClosed, setShowClosed] = useState(false);
 
   // Handle column sorting
   const handleSort = (columnId: string) => {
@@ -172,10 +175,10 @@ export const IssueList: React.FC<IssueListProps> = ({
 
   // Handle select all issues
   const handleSelectAll = () => {
-    if (selectedIssues.length === sortedIssues.length) {
+    if (selectedIssues.length === displayedIssues.length) {
       setSelectedIssues([]);
     } else {
-      setSelectedIssues(sortedIssues.map(issue => issue.id));
+      setSelectedIssues(displayedIssues.map(issue => issue.id));
     }
   };
 
@@ -220,7 +223,7 @@ export const IssueList: React.FC<IssueListProps> = ({
     return null;
   };
 
-  // Apply sorting to issues
+  // Apply sorting to issues and filter by epic
   const sortedIssues = [...issues].sort((a, b) => {
     if (sortConfig.length > 0) {
       for (const sort of sortConfig) {
@@ -283,7 +286,15 @@ export const IssueList: React.FC<IssueListProps> = ({
       return getEpicValue(issue) === epicFilter;
     }
     return true;
-  });;
+  });
+
+  // Filter and reorder issues based on the showClosed toggle
+  const displayedIssues = showClosed 
+    ? [
+        ...sortedIssues.filter(issue => issue.status.name !== 'Closed'),
+        ...sortedIssues.filter(issue => issue.status.name === 'Closed')
+      ]
+    : sortedIssues.filter(issue => issue.status.name !== 'Closed');
 
   return (
     <div className="space-y-6">
@@ -346,6 +357,17 @@ export const IssueList: React.FC<IssueListProps> = ({
               <Search size={16} />
               <span>Apply Filters</span>
             </button>
+
+            {/* Toggle Closed Issues */}
+            <label className="flex items-center space-x-1">
+              <input
+                type="checkbox"
+                checked={showClosed}
+                onChange={() => setShowClosed(!showClosed)}
+                className="h-4 w-4 text-indigo-600 border-gray-300 rounded"
+              />
+              <span className="text-sm text-gray-700">Show Closed</span>
+            </label>
 
             {/* Bulk Actions */}
             {selectedIssues.length > 0 && (
@@ -522,7 +544,7 @@ export const IssueList: React.FC<IssueListProps> = ({
         <div className="flex justify-center py-8">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
         </div>
-      ) : sortedIssues.length === 0 ? (
+      ) : displayedIssues.length === 0 ? (
         <div className="bg-white rounded-lg shadow p-8 text-center">
           <p className="text-gray-500">No issues found matching your criteria.</p>
         </div>
@@ -538,7 +560,7 @@ export const IssueList: React.FC<IssueListProps> = ({
                       <input
                         type="checkbox"
                         className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                        checked={selectedIssues.length === sortedIssues.length}
+                        checked={selectedIssues.length === displayedIssues.length}
                         onChange={handleSelectAll}
                       />
                     </div>
@@ -653,7 +675,7 @@ export const IssueList: React.FC<IssueListProps> = ({
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {sortedIssues.map((issue) => (
+                {displayedIssues.map((issue) => (
                   <tr key={issue.id} className="hover:bg-gray-50">
                     {/* Checkbox */}
                     <td
@@ -808,7 +830,7 @@ export const IssueList: React.FC<IssueListProps> = ({
       {/* Bulk Edit Modal */}
       {showBulkEditModal && (
         <BulkEditIssueModal
-          selectedIssues={sortedIssues.filter(issue => selectedIssues.includes(issue.id))}
+          selectedIssues={displayedIssues.filter(issue => selectedIssues.includes(issue.id))}
           onClose={() => setShowBulkEditModal(false)}
           onSave={handleBulkUpdate}
           loadingAction={loadingBulkEdit}
@@ -821,7 +843,7 @@ export const IssueList: React.FC<IssueListProps> = ({
       {/* Bulk Delete Modal */}
       {showBulkDeleteModal && (
         <BulkDeleteConfirmModal
-          selectedIssues={sortedIssues.filter(issue => selectedIssues.includes(issue.id))}
+          selectedIssues={displayedIssues.filter(issue => selectedIssues.includes(issue.id))}
           onClose={() => setShowBulkDeleteModal(false)}
           onConfirm={handleBulkDeleteConfirm}
           isLoading={loadingBulkDelete}
