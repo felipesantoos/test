@@ -25,7 +25,7 @@ export const SprintDetails = () => {
   const [selectedSprint, setSelectedSprint] = useState<any>(null);
   const [sprintToDelete, setSprintToDelete] = useState<any>(null);
 
-  // Load sprint details and issues
+  // Inside the useEffect where we load sprint data, update the fetchIssues call:
   useEffect(() => {
     const loadSprintData = async () => {
       if (!id) return;
@@ -40,8 +40,17 @@ export const SprintDetails = () => {
         }
         setSprint(sprintData);
         
-        // Fetch issues for this sprint
-        const sprintIssues = await fetchIssues({ sprint_id: id });
+        // Fetch all issues
+        const allIssues = await fetchIssues();
+        
+        // Filter issues that have this sprint ID in their custom fields
+        const sprintIssues = allIssues.filter(issue => {
+          const sprintField = issue.custom_fields?.find(
+            (field: any) => field.id == import.meta.env.VITE_SPRINT_CUSTOM_FIELD_ID
+          );
+          return sprintField?.value === id;
+        });
+        
         setIssues(sprintIssues);
       } catch (err: any) {
         console.error('Error loading sprint data:', err);

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import axios from 'axios';
 import { useAuth } from './AuthContext';
 
@@ -78,6 +78,8 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
   const [priorities, setPriorities] = useState<any[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
   const [sprints, setSprints] = useState<Sprint[]>([]);
+  const [epicsCache, setEpicsCache] = useState<string[]>([]);
+  const [sprintsCache, setSprintsCache] = useState<Sprint[]>([]);
 
   // Get authentication token from localStorage
   const getAuthToken = () => {
@@ -193,6 +195,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
       // Fetch sprints
       const sprintsResponse = await axios.get(`${SERVER_URL}/api/sprints`);
       setSprints(sprintsResponse.data || []);
+      setSprintsCache(sprintsResponse.data || []);
 
       setIsLoading(false);
     } catch (err: any) {
@@ -201,18 +204,45 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Sprint Management Functions
-  const fetchSprints = async (): Promise<Sprint[]> => {
+  // Fetch epics with caching
+  const fetchEpics = useCallback(async (): Promise<any> => {
+    if (epicsCache.length > 0) {
+      return epicsCache;
+    }
+
+    try {
+      const authToken = getAuthToken();
+      const response = await axios.get(`${SERVER_URL}/api/custom_fields/epics`, {
+        params: { 
+          authToken,
+          redmineUrl 
+        }
+      });
+      const epics = response.data.epics || [];
+      setEpicsCache(epics);
+      return epics;
+    } catch (err: any) {
+      console.error(`Error updating epics:`, err);
+      throw new Error(err.response?.data?.error || `Failed to update epics`);
+    }
+  }, [epicsCache]);
+
+  // Fetch sprints with caching
+  const fetchSprints = useCallback(async (): Promise<Sprint[]> => {
+    if (sprintsCache.length > 0) {
+      return sprintsCache;
+    }
+
     try {
       const response = await axios.get(`${SERVER_URL}/api/sprints`);
-      const sprints = response.data;
-      setSprints(sprints);
+      const sprints = response.data || [];
+      setSprintsCache(sprints);
       return sprints;
     } catch (err: any) {
       console.error('Error fetching sprints:', err);
       throw new Error(err.response?.data?.error || 'Failed to fetch sprints');
     }
-  };
+  }, [sprintsCache]);
 
   const fetchSprintById = async (id: string): Promise<Sprint | null> => {
     try {
@@ -229,6 +259,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
       const response = await axios.post(`${SERVER_URL}/api/sprints`, sprintData);
       const newSprint = response.data;
       setSprints(prev => [...prev, newSprint]);
+      setSprintsCache(prev => [...prev, newSprint]);
       return newSprint;
     } catch (err: any) {
       console.error('Error creating sprint:', err);
@@ -241,6 +272,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
       const response = await axios.put(`${SERVER_URL}/api/sprints/${id}`, sprintData);
       const updatedSprint = response.data;
       setSprints(prev => prev.map(sprint => sprint.id === id ? updatedSprint : sprint));
+      setSprintsCache(prev => prev.map(sprint => sprint.id === id ? updatedSprint : sprint));
       return updatedSprint;
     } catch (err: any) {
       console.error(`Error updating sprint ${id}:`, err);
@@ -252,6 +284,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     try {
       await axios.delete(`${SERVER_URL}/api/sprints/${id}`);
       setSprints(prev => prev.filter(sprint => sprint.id !== id));
+      setSprintsCache(prev => prev.filter(sprint => sprint.id !== id));
       return true;
     } catch (err: any) {
       console.error(`Error deleting sprint ${id}:`, err);
@@ -743,28 +776,6 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     } catch (err: any) {
       console.error(`Error deleting membership ${membershipId}:`, err);
       throw new Error(err.response?.data?.error || `Failed to delete membership ${membershipId}`);
-    }
-  };
-
-  // Get epics
-  const fetchEpics = async (): Promise<any> => {
-    if (!isConnected && isAuthenticated && redmineUrl) {
-      const connected = await testConnection();
-      if (!connected) return;
-    }
-
-    try {
-      const authToken = getAuthToken();
-      const response = await axios.get(`${SERVER_URL}/api/custom_fields/epics`, {
-        params: { 
-          authToken,
-          redmineUrl 
-        }
-      });
-      return response.data.epics || [];
-    } catch (err: any) {
-      console.error(`Error updating epics:`, err);
-      throw new Error(err.response?.data?.error || `Failed to update epics`);
     }
   };
 
