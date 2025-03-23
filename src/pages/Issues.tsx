@@ -346,6 +346,26 @@ export const Issues = () => {
     return Array.from(epics).sort();
   };
 
+  // Get sprint value from custom fields
+  const getSprintValue = (issue: any) => {
+    const sprintField = issue.custom_fields?.find((field: any) => field.id == import.meta.env.VITE_SPRINT_CUSTOM_FIELD_ID);
+    return sprintField?.value || '-';
+  };
+
+  // Get unique sprints from issues
+  const getUniqueSprints = () => {
+    const sprints = new Set<string>();
+    
+    issues.forEach(issue => {
+      const sprintValue = getSprintValue(issue);
+      if (sprintValue !== '-') {
+        sprints.add(sprintValue);
+      }
+    });
+    
+    return Array.from(sprints).sort();
+  };
+
   const onStatusChange = async (issueId: any, newStatusId: any) => {
     await updateIssue(issueId, { issue: { status_id: newStatusId } });
     await refreshData();
@@ -453,6 +473,8 @@ export const Issues = () => {
         getEpicValue={getEpicValue}
         getUniqueEpics={getUniqueEpics}
         onStatusChange={onStatusChange}
+        getSprintValue={getSprintValue}
+        getUniqueSprints={getUniqueSprints}
       />
 
       {/* Create Issue Modal */}

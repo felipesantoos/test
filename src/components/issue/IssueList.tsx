@@ -51,6 +51,11 @@ interface IssueListProps {
   setProjectFilter?: (project: string) => void;
   epicFilter?: string;
   setEpicFilter: (epic: string) => void;
+  sprintFilter?: string;
+  setSprintFilter?: (sprint: string) => void;
+  sprints?: any[]; // Array of available sprints
+  getSprintValue: (issue: any) => string; // Function to get sprint value from issue
+  getUniqueSprints: () => string[]; // Function to get unique sprints
   projects?: any[];
   issueStatuses: any[];
   priorities: any[];
@@ -88,6 +93,11 @@ export const IssueList: React.FC<IssueListProps> = ({
   setProjectFilter,
   epicFilter,
   setEpicFilter,
+  sprintFilter,
+  setSprintFilter,
+  sprints,
+  getSprintValue,
+  getUniqueSprints,
   projects,
   issueStatuses,
   priorities,
@@ -265,6 +275,10 @@ export const IssueList: React.FC<IssueListProps> = ({
             aValue = getEpicValue(a);
             bValue = getEpicValue(b);
             break;
+          case 'sprint':
+            aValue = getSprintValue(a);
+            bValue = getSprintValue(b);
+            break;            
           default:
             aValue = a[sort.key];
             bValue = b[sort.key];
@@ -473,6 +487,26 @@ export const IssueList: React.FC<IssueListProps> = ({
               </select>
             </div>
 
+            <div>
+              <label htmlFor="sprintFilter" className="block text-sm font-medium text-gray-700 mt-4 mb-1">
+                Sprint
+              </label>
+              <select
+                id="sprintFilter"
+                value={sprintFilter}
+                onChange={(e) => setSprintFilter && setSprintFilter(e.target.value)}
+                className="block w-full border border-gray-300 rounded-md text-sm text-gray-700 py-2 pl-3 pr-8 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option value="all">All Sprints</option>
+                <option value="none">No Sprint</option>
+                {getUniqueSprints().map(sprint => (
+                  <option key={sprint} value={sprint}>
+                    {sprint}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             {/* Active Filters */}
             {(statusFilter !== 'all' || projectFilter !== 'all' || priorityFilter !== 'all' || 
               assigneeFilter !== 'all' || dateFilter !== 'all' || epicFilter !== 'all' || sortConfig.length > 0) && (
@@ -520,6 +554,17 @@ export const IssueList: React.FC<IssueListProps> = ({
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-pink-100 text-pink-800">
                     Epic: {epicFilter === 'none' ? 'No Epic' : epicFilter}
                     <X size={14} className="ml-1 cursor-pointer" onClick={() => setEpicFilter('all')} />
+                  </span>
+                )}
+
+                {sprintFilter !== 'all' && (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                    Sprint: {sprintFilter === 'none' ? 'No Sprint' : sprintFilter}
+                    <X 
+                      size={14} 
+                      className="ml-1 cursor-pointer" 
+                      onClick={() => setSprintFilter && setSprintFilter('all')} 
+                    />
                   </span>
                 )}
 
@@ -643,6 +688,17 @@ export const IssueList: React.FC<IssueListProps> = ({
                     <div className="flex items-center justify-between">
                       <span>Epic</span>
                       <span className="text-gray-400">{getSortIndicator('epic')}</span>
+                    </div>
+                  </th>
+                  <th 
+                    scope="col" 
+                    className="bg-gray-50 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer border-r border-gray-200"
+                    style={{ minWidth: "150px" }}
+                    onClick={() => handleSort('sprint')}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>Sprint</span>
+                      <span className="text-gray-400">{getSortIndicator('sprint')}</span>
                     </div>
                   </th>
                   <th 
@@ -810,7 +866,14 @@ export const IssueList: React.FC<IssueListProps> = ({
                         {getEpicValue(issue)}
                       </span>
                     </td>
-
+                    <td 
+                      className="px-6 py-4 whitespace-nowrap border-r border-gray-200"
+                      style={{ minWidth: "150px" }}
+                    >
+                      <span className="px-2 py-1 rounded text-sm text-gray-900 inline-block">
+                        {getSprintValue(issue)}
+                      </span>
+                    </td>
                     <td 
                       className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200"
                         style={{ minWidth: "200px" }}
