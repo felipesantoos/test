@@ -166,8 +166,11 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
 
   // Handle sprint selection or new sprint creation
   const handleSprintChange = (value: string) => {
-    console.log(value);
-    // Update custom fields with the selected sprint
+    // Find the sprint object to get its ID
+    const selectedSprint = sprints.find(sprint => sprint.name === value);
+    const sprintId = selectedSprint ? selectedSprint.id : '';
+
+    // Update custom fields with the selected sprint ID
     setNewIssue((prev: any) => ({
       ...prev,
       custom_fields: [
@@ -176,7 +179,7 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
           field.id != import.meta.env.VITE_SPRINT_CUSTOM_FIELD_ID
         ) || []),
         { id: import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID, name: 'Epic', value: getCurrentEpic() },
-        { id: import.meta.env.VITE_SPRINT_CUSTOM_FIELD_ID, name: 'Sprint', value }
+        { id: import.meta.env.VITE_SPRINT_CUSTOM_FIELD_ID, name: 'Sprint', value: sprintId }
       ]
     }));
   };
@@ -186,7 +189,7 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
     try {
       const newSprint = await createSprint(sprintData);
       setSprints(prev => [...prev, newSprint]);
-      handleSprintChange(newSprint.name);
+      handleSprintChange(newSprint.name); // This will now use the ID internally
     } catch (err) {
       console.error('Error creating sprint:', err);
       alert('Failed to create sprint');
@@ -202,7 +205,10 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
   // Get current sprint value
   const getCurrentSprint = () => {
     const sprintField = newIssue.custom_fields?.find((field: any) => field.id == import.meta.env.VITE_SPRINT_CUSTOM_FIELD_ID);
-    return sprintField?.value || '';
+    const sprintId = sprintField?.value;
+    // Find sprint by ID and return its name
+    const sprint = sprints.find(s => s.id === sprintId);
+    return sprint ? sprint.name : '';
   };
 
   return (
