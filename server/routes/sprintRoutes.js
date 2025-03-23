@@ -10,7 +10,7 @@ const pool = new Pool({
   host: process.env.POSTGRES_HOST || 'dit-manager-db',
   database: process.env.POSTGRES_DB || 'dit_manager',
   password: process.env.POSTGRES_PASSWORD || 'dit_manager_password',
-  port: parseInt(process.env.POSTGRES_PORT || '5433'),
+  port: parseInt(process.env.POSTGRES_PORT || '5432'),
 });
 
 // Get all sprints

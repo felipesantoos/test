@@ -12,6 +12,16 @@ interface ProjectsResponse {
   limit?: number;
 }
 
+interface Sprint {
+  id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string;
+}
+
 interface ApiContextType {
   isConnected: boolean;
   isLoading: boolean;
@@ -23,6 +33,7 @@ interface ApiContextType {
   trackers: any[];
   priorities: any[];
   roles: any[];
+  sprints: Sprint[];
   refreshData: () => Promise<void>;
   fetchIssues: (filters?: any) => Promise<any[]>;
   fetchProjects: (filters?: any) => Promise<ProjectsResponse>;
@@ -45,6 +56,11 @@ interface ApiContextType {
   updateMembership: (membershipId: number, membershipData: any) => Promise<boolean>;
   deleteMembership: (membershipId: number) => Promise<boolean>;
   fetchEpics: () => Promise<any>;
+  fetchSprints: () => Promise<Sprint[]>;
+  fetchSprintById: (id: string) => Promise<Sprint | null>;
+  createSprint: (sprintData: Omit<Sprint, 'id' | 'created_at' | 'updated_at' | 'deleted_at'>) => Promise<Sprint>;
+  updateSprint: (id: string, sprintData: Partial<Sprint>) => Promise<Sprint>;
+  deleteSprint: (id: string) => Promise<boolean>;
 }
 
 const ApiContext = createContext<ApiContextType | undefined>(undefined);
@@ -61,6 +77,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
   const [trackers, setTrackers] = useState<any[]>([]);
   const [priorities, setPriorities] = useState<any[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
+  const [sprints, setSprints] = useState<Sprint[]>([]);
 
   // Get authentication token from localStorage
   const getAuthToken = () => {
@@ -173,10 +190,72 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
       });
       setRoles(rolesResponse.data.roles || []);
 
+      // Fetch sprints
+      const sprintsResponse = await axios.get(`${SERVER_URL}/api/sprints`);
+      setSprints(sprintsResponse.data || []);
+
       setIsLoading(false);
     } catch (err: any) {
       setError('Failed to fetch data from Redmine API');
       setIsLoading(false);
+    }
+  };
+
+  // Sprint Management Functions
+  const fetchSprints = async (): Promise<Sprint[]> => {
+    try {
+      const response = await axios.get(`${SERVER_URL}/api/sprints`);
+      const sprints = response.data;
+      setSprints(sprints);
+      return sprints;
+    } catch (err: any) {
+      console.error('Error fetching sprints:', err);
+      throw new Error(err.response?.data?.error || 'Failed to fetch sprints');
+    }
+  };
+
+  const fetchSprintById = async (id: string): Promise<Sprint | null> => {
+    try {
+      const response = await axios.get(`${SERVER_URL}/api/sprints/${id}`);
+      return response.data;
+    } catch (err: any) {
+      console.error(`Error fetching sprint ${id}:`, err);
+      throw new Error(err.response?.data?.error || `Failed to fetch sprint ${id}`);
+    }
+  };
+
+  const createSprint = async (sprintData: Omit<Sprint, 'id' | 'created_at' | 'updated_at' | 'deleted_at'>): Promise<Sprint> => {
+    try {
+      const response = await axios.post(`${SERVER_URL}/api/sprints`, sprintData);
+      const newSprint = response.data;
+      setSprints(prev => [...prev, newSprint]);
+      return newSprint;
+    } catch (err: any) {
+      console.error('Error creating sprint:', err);
+      throw new Error(err.response?.data?.error || 'Failed to create sprint');
+    }
+  };
+
+  const updateSprint = async (id: string, sprintData: Partial<Sprint>): Promise<Sprint> => {
+    try {
+      const response = await axios.put(`${SERVER_URL}/api/sprints/${id}`, sprintData);
+      const updatedSprint = response.data;
+      setSprints(prev => prev.map(sprint => sprint.id === id ? updatedSprint : sprint));
+      return updatedSprint;
+    } catch (err: any) {
+      console.error(`Error updating sprint ${id}:`, err);
+      throw new Error(err.response?.data?.error || `Failed to update sprint ${id}`);
+    }
+  };
+
+  const deleteSprint = async (id: string): Promise<boolean> => {
+    try {
+      await axios.delete(`${SERVER_URL}/api/sprints/${id}`);
+      setSprints(prev => prev.filter(sprint => sprint.id !== id));
+      return true;
+    } catch (err: any) {
+      console.error(`Error deleting sprint ${id}:`, err);
+      throw new Error(err.response?.data?.error || `Failed to delete sprint ${id}`);
     }
   };
 
@@ -707,6 +786,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     trackers,
     priorities,
     roles,
+    sprints,
     refreshData,
     fetchIssues,
     fetchProjects,
@@ -729,6 +809,11 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     updateMembership,
     deleteMembership,
     fetchEpics,
+    fetchSprints,
+    fetchSprintById,
+    createSprint,
+    updateSprint,
+    deleteSprint,
   };
 
   return <ApiContext.Provider value={value}>{children}</ApiContext.Provider>;

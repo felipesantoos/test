@@ -1,18 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useApi } from '../context/ApiContext';
 import { AlertCircle, Plus, Search, Filter, RefreshCw, Calendar, Edit2, Trash2, X, Clock, CalendarRange } from 'lucide-react';
 import { format, isAfter, isBefore, parseISO } from 'date-fns';
 import { CreateSprintModal } from '../components/sprint/CreateSprintModal';
 import { EditSprintModal } from '../components/sprint/EditSprintModal';
 import { DeleteSprintModal } from '../components/sprint/DeleteSprintModal';
 
-// Server URL from environment variable
-const SERVER_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-
 export const Sprints = () => {
-  const [sprints, setSprints] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { sprints, isLoading, error, fetchSprints, createSprint, updateSprint, deleteSprint } = useApi();
   const [searchQuery, setSearchQuery] = useState('');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [filters, setFilters] = useState({
@@ -26,35 +22,13 @@ export const Sprints = () => {
   const [selectedSprint, setSelectedSprint] = useState<any>(null);
   const [sprintToDelete, setSprintToDelete] = useState<any>(null);
   const [loadingAction, setLoadingAction] = useState(false);
-  
-  // Refresh trigger
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // Load sprints
+  // Load sprints on component mount only
   useEffect(() => {
-    const loadSprints = async () => {
-      setLoading(true);
-      setError(null);
-      
-      try {
-        const response = await fetch(`${SERVER_URL}/api/sprints`);
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch sprints');
-        }
-        
-        const data = await response.json();
-        setSprints(data);
-      } catch (err: any) {
-        console.error('Error loading sprints:', err);
-        setError(err.message || 'Failed to load sprints');
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    loadSprints();
-  }, [refreshTrigger]);
+    fetchSprints().catch(err => {
+      console.error('Error loading sprints:', err);
+    });
+  }, []); // Empty dependency array since we only want to load on mount
 
   // Filter sprints
   const getFilteredSprints = () => {
@@ -143,20 +117,9 @@ export const Sprints = () => {
     setLoadingAction(true);
     
     try {
-      const response = await fetch(`${SERVER_URL}/api/sprints`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(sprintData)
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to create sprint');
-      }
-      
-      setRefreshTrigger(prev => prev + 1);
+      await createSprint(sprintData);
       setIsCreatingSprint(false);
+      await fetchSprints(); // Refresh sprints after creation
     } catch (err: any) {
       console.error('Error creating sprint:', err);
       alert(err.message || 'Failed to create sprint');
@@ -172,20 +135,9 @@ export const Sprints = () => {
     setLoadingAction(true);
     
     try {
-      const response = await fetch(`${SERVER_URL}/api/sprints/${selectedSprint.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(sprintData)
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to update sprint');
-      }
-      
-      setRefreshTrigger(prev => prev + 1);
+      await updateSprint(selectedSprint.id, sprintData);
       setSelectedSprint(null);
+      await fetchSprints(); // Refresh sprints after update
     } catch (err: any) {
       console.error('Error updating sprint:', err);
       alert(err.message || 'Failed to update sprint');
@@ -201,16 +153,9 @@ export const Sprints = () => {
     setLoadingAction(true);
     
     try {
-      const response = await fetch(`${SERVER_URL}/api/sprints/${sprintToDelete.id}`, {
-        method: 'DELETE'
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to delete sprint');
-      }
-      
-      setRefreshTrigger(prev => prev + 1);
+      await deleteSprint(sprintToDelete.id);
       setSprintToDelete(null);
+      await fetchSprints(); // Refresh sprints after deletion
     } catch (err: any) {
       console.error('Error deleting sprint:', err);
       alert(err.message || 'Failed to delete sprint');
@@ -227,12 +172,12 @@ export const Sprints = () => {
         <h1 className="text-2xl font-bold text-gray-800">Sprints</h1>
         <div className="flex gap-2">
           <button
-            onClick={() => setRefreshTrigger(prev => prev + 1)}
-            disabled={loading || loadingAction}
+            onClick={() => fetchSprints()}
+            disabled={isLoading || loadingAction}
             className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-50 transition-colors disabled:bg-gray-100 disabled:text-gray-400 flex items-center"
           >
-            <RefreshCw size={16} className={`mr-2 ${loading || loadingAction ? 'animate-spin' : ''}`} />
-            {loading || loadingAction ? 'Refreshing...' : 'Refresh'}
+            <RefreshCw size={16} className={`mr-2 ${isLoading || loadingAction ? 'animate-spin' : ''}`} />
+            {isLoading || loadingAction ? 'Refreshing...' : 'Refresh'}
           </button>
           <button
             onClick={() => setIsCreatingSprint(true)}
@@ -342,7 +287,7 @@ export const Sprints = () => {
       </div>
 
       {/* Sprints List */}
-      {loading ? (
+      {isLoading || loadingAction ? (
         <div className="flex justify-center py-8">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
         </div>
