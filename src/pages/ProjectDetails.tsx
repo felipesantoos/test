@@ -432,7 +432,8 @@ export const ProjectDetails = () => {
           status_id: selectedIssue.status.id,
           priority_id: selectedIssue.priority.id,
           assigned_to_id: selectedIssue.assigned_to?.id || null,
-          uploads: selectedIssue.uploads
+          uploads: selectedIssue.uploads,
+          custom_fields: selectedIssue.custom_fields
         }
       };
       
