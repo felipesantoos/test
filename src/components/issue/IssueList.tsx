@@ -19,6 +19,16 @@ import { BulkDeleteConfirmModal } from './modals/BulkDeleteConfirmModal';
 import { Link } from "react-router-dom";
 import "./styles.css";
 
+const getEpicColor = (epic: any) => {
+  if (!epic || epic === "-") return "#ffffff";
+  let hash = 0;
+  for (let i = 0; i < epic.length; i++) {
+    hash = epic.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const hue = Math.abs(hash) % 360;
+  return `hsl(${hue}, 50%, 85%)`;
+};
+
 interface IssueListProps {
   issues: any[];
   loading: boolean;
@@ -39,6 +49,8 @@ interface IssueListProps {
   setDateFilter: (date: string) => void;
   projectFilter?: string;
   setProjectFilter?: (project: string) => void;
+  epicFilter?: string;
+  setEpicFilter?: (epic: string) => void;
   projects?: any[];
   issueStatuses: any[];
   priorities: any[];
@@ -49,6 +61,8 @@ interface IssueListProps {
   onViewIssue: (id: number) => void;
   onBulkUpdate?: (issueIds: number[], updates: any) => Promise<void>;
   handleBulkDelete?: (issueIds: number[]) => Promise<void>;
+  getEpicValue: (issue: any) => string;
+  getUniqueEpics: () => string[]
 }
 
 export const IssueList: React.FC<IssueListProps> = ({
@@ -71,6 +85,8 @@ export const IssueList: React.FC<IssueListProps> = ({
   setDateFilter,
   projectFilter,
   setProjectFilter,
+  epicFilter,
+  setEpicFilter,
   projects,
   issueStatuses,
   priorities,
@@ -80,7 +96,9 @@ export const IssueList: React.FC<IssueListProps> = ({
   handleFilterChange,
   onViewIssue,
   onBulkUpdate,
-  handleBulkDelete
+  handleBulkDelete,
+  getEpicValue,
+  getUniqueEpics
 }) => {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [sortConfig, setSortConfig] = useState<SortConfig[]>([]);
@@ -91,12 +109,6 @@ export const IssueList: React.FC<IssueListProps> = ({
   const [loadingBulkEdit, setLoadingBulkEdit] = useState(false);
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
   const [loadingBulkDelete, setLoadingBulkDelete] = useState(false);
-
-  // Get epic value from custom fields
-  const getEpicValue = (issue: any) => {
-    const epicField = issue.custom_fields?.find((field: any) => field.id == import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID);
-    return epicField?.value || '-';
-  };
 
   // Handle column sorting
   const handleSort = (columnId: string) => {
@@ -262,7 +274,16 @@ export const IssueList: React.FC<IssueListProps> = ({
     }
     
     return a.id - b.id;
-  });
+  }).filter(issue => {
+    // Apply epic filter
+    if (epicFilter !== 'all') {
+      if (epicFilter === 'none') {
+        return getEpicValue(issue) === '-';
+      }
+      return getEpicValue(issue) === epicFilter;
+    }
+    return true;
+  });;
 
   return (
     <div className="space-y-6">
@@ -409,6 +430,26 @@ export const IssueList: React.FC<IssueListProps> = ({
               </div>
             </div>
 
+            <div>
+              <label htmlFor="epicFilter" className="block text-sm font-medium text-gray-700 mb-1">
+                Epic
+              </label>
+              <select
+                id="epicFilter"
+                value={epicFilter}
+                onChange={(e) => setEpicFilter && setEpicFilter(e.target.value)}
+                className="block w-full border border-gray-300 rounded-md text-sm text-gray-700 py-2 pl-3 pr-8 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option value="all">All Epics</option>
+                <option value="none">No Epic</option>
+                {getUniqueEpics().map(epic => (
+                  <option key={epic} value={epic}>
+                    {epic}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             {/* Active Filters */}
             {(statusFilter !== 'all' || projectFilter !== 'all' || priorityFilter !== 'all' || 
               assigneeFilter !== 'all' || dateFilter !== 'all' || sortConfig.length > 0) && (
@@ -492,7 +533,7 @@ export const IssueList: React.FC<IssueListProps> = ({
               <thead className="bg-gray-50">
                 <tr>
                   {/* Select All Checkbox */}
-                  <th scope="col" className="sticky left-0 z-30 bg-gray-50 px-6">
+                  <th scope="col" className="sticky left-0 z-30 bg-gray-50 px-6 border-r border-gray-200">
                     <div className="flex items-center">
                       <input
                         type="checkbox"
@@ -506,7 +547,7 @@ export const IssueList: React.FC<IssueListProps> = ({
                   {/* ID Column */}
                   <th 
                     scope="col" 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                    className="bg-gray-50 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer border-r border-gray-200"
                     onClick={() => handleSort('id')}
                   >
                     <div className="flex items-center">
@@ -518,7 +559,7 @@ export const IssueList: React.FC<IssueListProps> = ({
                   {/* Fixed Subject Column */}
                   <th 
                     scope="col" 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                    className="bg-gray-50 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer border-r border-gray-200"
                     onClick={() => handleSort('subject')}
                   >
                     <div className="flex items-center justify-between">
@@ -691,7 +732,10 @@ export const IssueList: React.FC<IssueListProps> = ({
                       className="px-6 py-4 whitespace-nowrap border-r border-gray-200"
                       style={{ minWidth: "150px" }}
                     >
-                      <span className="text-sm text-gray-900">
+                      <span
+                        style={{ backgroundColor: getEpicColor(getEpicValue(issue)) }}
+                        className="px-2 py-1 rounded text-sm text-gray-900 inline-block"
+                      >
                         {getEpicValue(issue)}
                       </span>
                     </td>

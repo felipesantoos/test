@@ -34,6 +34,7 @@ export const Issues = () => {
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [assigneeFilter, setAssigneeFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
+  const [epicFilter, setEpicFilter] = useState('all');
   
   // State for issues and loading
   const [filteredIssues, setFilteredIssues] = useState<any[]>([]);
@@ -275,6 +276,26 @@ export const Issues = () => {
     return Array.from(assignees.values());
   };
 
+  // Get epic value from custom fields
+  const getEpicValue = (issue: any) => {
+    const epicField = issue.custom_fields?.find((field: any) => field.id == import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID);
+    return (epicField?.value || '-').toUpperCase();
+  };
+
+  // Get unique epics from issues
+  const getUniqueEpics = () => {
+    const epics = new Set<string>();
+    
+    issues.forEach(issue => {
+      const epicValue = getEpicValue(issue);
+      if (epicValue !== '-') {
+        epics.add(epicValue);
+      }
+    });
+    
+    return Array.from(epics).sort();
+  };
+
   // Reset all filters to default values
   const resetFilters = () => {
     setSearchQuery('');
@@ -354,6 +375,8 @@ export const Issues = () => {
         setDateFilter={setDateFilter}
         projectFilter={projectFilter}
         setProjectFilter={setProjectFilter}
+        epicFilter={epicFilter}
+        setEpicFilter={setEpicFilter}
         projects={projects}
         issueStatuses={issueStatuses}
         priorities={priorities}
@@ -364,6 +387,8 @@ export const Issues = () => {
         onViewIssue={setViewingIssueId}
         onBulkUpdate={handleBulkUpdate}
         handleBulkDelete={handleBulkDelete}
+        getEpicValue={getEpicValue}
+        getUniqueEpics={getUniqueEpics}
       />
 
       {/* Create Issue Modal */}
