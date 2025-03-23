@@ -46,12 +46,13 @@ export const IssuesTab = ({
   updateIssue,
   refreshData,
 }: IssuesTabProps) => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [priorityFilter, setPriorityFilter] = useState('all');
-  const [assigneeFilter, setAssigneeFilter] = useState('all');
-  const [dateFilter, setDateFilter] = useState('all');
-  const [epicFilter, setEpicFilter] = useState('all');
+  // State for filters
+  const [searchQuery, setSearchQuery] = useState(() => localStorage.getItem('issues_searchQuery') || '');
+  const [statusFilter, setStatusFilter] = useState(() => localStorage.getItem('issues_statusFilter') || 'all');
+  const [priorityFilter, setPriorityFilter] = useState(() => localStorage.getItem('issues_priorityFilter') || 'all');
+  const [assigneeFilter, setAssigneeFilter] = useState(() => localStorage.getItem('issues_assigneeFilter') || 'all');
+  const [dateFilter, setDateFilter] = useState(() => localStorage.getItem('issues_dateFilter') || 'all');
+  const [epicFilter, setEpicFilter] = useState(() => localStorage.getItem('issues_epicFilter') || 'all');
   const [isBulkCreatingIssues, setIsBulkCreatingIssues] = useState(false);
   const [loadingAction, setLoadingAction] = useState(false);
 
