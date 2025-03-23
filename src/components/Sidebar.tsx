@@ -10,7 +10,8 @@ import {
   Trello,
   UserCog,
   Menu,
-  X
+  X,
+  CalendarRange
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -141,6 +142,22 @@ const SidebarContent: React.FC<SidebarContentProps> = ({ username, isAdmin, onIt
             >
               <Trello size={20} />
               <span>Kanban Board</span>
+            </NavLink>
+          </li>
+          <li>
+            <NavLink 
+              to="/sprints" 
+              className={({ isActive }) => 
+                `flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+                  isActive 
+                    ? 'bg-indigo-700 text-white' 
+                    : 'text-indigo-100 hover:bg-indigo-700'
+                }`
+              }
+              onClick={onItemClick}
+            >
+              <CalendarRange size={20} />
+              <span>Sprints</span>
             </NavLink>
           </li>
           <li>
