@@ -42,13 +42,13 @@ interface IssueListProps {
   projects?: any[];
   issueStatuses: any[];
   priorities: any[];
-  users: any[]; // Add users prop
+  users: any[];
   getUniqueAssignees: () => any[];
   resetFilters: () => void;
   handleFilterChange: () => void;
   onViewIssue: (id: number) => void;
-  onBulkUpdate?: (issueIds: number[], updates: any) => Promise<void>; // Add bulk update handler
-  handleBulkDelete?: (issueIds: number[]) => Promise<void>; // Add this line
+  onBulkUpdate?: (issueIds: number[], updates: any) => Promise<void>;
+  handleBulkDelete?: (issueIds: number[]) => Promise<void>;
 }
 
 export const IssueList: React.FC<IssueListProps> = ({
@@ -92,27 +92,25 @@ export const IssueList: React.FC<IssueListProps> = ({
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
   const [loadingBulkDelete, setLoadingBulkDelete] = useState(false);
 
+  // Get epic value from custom fields
+  const getEpicValue = (issue: any) => {
+    const epicField = issue.custom_fields?.find((field: any) => field.id == import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID);
+    return epicField?.value || '-';
+  };
+
   // Handle column sorting
   const handleSort = (columnId: string) => {
-    // Find the column in the current sort config
     const currentSortIndex = sortConfig.findIndex(sort => sort.key === columnId);
-    
-    // Create a new sort config array
     let newSortConfig = [...sortConfig];
     
     if (currentSortIndex >= 0) {
-      // Column is already in sort config
       const currentSort = sortConfig[currentSortIndex];
-      
       if (currentSort.direction === 'asc') {
-        // Change direction to desc
         newSortConfig[currentSortIndex] = { key: columnId, direction: 'desc' };
       } else {
-        // Remove this sort criteria
         newSortConfig.splice(currentSortIndex, 1);
       }
     } else {
-      // Add new sort criteria
       newSortConfig.push({ key: columnId, direction: 'asc' });
     }
     
@@ -212,12 +210,10 @@ export const IssueList: React.FC<IssueListProps> = ({
 
   // Apply sorting to issues
   const sortedIssues = [...issues].sort((a, b) => {
-    // Apply sorting
     if (sortConfig.length > 0) {
       for (const sort of sortConfig) {
         let aValue, bValue;
         
-        // Extract values based on sort key
         switch (sort.key) {
           case 'id':
             aValue = a.id;
@@ -247,12 +243,15 @@ export const IssueList: React.FC<IssueListProps> = ({
             aValue = new Date(a.updated_on).getTime();
             bValue = new Date(b.updated_on).getTime();
             break;
+          case 'epic':
+            aValue = getEpicValue(a);
+            bValue = getEpicValue(b);
+            break;
           default:
             aValue = a[sort.key];
             bValue = b[sort.key];
         }
         
-        // Compare values
         if (aValue < bValue) {
           return sort.direction === 'asc' ? -1 : 1;
         }
@@ -262,7 +261,6 @@ export const IssueList: React.FC<IssueListProps> = ({
       }
     }
     
-    // Default sort by ID if no sort config
     return a.id - b.id;
   });
 
@@ -519,85 +517,96 @@ export const IssueList: React.FC<IssueListProps> = ({
 
                   {/* Fixed Subject Column */}
                   <th 
-                      scope="col" 
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                      onClick={() => handleSort('subject')}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span>Subject</span>
-                        <span className="text-gray-400">{getSortIndicator('subject')}</span>
-                      </div>
-                    </th>
+                    scope="col" 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                    onClick={() => handleSort('subject')}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>Subject</span>
+                      <span className="text-gray-400">{getSortIndicator('subject')}</span>
+                    </div>
+                  </th>
 
-                    {/* Scrollable Columns */}
-                    {projectFilter !== undefined && (
-                      <th 
-                        scope="col" 
-                        className="bg-gray-50 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer border-r border-gray-200"
-                        style={{ minWidth: "200px" }}
-                        onClick={() => handleSort('project')}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span>Project</span>
-                          <span className="text-gray-400">{getSortIndicator('project')}</span>
-                        </div>
-                      </th>
-                    )}
-                    <th 
-                      scope="col" 
-                      className="bg-gray-50 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer border-r border-gray-200"
-                      style={{ minWidth: "150px" }}
-                      onClick={() => handleSort('status')}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span>Status</span>
-                        <span className="text-gray-400">{getSortIndicator('status')}</span>
-                      </div>
-                    </th>
-                    <th 
-                      scope="col" 
-                      className="bg-gray-50 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer border-r border-gray-200"
-                      style={{ minWidth: "150px" }}
-                      onClick={() => handleSort('priority')}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span>Priority</span>
-                        <span className="text-gray-400">{getSortIndicator('priority')}</span>
-                      </div>
-                    </th>
+                  {/* Scrollable Columns */}
+                  {projectFilter !== undefined && (
                     <th 
                       scope="col" 
                       className="bg-gray-50 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer border-r border-gray-200"
                       style={{ minWidth: "200px" }}
-                      onClick={() => handleSort('assignedTo')}
+                      onClick={() => handleSort('project')}
                     >
                       <div className="flex items-center justify-between">
-                        <span>Assigned To</span>
-                        <span className="text-gray-400">{getSortIndicator('assignedTo')}</span>
+                        <span>Project</span>
+                        <span className="text-gray-400">{getSortIndicator('project')}</span>
                       </div>
                     </th>
-                    <th 
-                      scope="col" 
-                      className="bg-gray-50 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer border-r border-gray-200"
-                      style={{ minWidth: "150px" }}
-                      onClick={() => handleSort('updated')}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span>Updated</span>
-                        <span className="text-gray-400">{getSortIndicator('updated')}</span>
-                      </div>
-                    </th>
+                  )}
+                  <th 
+                    scope="col" 
+                    className="bg-gray-50 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer border-r border-gray-200"
+                    style={{ minWidth: "150px" }}
+                    onClick={() => handleSort('status')}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>Status</span>
+                      <span className="text-gray-400">{getSortIndicator('status')}</span>
+                    </div>
+                  </th>
+                  <th 
+                    scope="col" 
+                    className="bg-gray-50 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer border-r border-gray-200"
+                    style={{ minWidth: "150px" }}
+                    onClick={() => handleSort('priority')}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>Priority</span>
+                      <span className="text-gray-400">{getSortIndicator('priority')}</span>
+                    </div>
+                  </th>
+                  <th 
+                    scope="col" 
+                    className="bg-gray-50 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer border-r border-gray-200"
+                    style={{ minWidth: "150px" }}
+                    onClick={() => handleSort('epic')}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>Epic</span>
+                      <span className="text-gray-400">{getSortIndicator('epic')}</span>
+                    </div>
+                  </th>
+                  <th 
+                    scope="col" 
+                    className="bg-gray-50 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer border-r border-gray-200"
+                    style={{ minWidth: "200px" }}
+                    onClick={() => handleSort('assignedTo')}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>Assigned To</span>
+                      <span className="text-gray-400">{getSortIndicator('assignedTo')}</span>
+                    </div>
+                  </th>
+                  <th 
+                    scope="col" 
+                    className="bg-gray-50 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer border-r border-gray-200"
+                    style={{ minWidth: "150px" }}
+                    onClick={() => handleSort('updated')}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>Updated</span>
+                      <span className="text-gray-400">{getSortIndicator('updated')}</span>
+                    </div>
+                  </th>
 
                   {/* Actions Column */}
                   <th 
-                      scope="col" 
-                      className="sticky right-0 z-30 bg-gray-50 px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200"
-                      style={{ 
-                        width: "120px",
-                        minWidth: "120px",
-                        boxShadow: '-4px 0 6px -2px rgba(0, 0, 0, 0.05)'
-                      }}
-                    >
+                    scope="col" 
+                    className="sticky right-0 z-30 bg-gray-50 px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200"
+                    style={{ 
+                      width: "120px",
+                      minWidth: "120px",
+                      boxShadow: '-4px 0 6px -2px rgba(0, 0, 0, 0.05)'
+                    }}
+                  >
                     Actions
                   </th>
                 </tr>
@@ -622,62 +631,73 @@ export const IssueList: React.FC<IssueListProps> = ({
 
                     {/* ID Column */}
                     <td 
-                        className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200"
-                        style={{ 
-                          width: "100px",
-                          minWidth: "100px"
-                        }}
-                      >
+                      className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200"
+                      style={{ 
+                        width: "100px",
+                        minWidth: "100px"
+                      }}
+                    >
                       #{issue.id}
                     </td>
 
                     {/* Fixed Subject Column */}
                     <td 
-                        className="px-6 py-4 border-r border-gray-200"
-                        style={{ 
-                          width: "400px",
-                          minWidth: "400px",
-                          maxWidth: "400px"
-                        }}
+                      className="px-6 py-4 border-r border-gray-200"
+                      style={{ 
+                        width: "400px",
+                        minWidth: "400px",
+                        maxWidth: "400px"
+                      }}
+                    >
+                      <div
+                        className="text-sm font-medium text-gray-900 cursor-pointer hover:text-indigo-600 multiline-truncate"
+                        title={issue.subject}
+                        onClick={() => onViewIssue(issue.id)}
                       >
-                        <div
-                          className="text-sm font-medium text-gray-900 cursor-pointer hover:text-indigo-600 multiline-truncate"
-                          title={issue.subject}
-                          onClick={() => onViewIssue(issue.id)}
-                        >
-                          {issue.subject}
+                        {issue.subject}
+                      </div>
+                    </td>
+
+                    {/* Scrollable Columns */}
+                    {projectFilter !== undefined && (
+                      <td 
+                        className="px-6 py-4 whitespace-nowrap border-r border-gray-200"
+                        style={{ minWidth: "200px" }}
+                      >
+                        <div className="text-sm text-gray-900">
+                          {issue.project.name}
                         </div>
                       </td>
+                    )}
 
-                      {/* Scrollable Columns */}
-                      {projectFilter !== undefined && (
-                        <td 
-                          className="px-6 py-4 whitespace-nowrap border-r border-gray-200"
-                          style={{ minWidth: "200px" }}
-                        >
-                          <div className="text-sm text-gray-900">
-                            {issue.project.name}
-                          </div>
-                        </td>
-                      )}
-                      <td 
-                        className="px-6 py-4 whitespace-nowrap border-r border-gray-200"
-                        style={{ minWidth: "150px" }}
-                      >
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColorClass(issue.status.name)}`}>
-                          {issue.status.name}
-                        </span>
-                      </td>
-                      <td 
-                        className="px-6 py-4 whitespace-nowrap border-r border-gray-200"
-                        style={{ minWidth: "150px" }}
-                      >
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getPriorityColorClass(issue.priority.name)}`}>
-                          {issue.priority.name}
-                        </span>
-                      </td>
-                      <td 
-                        className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200"
+                    <td 
+                      className="px-6 py-4 whitespace-nowrap border-r border-gray-200"
+                      style={{ minWidth: "150px" }}
+                    >
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColorClass(issue.status.name)}`}>
+                        {issue.status.name}
+                      </span>
+                    </td>
+                    <td 
+                      className="px-6 py-4 whitespace-nowrap border-r border-gray-200"
+                      style={{ minWidth: "150px" }}
+                    >
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getPriorityColorClass(issue.priority.name)}`}>
+                        {issue.priority.name}
+                      </span>
+                    </td>
+
+                    <td 
+                      className="px-6 py-4 whitespace-nowrap border-r border-gray-200"
+                      style={{ minWidth: "150px" }}
+                    >
+                      <span className="text-sm text-gray-900">
+                        {getEpicValue(issue)}
+                      </span>
+                    </td>
+
+                    <td 
+                      className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200"
                         style={{ minWidth: "200px" }}
                       >
                         {issue.assigned_to ? issue.assigned_to.name : '-'}
