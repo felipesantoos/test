@@ -184,12 +184,22 @@ export const Issues = () => {
           new Date(issue.updated_on) > compareDate
         );
       }
+
+      // Apply epic filter
+      if (epicFilter !== 'all') {
+        filtered = filtered.filter(issue => {
+          if (epicFilter === 'none') {
+            return getEpicValue(issue) === '-';
+          }
+          return getEpicValue(issue) === epicFilter;
+        });
+      }
       
       setFilteredIssues(filtered);
     } else {
       setFilteredIssues([]);
     }
-  }, [issues, searchQuery, statusFilter, projectFilter, priorityFilter, assigneeFilter, dateFilter]);
+  }, [issues, searchQuery, statusFilter, projectFilter, priorityFilter, assigneeFilter, dateFilter, epicFilter]);
 
   // Handle bulk update
   const handleBulkUpdate = async (issueIds: number[], updates: any) => {

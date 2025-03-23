@@ -154,6 +154,19 @@ export const IssuesTab = ({
         return false;
       }
     }
+
+    // Apply epic filter
+    if (epicFilter !== 'all') {
+      if (epicFilter === 'none') {
+        if (getEpicValue(issue) !== '-') {
+          return false;
+        }
+      } else {
+        if (getEpicValue(issue) !== epicFilter) {
+          return false;
+        }
+      }
+    }
     
     return true;
   });

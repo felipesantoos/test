@@ -280,15 +280,6 @@ export const IssueList: React.FC<IssueListProps> = ({
     }
     
     return a.id - b.id;
-  }).filter(issue => {
-    // Apply epic filter
-    if (epicFilter !== 'all') {
-      if (epicFilter === 'none') {
-        return getEpicValue(issue) === '-';
-      }
-      return getEpicValue(issue) === epicFilter;
-    }
-    return true;
   });
 
   // Filter and reorder issues based on the showClosed toggle
