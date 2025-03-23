@@ -96,6 +96,41 @@ export const IssuesTab = ({
     await refreshData();
   }
 
+  // Save filter values to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('issues_searchQuery', searchQuery);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    localStorage.setItem('issues_statusFilter', statusFilter);
+  }, [statusFilter]);
+
+  useEffect(() => {
+    localStorage.setItem('issues_priorityFilter', priorityFilter);
+  }, [priorityFilter]);
+
+  useEffect(() => {
+    localStorage.setItem('issues_assigneeFilter', assigneeFilter);
+  }, [assigneeFilter]);
+
+  useEffect(() => {
+    localStorage.setItem('issues_dateFilter', dateFilter);
+  }, [dateFilter]);
+
+  useEffect(() => {
+    localStorage.setItem('issues_epicFilter', epicFilter);
+  }, [epicFilter]);
+
+  // On mount, load saved filter values (if any)
+  useEffect(() => {
+    setSearchQuery(localStorage.getItem('issues_searchQuery') || '');
+    setStatusFilter(localStorage.getItem('issues_statusFilter') || 'all');
+    setPriorityFilter(localStorage.getItem('issues_priorityFilter') || 'all');
+    setAssigneeFilter(localStorage.getItem('issues_assigneeFilter') || 'all');
+    setDateFilter(localStorage.getItem('issues_dateFilter') || 'all');
+    setEpicFilter(localStorage.getItem('issues_epicFilter') || 'all');
+  }, []);
+
   // Reset all filters to default values
   const resetFilters = () => {
     setSearchQuery('');
@@ -104,6 +139,12 @@ export const IssuesTab = ({
     setAssigneeFilter('all');
     setDateFilter('all');
     setEpicFilter('all');
+    localStorage.removeItem('issues_searchQuery');
+    localStorage.removeItem('issues_statusFilter');
+    localStorage.removeItem('issues_priorityFilter');
+    localStorage.removeItem('issues_assigneeFilter');
+    localStorage.removeItem('issues_dateFilter');
+    localStorage.removeItem('issues_epicFilter');
   };
 
   // Handle filter change (dummy function as we're filtering client-side)

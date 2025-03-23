@@ -67,6 +67,46 @@ export const Issues = () => {
   // Add new state for success notification
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  // Save filter values to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('issues_searchQuery', searchQuery);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    localStorage.setItem('issues_statusFilter', statusFilter);
+  }, [statusFilter]);
+
+  useEffect(() => {
+    localStorage.setItem('issues_projectFilter', projectFilter);
+  }, [projectFilter]);
+
+  useEffect(() => {
+    localStorage.setItem('issues_priorityFilter', priorityFilter);
+  }, [priorityFilter]);
+
+  useEffect(() => {
+    localStorage.setItem('issues_assigneeFilter', assigneeFilter);
+  }, [assigneeFilter]);
+
+  useEffect(() => {
+    localStorage.setItem('issues_dateFilter', dateFilter);
+  }, [dateFilter]);
+
+  useEffect(() => {
+    localStorage.setItem('issues_epicFilter', epicFilter);
+  }, [epicFilter]);
+
+  // On mount, load saved filter values (if any)
+  useEffect(() => {
+    setSearchQuery(localStorage.getItem('issues_searchQuery') || '');
+    setStatusFilter(localStorage.getItem('issues_statusFilter') || 'all');
+    setProjectFilter(localStorage.getItem('issues_projectFilter') || 'all');
+    setPriorityFilter(localStorage.getItem('issues_priorityFilter') || 'all');
+    setAssigneeFilter(localStorage.getItem('issues_assigneeFilter') || 'all');
+    setDateFilter(localStorage.getItem('issues_dateFilter') || 'all');
+    setEpicFilter(localStorage.getItem('issues_epicFilter') || 'all');
+  }, []);
+
   // Handle bulk delete
   const handleDeleteIssue = async (id: number) => {
     if (!isConnected) return;
@@ -311,7 +351,7 @@ export const Issues = () => {
     await refreshData();
   }
 
-  // Reset all filters to default values
+  // Reset all filters (also clear localStorage)
   const resetFilters = () => {
     setSearchQuery('');
     setStatusFilter('all');
@@ -320,6 +360,13 @@ export const Issues = () => {
     setAssigneeFilter('all');
     setDateFilter('all');
     setEpicFilter('all');
+    localStorage.removeItem('issues_searchQuery');
+    localStorage.removeItem('issues_statusFilter');
+    localStorage.removeItem('issues_projectFilter');
+    localStorage.removeItem('issues_priorityFilter');
+    localStorage.removeItem('issues_assigneeFilter');
+    localStorage.removeItem('issues_dateFilter');
+    localStorage.removeItem('issues_epicFilter');
   };
 
   // Handle filter change
