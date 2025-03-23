@@ -90,15 +90,13 @@ export const Projects = () => {
       setLoading(true);
       
       try {
+        // Remove the search query from the fetch parameters
         const response = await fetchProjects({
           offset: (currentPage - 1) * projectsPerPage,
           limit: projectsPerPage,
-          // Add any active filters
           status: filters.status !== 'all' ? filters.status : undefined,
-          name: searchQuery || undefined,
-          // Add other filters as needed
         });
-
+  
         setTotalProjects(response.total_count);
         
         // Process projects with progress and memberships
@@ -142,9 +140,9 @@ export const Projects = () => {
         setLoading(false);
       }
     };
-
+  
     loadProjects();
-  }, [isConnected, currentPage, projectsPerPage, searchQuery, filters]);
+  }, [isConnected, currentPage, projectsPerPage]);  
 
   // Apply filters and sorting when they change
   useEffect(() => {
