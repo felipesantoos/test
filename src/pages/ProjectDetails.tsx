@@ -19,6 +19,7 @@ import { EditProjectModal } from '../components/project/modals/EditProjectModal'
 import { format, parseISO, subDays, isAfter, isBefore, isEqual, startOfDay } from 'date-fns';
 import { GitHubIntegrationTab } from '../components/project/tabs/GitHubIntegrationTab';
 import { SuccessNotification } from '../components/shared/SuccessNotification';
+import { ProjectKanbanTab } from '../components/project/tabs/ProjectKanbanTab';
 
 export const ProjectDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -802,6 +803,18 @@ export const ProjectDetails = () => {
             onBulkUpdate={handleBulkUpdate}
             handleBulkDelete={handleBulkDelete}
             updateIssue={updateIssue}
+            refreshData={refreshData}
+          />
+        )}
+
+        {/* Kanban Board Tab */}
+        {activeTab === 'kanban' && (
+          <ProjectKanbanTab 
+            projectId={parseInt(id || '0')}
+            issues={issues}
+            loading={loading}
+            updateIssue={updateIssue}
+            createIssue={createIssue}
             refreshData={refreshData}
           />
         )}
