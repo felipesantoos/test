@@ -19,7 +19,6 @@ import { EditProjectModal } from '../components/project/modals/EditProjectModal'
 import { format, parseISO, subDays, isAfter, isBefore, isEqual, startOfDay } from 'date-fns';
 import { GitHubIntegrationTab } from '../components/project/tabs/GitHubIntegrationTab';
 import { SuccessNotification } from '../components/shared/SuccessNotification';
-import { AttachmentsTab } from '../components/issue/tabs/AttachmentsTab';
 
 export const ProjectDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -802,6 +801,8 @@ export const ProjectDetails = () => {
             handleBulkCreateIssues={handleBulkCreateIssues}
             onBulkUpdate={handleBulkUpdate}
             handleBulkDelete={handleBulkDelete}
+            updateIssue={updateIssue}
+            refreshData={refreshData}
           />
         )}
 
