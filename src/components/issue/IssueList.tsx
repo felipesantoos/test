@@ -300,8 +300,9 @@ export const IssueList: React.FC<IssueListProps> = ({
     <div className="space-y-6">
       {/* Search and Filters */}
       <div className="bg-white rounded-lg shadow p-4">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="relative w-full md:w-96">
+        <div className="flex flex-col gap-4 w-full">
+          {/* Search Input */}
+          <div className="relative w-full">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search size={18} className="text-gray-400" />
             </div>
@@ -313,85 +314,87 @@ export const IssueList: React.FC<IssueListProps> = ({
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="border border-gray-300 rounded-md text-sm text-gray-700 py-2 pl-3 pr-8 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-            >
-              <option value="all">All Statuses</option>
-              {issueStatuses.map(status => (
-                <option key={status.id} value={status.name.toLowerCase()}>
-                  {status.name}
-                </option>
-              ))}
-            </select>
 
-            {projectFilter !== undefined && setProjectFilter !== undefined && projects && (
+          {/* Filter Options split in 2 rows */}
+          <div className="flex flex-col gap-2 w-full">
+            {/* First Row: Select filters and filter action buttons */}
+            <div className="flex flex-wrap items-center gap-2 w-full">
               <select
-                value={projectFilter}
-                onChange={(e) => setProjectFilter(e.target.value)}
-                className="border border-gray-300 rounded-md text-sm text-gray-700 py-2 pl-3 pr-8 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="flex-1 border border-gray-300 rounded-md text-sm text-gray-700 py-2 pl-3 pr-8 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
               >
-                <option value="all">All Projects</option>
-                {projects.map(project => (
-                  <option key={project.id} value={project.id}>
-                    {project.name}
+                <option value="all">All Statuses</option>
+                {issueStatuses.map((status) => (
+                  <option key={status.id} value={status.name.toLowerCase()}>
+                    {status.name}
                   </option>
                 ))}
               </select>
-            )}
 
-            <button
-              className="flex items-center space-x-1 px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50"
-              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-            >
-              <Filter size={16} />
-              <span>{showAdvancedFilters ? 'Hide Filters' : 'More Filters'}</span>
-            </button>
-
-            <button
-              className="flex items-center space-x-1 px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50"
-              onClick={handleFilterChange}
-            >
-              <Search size={16} />
-              <span>Apply Filters</span>
-            </button>
-
-            {/* Toggle Closed Issues */}
-            <label
-              onClick={() => setShowClosed(!showClosed)}
-              className={`flex items-center cursor-pointer rounded-full border px-3 py-2 ${
-                showClosed ? "bg-green-100 border-green-500" : "bg-white border-gray-300"
-              }`}
-            >
-              {showClosed ? (
-                <CheckSquare size={16} className="text-green-600" />
-              ) : (
-                <Square size={16} className="text-gray-400" />
+              {projectFilter !== undefined && setProjectFilter !== undefined && projects && (
+                <select
+                  value={projectFilter}
+                  onChange={(e) => setProjectFilter(e.target.value)}
+                  className="flex-1 border border-gray-300 rounded-md text-sm text-gray-700 py-2 pl-3 pr-8 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                  <option value="all">All Projects</option>
+                  {projects.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.name}
+                    </option>
+                  ))}
+                </select>
               )}
-              <span className="ml-2 text-sm font-medium text-gray-700">Show Closed</span>
-            </label>
 
-            {/* Bulk Actions */}
-            {selectedIssues.length > 0 && (
-              <>
-                <button
-                  onClick={() => setShowBulkEditModal(true)}
-                  className="flex items-center space-x-1 px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
-                >
-                  <Settings size={16} />
-                  <span>Bulk Edit ({selectedIssues.length})</span>
-                </button>
-                <button
-                  onClick={() => setShowBulkDeleteModal(true)}
-                  className="flex items-center space-x-1 px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700"
-                >
-                  <Trash2 size={16} />
-                  <span>Delete ({selectedIssues.length})</span>
-                </button>
-              </>
-            )}
+              <button
+                className="flex items-center gap-1 px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50"
+                onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+              >
+                <Filter size={16} />
+                <span>{showAdvancedFilters ? "Hide Filters" : "More Filters"}</span>
+              </button>
+
+              <button
+                className="flex items-center gap-1 px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50"
+                onClick={handleFilterChange}
+              >
+                <Search size={16} />
+                <span>Apply Filters</span>
+              </button>
+              <label
+                onClick={() => setShowClosed(!showClosed)}
+                className={`flex items-center cursor-pointer rounded-full border px-3 py-2 ${
+                  showClosed ? "bg-green-100 border-green-500" : "bg-white border-gray-300"
+                }`}
+              >
+                {showClosed ? (
+                  <CheckSquare size={16} className="text-green-600" />
+                ) : (
+                  <Square size={16} className="text-gray-400" />
+                )}
+                <span className="ml-2 text-sm font-medium text-gray-700">Show Closed</span>
+              </label>
+
+              {selectedIssues.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowBulkEditModal(true)}
+                    className="flex items-center gap-1 px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+                  >
+                    <Settings size={16} />
+                    <span>Bulk Edit ({selectedIssues.length})</span>
+                  </button>
+                  <button
+                    onClick={() => setShowBulkDeleteModal(true)}
+                    className="flex items-center gap-1 px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700"
+                  >
+                    <Trash2 size={16} />
+                    <span>Delete ({selectedIssues.length})</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -457,7 +460,7 @@ export const IssueList: React.FC<IssueListProps> = ({
             </div>
 
             <div>
-              <label htmlFor="epicFilter" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="epicFilter" className="block text-sm font-medium text-gray-700 mt-4 mb-1">
                 Epic
               </label>
               <select
