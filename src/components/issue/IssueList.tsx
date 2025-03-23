@@ -743,39 +743,54 @@ export const IssueList: React.FC<IssueListProps> = ({
                       </td>
                     )}
 
-                    <td 
-                      className="px-6 py-4 whitespace-nowrap border-r border-gray-200"
+                    <td
+                      className="px-6 py-4 whitespace-nowrap border-r border-gray-200 cursor-pointer"
                       style={{ minWidth: "150px" }}
+                      onClick={() => {
+                        // Only trigger edit mode if not already editing
+                        if (editingStatusIssueId !== issue.id) {
+                          setEditingStatusIssueId(issue.id);
+                        }
+                      }}
                     >
-                      {editingStatusIssueId === issue.id ? (
-                        <select 
-                          value={issue.status.id}
-                          onChange={async (e) => {
-                            const newStatusId = Number(e.target.value);
-                            if (onStatusChange) {
-                              await onStatusChange(issue.id, newStatusId);
-                            }
-                            setEditingStatusIssueId(null);
-                          }}
-                          onBlur={() => setEditingStatusIssueId(null)}
-                          className="block w-full border border-gray-300 rounded-md text-xs text-gray-700 py-1 px-2 focus:outline-none"
-                        >
-                          {issueStatuses.map((status) => (
-                            <option key={status.id} value={status.id}>
-                              {status.name}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <span 
-                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColorClass(issue.status.name)}`}
-                          onClick={() => setEditingStatusIssueId(issue.id)}
-                          style={{ cursor: "pointer" }}
-                          title="Click to edit status"
-                        >
-                          {issue.status.name}
-                        </span>
-                      )}
+                      <div className="relative group">
+                        {editingStatusIssueId === issue.id ? (
+                          <select
+                            value={issue.status.id}
+                            onChange={async (e) => {
+                              const newStatusId = Number(e.target.value);
+                              if (onStatusChange) {
+                                await onStatusChange(issue.id, newStatusId);
+                              }
+                              setEditingStatusIssueId(null);
+                            }}
+                            onBlur={() => setEditingStatusIssueId(null)}
+                            className="block w-full border border-gray-300 rounded-md text-xs text-gray-700 py-1 px-2 focus:outline-none"
+                            autoFocus
+                          >
+                            {issueStatuses.map((status) => (
+                              <option key={status.id} value={status.id}>
+                                {status.name}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span
+                            className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColorClass(
+                              issue.status.name
+                            )}`}
+                            title="Click to edit status"
+                          >
+                            {issue.status.name}
+                          </span>
+                        )}
+                        {editingStatusIssueId !== issue.id && (
+                          <Edit
+                            size={16}
+                            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                          />
+                        )}
+                      </div>
                     </td>
                     <td 
                       className="px-6 py-4 whitespace-nowrap border-r border-gray-200"
