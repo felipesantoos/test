@@ -55,6 +55,7 @@ export const IssuesTab = ({
   const [assigneeFilter, setAssigneeFilter] = useState(() => localStorage.getItem('issues_assigneeFilter') || 'all');
   const [dateFilter, setDateFilter] = useState(() => localStorage.getItem('issues_dateFilter') || 'all');
   const [epicFilter, setEpicFilter] = useState(() => localStorage.getItem('issues_epicFilter') || 'all');
+  const [sprintFilter, setSprintFilter] = useState(() => localStorage.getItem('issues_sprintFilter') || 'all');
   const [isBulkCreatingIssues, setIsBulkCreatingIssues] = useState(false);
   const [loadingAction, setLoadingAction] = useState(false);
 
@@ -151,6 +152,10 @@ export const IssuesTab = ({
     localStorage.setItem('issues_epicFilter', epicFilter);
   }, [epicFilter]);
 
+  useEffect(() => {
+    localStorage.setItem('issues_sprintFilter', sprintFilter);
+  }, [sprintFilter]);
+
   // On mount, load saved filter values (if any)
   useEffect(() => {
     setSearchQuery(localStorage.getItem('issues_searchQuery') || '');
@@ -159,6 +164,7 @@ export const IssuesTab = ({
     setAssigneeFilter(localStorage.getItem('issues_assigneeFilter') || 'all');
     setDateFilter(localStorage.getItem('issues_dateFilter') || 'all');
     setEpicFilter(localStorage.getItem('issues_epicFilter') || 'all');
+    setSprintFilter(localStorage.getItem('issues_sprintFilter') || 'all');
   }, []);
 
   // Reset all filters to default values
@@ -169,12 +175,14 @@ export const IssuesTab = ({
     setAssigneeFilter('all');
     setDateFilter('all');
     setEpicFilter('all');
+    setSprintFilter('all');
     localStorage.removeItem('issues_searchQuery');
     localStorage.removeItem('issues_statusFilter');
     localStorage.removeItem('issues_priorityFilter');
     localStorage.removeItem('issues_assigneeFilter');
     localStorage.removeItem('issues_dateFilter');
     localStorage.removeItem('issues_epicFilter');
+    localStorage.removeItem('issues_sprintFilter');
   };
 
   // Handle filter change (dummy function as we're filtering client-side)
@@ -239,6 +247,19 @@ export const IssuesTab = ({
         }
       }
     }
+
+    // Apply epic filter
+    if (sprintFilter !== 'all') {
+      if (sprintFilter === 'none') {
+        if (getSprintValue(issue) !== '-') {
+          return false;
+        }
+      } else {
+        if (getSprintValue(issue) !== sprintFilter) {
+          return false;
+        }
+      }
+    }
     
     return true;
   });
@@ -286,6 +307,8 @@ export const IssuesTab = ({
         setDateFilter={setDateFilter}
         epicFilter={epicFilter}
         setEpicFilter={setEpicFilter}
+        sprintFilter={sprintFilter}
+        setSprintFilter={setSprintFilter}
         issueStatuses={statuses}
         priorities={priorities}
         users={users}

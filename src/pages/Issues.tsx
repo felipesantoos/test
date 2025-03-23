@@ -36,6 +36,7 @@ export const Issues = () => {
   const [assigneeFilter, setAssigneeFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
   const [epicFilter, setEpicFilter] = useState('all');
+  const [sprintFilter, setSprintFilter] = useState('all');
   
   // State for issues and loading
   const [filteredIssues, setFilteredIssues] = useState<any[]>([]);
@@ -97,6 +98,10 @@ export const Issues = () => {
     localStorage.setItem('issues_epicFilter', epicFilter);
   }, [epicFilter]);
 
+  useEffect(() => {
+    localStorage.setItem('issues_sprintFilter', sprintFilter);
+  }, [sprintFilter]);
+
   // On mount, load saved filter values (if any)
   useEffect(() => {
     setSearchQuery(localStorage.getItem('issues_searchQuery') || '');
@@ -106,6 +111,7 @@ export const Issues = () => {
     setAssigneeFilter(localStorage.getItem('issues_assigneeFilter') || 'all');
     setDateFilter(localStorage.getItem('issues_dateFilter') || 'all');
     setEpicFilter(localStorage.getItem('issues_epicFilter') || 'all');
+    setSprintFilter(localStorage.getItem('issues_sprintFilter') || 'all');
   }, []);
 
   // Handle bulk delete
@@ -235,12 +241,22 @@ export const Issues = () => {
           return getEpicValue(issue) === epicFilter;
         });
       }
+
+      // Apply sprint filter
+      if (sprintFilter !== 'all') {
+        filtered = filtered.filter(issue => {
+          if (sprintFilter === 'none') {
+            return getSprintValue(issue) === '-';
+          }
+          return getSprintValue(issue) === sprintFilter;
+        });
+      }
       
       setFilteredIssues(filtered);
     } else {
       setFilteredIssues([]);
     }
-  }, [issues, searchQuery, statusFilter, projectFilter, priorityFilter, assigneeFilter, dateFilter, epicFilter]);
+  }, [issues, searchQuery, statusFilter, projectFilter, priorityFilter, assigneeFilter, dateFilter, epicFilter, sprintFilter]);
 
   // Handle bulk update
   const handleBulkUpdate = async (issueIds: number[], updates: any) => {
@@ -388,6 +404,7 @@ export const Issues = () => {
     setAssigneeFilter('all');
     setDateFilter('all');
     setEpicFilter('all');
+    setSprintFilter('all');
     localStorage.removeItem('issues_searchQuery');
     localStorage.removeItem('issues_statusFilter');
     localStorage.removeItem('issues_projectFilter');
@@ -395,6 +412,7 @@ export const Issues = () => {
     localStorage.removeItem('issues_assigneeFilter');
     localStorage.removeItem('issues_dateFilter');
     localStorage.removeItem('issues_epicFilter');
+    localStorage.removeItem('issues_sprintFilter');
   };
 
   // Handle filter change
@@ -468,6 +486,8 @@ export const Issues = () => {
         setProjectFilter={setProjectFilter}
         epicFilter={epicFilter}
         setEpicFilter={setEpicFilter}
+        sprintFilter={sprintFilter}
+        setSprintFilter={setSprintFilter}
         projects={projects}
         issueStatuses={issueStatuses}
         priorities={priorities}

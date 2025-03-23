@@ -509,7 +509,8 @@ export const IssueList: React.FC<IssueListProps> = ({
 
             {/* Active Filters */}
             {(statusFilter !== 'all' || projectFilter !== 'all' || priorityFilter !== 'all' || 
-              assigneeFilter !== 'all' || dateFilter !== 'all' || epicFilter !== 'all' || sortConfig.length > 0) && (
+              assigneeFilter !== 'all' || dateFilter !== 'all' || epicFilter !== 'all' || 
+              sprintFilter !== 'all' || sortConfig.length > 0) && (
               <div className="mt-4 flex flex-wrap gap-2">
                 <span className="text-sm font-medium text-gray-700">Active filters:</span>
 
