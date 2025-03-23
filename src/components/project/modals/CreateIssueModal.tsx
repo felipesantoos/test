@@ -83,7 +83,7 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
       }
     };
     loadData();
-  }, [fetchEpics, fetchSprints]);
+  }, []);
 
   // Handle file upload completion
   const handleUploadComplete = async (upload: { token: string; filename: string; content_type: string }) => {
@@ -166,6 +166,7 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
 
   // Handle sprint selection or new sprint creation
   const handleSprintChange = (value: string) => {
+    console.log(value);
     // Update custom fields with the selected sprint
     setNewIssue((prev: any) => ({
       ...prev,

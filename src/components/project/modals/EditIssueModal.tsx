@@ -136,7 +136,7 @@ export const EditIssueModal: React.FC<EditIssueModalProps> = ({
       }
     };
     loadData();
-  }, [fetchEpics, fetchSprints]);
+  }, []);
 
   // Handle file upload completion
   const handleUploadComplete = async (upload: { token: string; filename: string; content_type: string }) => {
