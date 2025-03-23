@@ -319,6 +319,7 @@ export const Issues = () => {
     setPriorityFilter('all');
     setAssigneeFilter('all');
     setDateFilter('all');
+    setEpicFilter('all');
   };
 
   // Handle filter change

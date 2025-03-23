@@ -50,7 +50,7 @@ interface IssueListProps {
   projectFilter?: string;
   setProjectFilter?: (project: string) => void;
   epicFilter?: string;
-  setEpicFilter?: (epic: string) => void;
+  setEpicFilter: (epic: string) => void;
   projects?: any[];
   issueStatuses: any[];
   priorities: any[];
@@ -475,7 +475,7 @@ export const IssueList: React.FC<IssueListProps> = ({
 
             {/* Active Filters */}
             {(statusFilter !== 'all' || projectFilter !== 'all' || priorityFilter !== 'all' || 
-              assigneeFilter !== 'all' || dateFilter !== 'all' || sortConfig.length > 0) && (
+              assigneeFilter !== 'all' || dateFilter !== 'all' || epicFilter !== 'all' || sortConfig.length > 0) && (
               <div className="mt-4 flex flex-wrap gap-2">
                 <span className="text-sm font-medium text-gray-700">Active filters:</span>
 
@@ -513,6 +513,13 @@ export const IssueList: React.FC<IssueListProps> = ({
                     Updated: {dateFilter === 'today' ? 'Last 24 Hours' : 
                       dateFilter === 'week' ? 'Last 7 Days' : 'Last 30 Days'}
                     <X size={14} className="ml-1 cursor-pointer" onClick={() => setDateFilter('all')} />
+                  </span>
+                )}
+
+                {epicFilter !== 'all' && (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-pink-100 text-pink-800">
+                    Epic: {epicFilter === 'none' ? 'No Epic' : epicFilter}
+                    <X size={14} className="ml-1 cursor-pointer" onClick={() => setEpicFilter('all')} />
                   </span>
                 )}
 

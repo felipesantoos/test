@@ -103,6 +103,7 @@ export const IssuesTab = ({
     setPriorityFilter('all');
     setAssigneeFilter('all');
     setDateFilter('all');
+    setEpicFilter('all');
   };
 
   // Handle filter change (dummy function as we're filtering client-side)
