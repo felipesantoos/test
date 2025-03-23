@@ -359,14 +359,18 @@ export const IssueList: React.FC<IssueListProps> = ({
             </button>
 
             {/* Toggle Closed Issues */}
-            <label className="flex items-center space-x-1">
-              <input
-                type="checkbox"
-                checked={showClosed}
-                onChange={() => setShowClosed(!showClosed)}
-                className="h-4 w-4 text-indigo-600 border-gray-300 rounded"
-              />
-              <span className="text-sm text-gray-700">Show Closed</span>
+            <label
+              onClick={() => setShowClosed(!showClosed)}
+              className={`flex items-center cursor-pointer rounded-full border px-3 py-2 ${
+                showClosed ? "bg-green-100 border-green-500" : "bg-white border-gray-300"
+              }`}
+            >
+              {showClosed ? (
+                <CheckSquare size={16} className="text-green-600" />
+              ) : (
+                <Square size={16} className="text-gray-400" />
+              )}
+              <span className="ml-2 text-sm font-medium text-gray-700">Show Closed</span>
             </label>
 
             {/* Bulk Actions */}
