@@ -81,18 +81,13 @@ export const ProjectDetails = () => {
   const [issuesOverTimeData, setIssuesOverTimeData] = useState<any[]>([]);
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
 
-  // Replace the problematic useEffect with this version
+  // Add this useEffect near the top of the component
   useEffect(() => {
-    const hasRequiredData = issueStatuses.length > 0 && 
-                           priorities.length > 0 && 
-                           trackers.length > 0 && 
-                           users.length > 0;
-                           
-    if (isConnected && !hasRequiredData && !loading && !hasLoadedInitialData) {
-      setHasLoadedInitialData(true); // Set flag to prevent multiple refreshes
+    if (isConnected && !hasLoadedInitialData) {
+      setHasLoadedInitialData(true);
       refreshData();
     }
-  }, [isConnected, loading]); // Only watch connection status and loading state
+  }, [isConnected, hasLoadedInitialData, refreshData]);
 
   // Load project details and issues
   useEffect(() => {
@@ -168,7 +163,7 @@ export const ProjectDetails = () => {
     };
     
     loadProjectData();
-  }, [id, isConnected, fetchProjectDetails, fetchIssues]);
+  }, [id, isConnected, fetchProjectDetails, fetchProjectMemberships, fetchIssues]);
 
   // Process chart data
   const processChartData = (projectIssues: any[]) => {

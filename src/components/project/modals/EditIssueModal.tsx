@@ -94,12 +94,11 @@ export const EditIssueModal: React.FC<EditIssueModalProps> = ({
   // Get Redmine URL from localStorage
   const redmineUrl = localStorage.getItem('redmine_url') || '';
 
-  // When the issue has a project, fetch its memberships
+  // In both modals, add proper dependency arrays to useEffect hooks
   useEffect(() => {
     if (selectedIssue?.project?.id) {
-      fetchProjectMemberships(selectedIssue.project.id)
+      fetchProjectMemberships(selectedIssue?.project?.id)
         .then((memberships) => {
-          // Only include memberships that have a user object
           const members = memberships
             .filter(m => m.user)
             .map(m => m.user);
@@ -109,19 +108,10 @@ export const EditIssueModal: React.FC<EditIssueModalProps> = ({
           console.error('Error fetching project memberships:', error);
           setProjectMembers([]);
         });
-    } else {
-      setProjectMembers([]);
     }
-  }, [selectedIssue?.project?.id, fetchProjectMemberships]);
+  }, [selectedIssue?.project?.id, fetchProjectMemberships]); // Add proper dependencies
 
-  // Initialize uploads from existing attachments
-  useEffect(() => {
-    if (selectedIssue?.uploads) {
-      setUploads(selectedIssue.uploads);
-    }
-  }, [selectedIssue?.uploads]);
-
-  // Fetch epics and sprints when component mounts
+  // Similarly for epics and sprints loading
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -136,7 +126,14 @@ export const EditIssueModal: React.FC<EditIssueModalProps> = ({
       }
     };
     loadData();
-  }, []);
+  }, []); // Empty dependency array since this should only run once
+
+  // Initialize uploads from existing attachments
+  useEffect(() => {
+    if (selectedIssue?.uploads) {
+      setUploads(selectedIssue.uploads);
+    }
+  }, [selectedIssue?.uploads]);
 
   // Handle file upload completion
   const handleUploadComplete = async (upload: { token: string; filename: string; content_type: string }) => {

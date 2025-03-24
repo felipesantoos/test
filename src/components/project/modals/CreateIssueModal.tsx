@@ -48,12 +48,11 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
   const [newEpicValue, setNewEpicValue] = useState('');
   const [isAddingNewEpic, setIsAddingNewEpic] = useState(false);
 
-  // When a project is selected, fetch its memberships
+  // In both modals, add proper dependency arrays to useEffect hooks
   useEffect(() => {
     if (newIssue.project_id) {
       fetchProjectMemberships(newIssue.project_id)
         .then((memberships) => {
-          // Only include memberships that have a user object
           const members = memberships
             .filter(m => m.user)
             .map(m => m.user);
@@ -63,12 +62,10 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
           console.error('Error fetching project memberships:', error);
           setProjectMembers([]);
         });
-    } else {
-      setProjectMembers([]);
     }
-  }, [newIssue.project_id, fetchProjectMemberships]);
+  }, [newIssue.project_id, fetchProjectMemberships]); // Add proper dependencies
 
-  // Fetch epics and sprints when component mounts
+  // Similarly for epics and sprints loading
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -83,7 +80,7 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
       }
     };
     loadData();
-  }, []);
+  }, []); // Empty dependency array since this should only run once
 
   // Handle file upload completion
   const handleUploadComplete = async (upload: { token: string; filename: string; content_type: string }) => {
