@@ -40,6 +40,7 @@ export const ProjectDetails = () => {
     priorities,
     trackers,
     users,
+    epics,
     sprints,
     refreshData
   } = useApi();
@@ -876,6 +877,9 @@ export const ProjectDetails = () => {
           setIsCreatingIssue={setIsCreatingIssue}
           loadingAction={loadingAction}
           users={users}
+          projectMemberships={project.memberships?.map((m: any) => m.user).filter(Boolean)}
+          projectEpics={epics.filter(e => e.project_id === project.id)}
+          projectSprints={sprints.filter(s => s.project_id === project.id)}
         />
       )}
 
@@ -887,6 +891,9 @@ export const ProjectDetails = () => {
           loadingAction={loadingAction}
           users={users}
           onCancel={() => setSelectedIssue(null)}
+          projectMemberships={project.memberships?.map((m: any) => m.user).filter(Boolean)}
+          projectEpics={epics.filter(e => e.project_id === project.id)}
+          projectSprints={sprints.filter(s => s.project_id === project.id)}
         />
       )}
 

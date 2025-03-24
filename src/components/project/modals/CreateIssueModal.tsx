@@ -16,6 +16,9 @@ interface CreateIssueModalProps {
   loadingAction: boolean;
   projects?: any[]; // Optional projects list for selection
   users: any[]; // Users list for lookup
+  projectMemberships?: any[];
+  projectEpics?: any[];
+  projectSprints?: any[];
 }
 
 export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({ 
@@ -25,7 +28,10 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
   setIsCreatingIssue, 
   loadingAction,
   projects,
-  users
+  users,
+  projectMemberships,
+  projectEpics,
+  projectSprints
 }) => {
   const { 
     fetchProjectMemberships,
@@ -49,12 +55,13 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
   const [allSprints, setAllSprints] = useState<any[]>([]);
   const [filteredSprints, setFilteredSprints] = useState<any[]>([]);
 
-  // When a project is selected, fetch its memberships
+  // Use passed project members if available
   useEffect(() => {
-    if (newIssue.project_id) {
+    if (projectMemberships) {
+      setProjectMembers(projectMemberships);
+    } else if (newIssue.project_id) { // Only fetch if not provided
       fetchProjectMemberships(newIssue.project_id)
         .then((memberships) => {
-          // Only include memberships that have a user object
           const members = memberships
             .filter(m => m.user)
             .map(m => m.user);
@@ -64,47 +71,56 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
           console.error('Error fetching project memberships:', error);
           setProjectMembers([]);
         });
-    } else {
-      setProjectMembers([]);
     }
-  }, [newIssue.project_id, fetchProjectMemberships]);
+  }, [newIssue.project_id, projectMemberships]);
 
   // Fetch epics and sprints when component mounts
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [epicsData, sprintsData] = await Promise.all([
-          fetchEpics(),
-          fetchSprints()
-        ]);
-        setAllEpics(epicsData || []);
-        setAllSprints(sprintsData || []);
+        if (projectEpics && projectSprints) {
+          setAllEpics(projectEpics);
+          setAllSprints(projectSprints);
+        } else {
+          const [epicsData, sprintsData] = await Promise.all([
+            fetchEpics(),
+            fetchSprints()
+          ]);
+          setAllEpics(epicsData || []);
+          setAllSprints(sprintsData || []);
+        }
       } catch (err) {
         console.error('Error loading data:', err);
       }
     };
     loadData();
-  }, []);
+  }, [projectEpics, projectSprints]);
 
   // Filter epics and sprints when project changes
   useEffect(() => {
     if (newIssue.project_id) {
-      // Filter epics for the selected project
-      const projectEpics = allEpics.filter(epic => 
-        epic.project_id === newIssue.project_id
-      );
-      setFilteredEpics(projectEpics);
-
-      // Filter sprints for the selected project
-      const projectSprints = allSprints.filter(sprint => 
-        sprint.project_id === newIssue.project_id
-      );
-      setFilteredSprints(projectSprints);
+      if (projectEpics) {
+        setFilteredEpics(projectEpics);
+      } else {
+        const projectEpics = allEpics.filter(epic => 
+          epic.project_id === newIssue.project_id
+        );
+        setFilteredEpics(projectEpics);
+      }
+  
+      if (projectSprints) {
+        setFilteredSprints(projectSprints);
+      } else {
+        const projectSprints = allSprints.filter(sprint => 
+          sprint.project_id === newIssue.project_id
+        );
+        setFilteredSprints(projectSprints);
+      }
     } else {
       setFilteredEpics([]);
       setFilteredSprints([]);
     }
-  }, [newIssue.project_id, allEpics, allSprints]);
+  }, [newIssue.project_id, allEpics, allSprints, projectEpics, projectSprints]);  
 
   // Handle file upload completion
   const handleUploadComplete = async (upload: { token: string; filename: string; content_type: string }) => {
