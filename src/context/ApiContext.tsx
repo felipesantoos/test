@@ -1,8 +1,9 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { useAuth } from './AuthContext';
+import { debounce } from 'lodash';
 
-// Use environment variable with fallback
+// Use environment variable with fallback 
 const SERVER_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 interface ProjectsResponse {
@@ -79,27 +80,38 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
   const [priorities, setPriorities] = useState<any[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
   const [sprints, setSprints] = useState<Sprint[]>([]);
-  const [epicsCache, setEpicsCache] = useState<string[]>([]);
-  const [sprintsCache, setSprintsCache] = useState<Sprint[]>([]);
+  
+  // Cache refs to prevent unnecessary re-renders
+  const epicsCache = useRef<string[]>([]);
+  const sprintsCache = useRef<Sprint[]>([]);
+  const lastFetchTimestamp = useRef<number>(0);
+  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
   // Get authentication token from localStorage
-  const getAuthToken = () => {
+  const getAuthToken = useCallback(() => {
     return localStorage.getItem('redmine_auth') || '';
-  };
+  }, []);
+
+  // Debounced version of setIsLoading
+  const debouncedSetLoading = useCallback(
+    debounce((value: boolean) => {
+      setIsLoading(value);
+    }, 300),
+    []
+  );
 
   // Test connection to Redmine API
-  const testConnection = async (): Promise<boolean> => {
+  const testConnection = useCallback(async (): Promise<boolean> => {
     if (!isAuthenticated || !redmineUrl) {
       setError('Authentication required');
       setIsConnected(false);
       return false;
     }
 
-    setIsLoading(true);
+    debouncedSetLoading(true);
     setError(null);
 
     try {
-      // Use the proxy server to avoid CORS issues
       const response = await axios.get(`${SERVER_URL}/api/auth/verify`, {
         params: { 
           redmineUrl,
@@ -108,107 +120,83 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
       });
       
       setIsConnected(true);
-      setIsLoading(false);
+      debouncedSetLoading(false);
       return true;
     } catch (err: any) {
       setError('Failed to connect to Redmine API. Please check your credentials.');
       setIsConnected(false);
-      setIsLoading(false);
+      debouncedSetLoading(false);
       return false;
     }
-  };
+  }, [isAuthenticated, redmineUrl, getAuthToken, debouncedSetLoading]);
 
-  // Fetch data from Redmine API
-  const refreshData = async (): Promise<void> => {
+  // Check if cache is valid
+  const isCacheValid = useCallback(() => {
+    return Date.now() - lastFetchTimestamp.current < CACHE_DURATION;
+  }, []);
+
+  // Fetch data from Redmine API with debouncing
+  const refreshData = useCallback(async (): Promise<void> => {
+    // Check cache validity
+    if (isCacheValid()) {
+      return;
+    }
+
     if (!isConnected && isAuthenticated && redmineUrl) {
       const connected = await testConnection();
       if (!connected) return;
     }
 
-    setIsLoading(true);
+    debouncedSetLoading(true);
     setError(null);
 
     try {
       const authToken = getAuthToken();
       
-      // Fetch projects
-      const projectsResponse = await axios.get(`${SERVER_URL}/api/projects`, {
-        params: { 
-          authToken,
-          redmineUrl 
-        }
-      });
+      // Use Promise.all for parallel requests
+      const [
+        projectsResponse,
+        issuesResponse,
+        usersResponse,
+        statusesResponse,
+        trackersResponse,
+        prioritiesResponse,
+        rolesResponse,
+        sprintsResponse
+      ] = await Promise.all([
+        axios.get(`${SERVER_URL}/api/projects`, { params: { authToken, redmineUrl } }),
+        axios.get(`${SERVER_URL}/api/issues`, { params: { authToken, redmineUrl } }),
+        axios.get(`${SERVER_URL}/api/users`, { params: { redmineUrl } }),
+        axios.get(`${SERVER_URL}/api/issue_statuses`, { params: { authToken, redmineUrl } }),
+        axios.get(`${SERVER_URL}/api/trackers`, { params: { authToken, redmineUrl } }),
+        axios.get(`${SERVER_URL}/api/enumerations/issue_priorities`, { params: { authToken, redmineUrl } }),
+        axios.get(`${SERVER_URL}/api/roles`, { params: { authToken, redmineUrl } }),
+        axios.get(`${SERVER_URL}/api/sprints`)
+      ]);
+
       setProjects(projectsResponse.data.projects || []);
-
-      // Fetch issues
-      const issuesResponse = await axios.get(`${SERVER_URL}/api/issues`, {
-        params: { 
-          authToken,
-          redmineUrl 
-        }
-      });
       setIssues(issuesResponse.data.issues || []);
-
-      // Fetch users - this endpoint now uses admin API key
-      const usersResponse = await axios.get(`${SERVER_URL}/api/users`, {
-        params: { 
-          redmineUrl 
-        }
-      });
       setUsers(usersResponse.data.users || []);
-
-      // Fetch issue statuses
-      const statusesResponse = await axios.get(`${SERVER_URL}/api/issue_statuses`, {
-        params: { 
-          authToken,
-          redmineUrl 
-        }
-      });
       setIssueStatuses(statusesResponse.data.issue_statuses || []);
-
-      // Fetch trackers
-      const trackersResponse = await axios.get(`${SERVER_URL}/api/trackers`, {
-        params: { 
-          authToken,
-          redmineUrl 
-        }
-      });
       setTrackers(trackersResponse.data.trackers || []);
-
-      // Fetch priorities
-      const prioritiesResponse = await axios.get(`${SERVER_URL}/api/enumerations/issue_priorities`, {
-        params: { 
-          authToken,
-          redmineUrl 
-        }
-      });
       setPriorities(prioritiesResponse.data.issue_priorities || []);
-
-      // Fetch roles
-      const rolesResponse = await axios.get(`${SERVER_URL}/api/roles`, {
-        params: { 
-          authToken,
-          redmineUrl 
-        }
-      });
       setRoles(rolesResponse.data.roles || []);
-
-      // Fetch sprints
-      const sprintsResponse = await axios.get(`${SERVER_URL}/api/sprints`);
       setSprints(sprintsResponse.data || []);
-      setSprintsCache(sprintsResponse.data || []);
-
-      setIsLoading(false);
+      
+      // Update cache timestamp
+      lastFetchTimestamp.current = Date.now();
+      
+      debouncedSetLoading(false);
     } catch (err: any) {
       setError('Failed to fetch data from Redmine API');
-      setIsLoading(false);
+      debouncedSetLoading(false);
     }
-  };
+  }, [isConnected, isAuthenticated, redmineUrl, testConnection, getAuthToken, debouncedSetLoading, isCacheValid]);
 
   // Fetch epics with caching
   const fetchEpics = useCallback(async (): Promise<any> => {
-    if (epicsCache.length > 0) {
-      return epicsCache;
+    if (epicsCache.current.length > 0 && isCacheValid()) {
+      return epicsCache.current;
     }
 
     try {
@@ -220,27 +208,31 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
         }
       });
       const epics = response.data.epics || [];
-      setEpicsCache(epics);
+      epicsCache.current = epics;
       return epics;
     } catch (err: any) {
-      console.error(`Error updating epics:`, err);
-      throw new Error(err.response?.data?.error || `Failed to update epics`);
+      console.error(`Error fetching epics:`, err);
+      throw new Error(err.response?.data?.error || `Failed to fetch epics`);
     }
-  }, [epicsCache]);
+  }, [getAuthToken, isCacheValid]);
 
-  // Update the fetchSprints function to set both cache and state
+  // Update the fetchSprints function to use ref-based cache
   const fetchSprints = useCallback(async (): Promise<Sprint[]> => {
+    if (sprintsCache.current.length > 0 && isCacheValid()) {
+      return sprintsCache.current;
+    }
+
     try {
       const response = await axios.get(`${SERVER_URL}/api/sprints`);
       const sprints = response.data || [];
-      setSprints(sprints); // Set the sprints state
-      setSprintsCache(sprints); // Update the cache
+      setSprints(sprints);
+      sprintsCache.current = sprints;
       return sprints;
     } catch (err: any) {
       console.error('Error fetching sprints:', err);
       throw new Error(err.response?.data?.error || 'Failed to fetch sprints');
     }
-  }, []); // Remove sprintsCache from dependencies to avoid caching issues
+  }, [isCacheValid]);
 
   const fetchSprintById = async (id: string): Promise<Sprint | null> => {
     try {
@@ -259,7 +251,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
       const response = await axios.post(`${SERVER_URL}/api/sprints`, sprintData);
       const newSprint = response.data;
       setSprints((prev) => [...prev, newSprint]);
-      setSprintsCache((prev) => [...prev, newSprint]);
+      sprintsCache.current = [...sprintsCache.current, newSprint];
       return newSprint;
     } catch (err: any) {
       console.error('Error creating sprint:', err);
@@ -277,8 +269,8 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
       setSprints((prev) =>
         prev.map((sprint) => (sprint.id === id ? updatedSprint : sprint))
       );
-      setSprintsCache((prev) =>
-        prev.map((sprint) => (sprint.id === id ? updatedSprint : sprint))
+      sprintsCache.current = sprintsCache.current.map((sprint) =>
+        sprint.id === id ? updatedSprint : sprint
       );
       return updatedSprint;
     } catch (err: any) {
@@ -291,7 +283,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     try {
       await axios.delete(`${SERVER_URL}/api/sprints/${id}`);
       setSprints(prev => prev.filter(sprint => sprint.id !== id));
-      setSprintsCache(prev => prev.filter(sprint => sprint.id !== id));
+      sprintsCache.current = sprintsCache.current.filter(sprint => sprint.id !== id);
       return true;
     } catch (err: any) {
       console.error(`Error deleting sprint ${id}:`, err);
@@ -299,7 +291,6 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Fetch issues with filters
   const fetchIssues = async (filters: any = {}): Promise<any[]> => {
     if (!isConnected && isAuthenticated && redmineUrl) {
       const connected = await testConnection();
@@ -323,7 +314,6 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Fetch projects with filters
   const fetchProjects = async (filters: any = {}): Promise<ProjectsResponse> => {
     if (!isConnected && isAuthenticated && redmineUrl) {
       const connected = await testConnection();
@@ -353,7 +343,6 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Fetch issue details
   const fetchIssueDetails = async (id: number): Promise<any> => {
     if (!isConnected && isAuthenticated && redmineUrl) {
       const connected = await testConnection();
@@ -376,7 +365,6 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Fetch project details
   const fetchProjectDetails = async (id: number): Promise<any> => {
     if (!isConnected && isAuthenticated && redmineUrl) {
       const connected = await testConnection();
@@ -399,7 +387,6 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Fetch project memberships
   const fetchProjectMemberships = async (projectId: number): Promise<any[]> => {
     if (!isConnected && isAuthenticated && redmineUrl) {
       const connected = await testConnection();
@@ -422,7 +409,6 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Fetch roles
   const fetchRoles = async (): Promise<any[]> => {
     if (!isConnected && isAuthenticated && redmineUrl) {
       const connected = await testConnection();
@@ -445,7 +431,6 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Create a new issue
   const createIssue = async (issueData: any): Promise<any> => {
     if (!isConnected && isAuthenticated && redmineUrl) {
       const connected = await testConnection();
@@ -455,7 +440,6 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     try {
       const authToken = getAuthToken();
       
-      // If there are uploads, ensure they have the required fields
       if (issueData.issue.uploads && issueData.issue.uploads.length > 0) {
         issueData.issue.uploads = issueData.issue.uploads.map((upload: any) => ({
           token: upload.token,
@@ -478,7 +462,6 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Update an issue
   const updateIssue = async (id: number, issueData: any): Promise<boolean> => {
     if (!isConnected && isAuthenticated && redmineUrl) {
       const connected = await testConnection();
@@ -487,7 +470,6 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       const authToken = getAuthToken();
-      // If there are uploads, ensure they have the required fields
       if (issueData.issue.uploads && issueData.issue.uploads.length > 0) {
         issueData.issue.uploads = issueData.issue.uploads.map((upload: any) => ({
           token: upload.token,
@@ -510,7 +492,6 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Delete an issue
   const deleteIssue = async (id: number): Promise<boolean> => {
     if (!isConnected && isAuthenticated && redmineUrl) {
       const connected = await testConnection();
@@ -533,7 +514,6 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Add a watcher to an issue
   const addWatcher = async (issueId: number, userId: number): Promise<boolean> => {
     if (!isConnected && isAuthenticated && redmineUrl) {
       const connected = await testConnection();
@@ -556,7 +536,6 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Remove a watcher from an issue
   const removeWatcher = async (issueId: number, userId: number): Promise<boolean> => {
     if (!isConnected && isAuthenticated && redmineUrl) {
       const connected = await testConnection();
@@ -579,7 +558,6 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Fetch versions for a project
   const fetchVersions = async (projectId: number): Promise<any[]> => {
     if (!isConnected && isAuthenticated && redmineUrl) {
       const connected = await testConnection();
@@ -602,7 +580,6 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Create a new project
   const createProject = async (projectData: any): Promise<any> => {
     if (!isConnected && isAuthenticated && redmineUrl) {
       const connected = await testConnection();
@@ -625,7 +602,6 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Update a project
   const updateProject = async (id: number, projectData: any): Promise<boolean> => {
     if (!isConnected && isAuthenticated && redmineUrl) {
       const connected = await testConnection();
@@ -648,7 +624,6 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Archive a project
   const archiveProject = async (id: number): Promise<boolean> => {
     if (!isConnected && isAuthenticated && redmineUrl) {
       const connected = await testConnection();
@@ -671,7 +646,6 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Unarchive a project
   const unarchiveProject = async (id: number): Promise<boolean> => {
     if (!isConnected && isAuthenticated && redmineUrl) {
       const connected = await testConnection();
@@ -694,7 +668,6 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Delete a project
   const deleteProject = async (id: number): Promise<boolean> => {
     if (!isConnected && isAuthenticated && redmineUrl) {
       const connected = await testConnection();
@@ -717,7 +690,6 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Add a member to a project
   const addProjectMember = async (projectId: number, memberData: any): Promise<any> => {
     if (!isConnected && isAuthenticated && redmineUrl) {
       const connected = await testConnection();
@@ -740,7 +712,6 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Update a membership
   const updateMembership = async (membershipId: number, membershipData: any): Promise<boolean> => {
     if (!isConnected && isAuthenticated && redmineUrl) {
       const connected = await testConnection();
@@ -763,7 +734,6 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Delete a membership
   const deleteMembership = async (membershipId: number): Promise<boolean> => {
     if (!isConnected && isAuthenticated && redmineUrl) {
       const connected = await testConnection();
@@ -786,12 +756,29 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Cleanup effect
+  useEffect(() => {
+    return () => {
+      debouncedSetLoading.cancel();
+    };
+  }, [debouncedSetLoading]);
+
   // Initial connection test if authenticated
   useEffect(() => {
+    let mounted = true;
+
     if (isAuthenticated && redmineUrl) {
-      testConnection();
+      testConnection().then(() => {
+        if (mounted && !isCacheValid()) {
+          refreshData();
+        }
+      });
     }
-  }, [isAuthenticated, redmineUrl]);
+
+    return () => {
+      mounted = false;
+    };
+  }, [isAuthenticated, redmineUrl, testConnection, refreshData, isCacheValid]);
 
   const value = {
     isConnected,
