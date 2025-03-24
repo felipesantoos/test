@@ -16,6 +16,7 @@ import downloadRoutes from './routes/downloadRoutes.js';
 import attachmentRoutes from './routes/attachmentRoutes.js';
 import customFieldRoutes from './routes/customFieldRoutes.js';
 import sprintRoutes from './routes/sprintRoutes.js';
+import epicRoutes from './routes/epicRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -40,6 +41,7 @@ app.use('/api/downloads', downloadRoutes);
 app.use('/api/attachments', attachmentRoutes);
 app.use('/api/custom_fields', customFieldRoutes);
 app.use('/api/sprints', sprintRoutes);
+app.use('/api/epics', epicRoutes);
 app.use('/api', otherRoutes);
 
 // Start the server
