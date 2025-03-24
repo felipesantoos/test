@@ -20,6 +20,7 @@ export const Issues = () => {
     issueStatuses,
     trackers,
     priorities,
+    epics,
     sprints,
     refreshData, 
     fetchIssues,
@@ -346,7 +347,14 @@ export const Issues = () => {
   // Get epic value from custom fields
   const getEpicValue = (issue: any) => {
     const epicField = issue.custom_fields?.find((field: any) => field.id == import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID);
-    return (epicField?.value || '-').toUpperCase();
+    const epicId = epicField?.value;
+    
+    // If no epic ID, return default value
+    if (!epicId) return '-';
+
+    // Find the epic by ID in the epics array
+    const epic = epics.find(e => e.id === epicId);
+    return epic ? epic.name : '-';
   };
 
   // Get unique epics from issues

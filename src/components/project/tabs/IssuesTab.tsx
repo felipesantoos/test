@@ -19,6 +19,7 @@ interface IssuesTabProps {
   statuses: any[];
   priorities: any[];
   users: any[];
+  epics: any[];
   sprints: any[];
   handleBulkCreateIssues: (issues: any[]) => Promise<{success: any[], failed: any[]}>;
   onBulkUpdate?: (issueIds: number[], updates: any) => Promise<void>;
@@ -41,6 +42,7 @@ export const IssuesTab = ({
   statuses,
   priorities,
   users,
+  epics,
   sprints,
   handleBulkCreateIssues,
   onBulkUpdate,
@@ -75,10 +77,16 @@ export const IssuesTab = ({
     return Array.from(assignees.values());
   };
 
-  // Get epic value from custom fields
   const getEpicValue = (issue: any) => {
     const epicField = issue.custom_fields?.find((field: any) => field.id == import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID);
-    return (epicField?.value || '-').toUpperCase();
+    const epicId = epicField?.value;
+    
+    // If no epic ID, return default value
+    if (!epicId) return '-';
+
+    // Find the epic by ID in the epics array
+    const epic = epics.find(e => e.id === epicId);
+    return epic ? epic.name : '-';
   };
 
   // Get unique epics from issues

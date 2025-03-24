@@ -803,6 +803,7 @@ export const ProjectDetails = () => {
             statuses={issueStatuses}
             priorities={priorities}
             users={users}
+            epics={epics}
             sprints={sprints}
             handleBulkCreateIssues={handleBulkCreateIssues}
             onBulkUpdate={handleBulkUpdate}
