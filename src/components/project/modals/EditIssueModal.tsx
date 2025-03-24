@@ -81,7 +81,8 @@ export const EditIssueModal: React.FC<EditIssueModalProps> = ({
     fetchEpics,
     createEpic,
     fetchSprints,
-    createSprint 
+    createSprint,
+    refreshData
   } = useApi();
   
   const [projectMembers, setProjectMembers] = useState<any[]>([]);
@@ -241,7 +242,12 @@ export const EditIssueModal: React.FC<EditIssueModalProps> = ({
     const selectedEpic = filteredEpics.find(epic => epic.name === value);
     const epicId = selectedEpic ? selectedEpic.id : '';
 
-    // Update custom fields with the selected epic ID
+    // Get current sprint value to preserve it
+    const sprintField = selectedIssue.custom_fields?.find((field: any) => 
+      field.id == import.meta.env.VITE_SPRINT_CUSTOM_FIELD_ID
+    );
+
+    // Update custom fields while preserving sprint value
     setSelectedIssue({
       ...selectedIssue,
       custom_fields: [
@@ -250,7 +256,7 @@ export const EditIssueModal: React.FC<EditIssueModalProps> = ({
           field.id != import.meta.env.VITE_SPRINT_CUSTOM_FIELD_ID
         ) || []),
         { id: import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID, name: 'Epic', value: epicId },
-        { id: import.meta.env.VITE_SPRINT_CUSTOM_FIELD_ID, name: 'Sprint', value: getCurrentSprint() }
+        { id: import.meta.env.VITE_SPRINT_CUSTOM_FIELD_ID, name: 'Sprint', value: sprintField?.value || '' }
       ]
     });
   };
@@ -267,6 +273,9 @@ export const EditIssueModal: React.FC<EditIssueModalProps> = ({
       // Add to both epic lists
       setAllEpics(prev => [...prev, newEpic]);
       setFilteredEpics(prev => [...prev, newEpic]);
+
+      // Update the global epics state via refreshData
+      await refreshData();
       
       handleEpicChange(newEpic.name);
     } catch (err) {
@@ -281,7 +290,12 @@ export const EditIssueModal: React.FC<EditIssueModalProps> = ({
     const selectedSprint = filteredSprints.find(sprint => sprint.name === value);
     const sprintId = selectedSprint ? selectedSprint.id : '';
 
-    // Update custom fields with the selected sprint ID
+    // Get current epic value to preserve it
+    const epicField = selectedIssue.custom_fields?.find((field: any) => 
+      field.id == import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID
+    );
+
+    // Update custom fields while preserving epic value
     setSelectedIssue({
       ...selectedIssue,
       custom_fields: [
@@ -289,7 +303,7 @@ export const EditIssueModal: React.FC<EditIssueModalProps> = ({
           field.id != import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID && 
           field.id != import.meta.env.VITE_SPRINT_CUSTOM_FIELD_ID
         ) || []),
-        { id: import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID, name: 'Epic', value: getCurrentEpic() },
+        { id: import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID, name: 'Epic', value: epicField?.value || '' },
         { id: import.meta.env.VITE_SPRINT_CUSTOM_FIELD_ID, name: 'Sprint', value: sprintId }
       ]
     });
