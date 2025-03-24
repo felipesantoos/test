@@ -97,7 +97,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
   const [epics, setEpics] = useState<Epic[]>([]);
   
   // Cache refs to prevent unnecessary re-renders
-  const epicsCache = useRef<string[]>([]);
+  const epicsCache = useRef<Epic[]>([]);
   const sprintsCache = useRef<Sprint[]>([]);
   const lastFetchTimestamp = useRef<number>(0);
   const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
@@ -281,17 +281,23 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Update the fetchEpics function to use ref-based cache
   const fetchEpics = useCallback(async (): Promise<Epic[]> => {
+    if (epicsCache.current.length > 0 && isCacheValid()) {
+      return epicsCache.current;
+    }
+
     try {
       const response = await axios.get(`${SERVER_URL}/api/epics`);
       const epics = response.data || [];
       setEpics(epics);
+      epicsCache.current = epics;
       return epics;
     } catch (err: any) {
       console.error('Error fetching epics:', err);
       throw new Error(err.response?.data?.error || 'Failed to fetch epics');
     }
-  }, []);
+  }, [isCacheValid]);
 
   const fetchEpicById = async (id: string): Promise<Epic | null> => {
     try {
