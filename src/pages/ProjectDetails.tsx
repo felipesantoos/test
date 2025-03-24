@@ -36,6 +36,7 @@ export const ProjectDetails = () => {
     unarchiveProject,
     deleteProject,
     updateProject,
+    fetchEpics,
     issueStatuses,
     priorities,
     trackers,
@@ -65,6 +66,7 @@ export const ProjectDetails = () => {
   const [editedProject, setEditedProject] = useState<any>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
+  const [projectEpics, setProjectEpics] = useState<any[]>([]);
   
   // New issue form state
   const [newIssue, setNewIssue] = useState({
@@ -106,7 +108,7 @@ export const ProjectDetails = () => {
           setLoading(false);
           return;
         }
-
+    
         // Get project memberships
         const projectMembershipData = await fetchProjectMemberships(parseInt(id));
         projectData.memberships = projectMembershipData;
@@ -122,6 +124,11 @@ export const ProjectDetails = () => {
         // Fetch issues for this project
         const projectIssues = await fetchIssues({ projectId: id });
         setIssues(projectIssues);
+    
+        // Fetch epics for this project
+        const epicsData = await fetchEpics();
+        const projectEpics = epicsData.filter(epic => epic.project_id === projectData.id);
+        setProjectEpics(projectEpics);
         
         // Calculate project progress and stats
         const totalIssues = projectIssues.length;
@@ -878,7 +885,7 @@ export const ProjectDetails = () => {
           loadingAction={loadingAction}
           users={users}
           projectMemberships={project.memberships?.map((m: any) => m.user).filter(Boolean)}
-          projectEpics={epics.filter(e => e.project_id === project.id)}
+          projectEpics={projectEpics}
           projectSprints={sprints.filter(s => s.project_id === project.id)}
         />
       )}
@@ -892,7 +899,7 @@ export const ProjectDetails = () => {
           users={users}
           onCancel={() => setSelectedIssue(null)}
           projectMemberships={project.memberships?.map((m: any) => m.user).filter(Boolean)}
-          projectEpics={epics.filter(e => e.project_id === project.id)}
+          projectEpics={projectEpics}
           projectSprints={sprints.filter(s => s.project_id === project.id)}
         />
       )}
