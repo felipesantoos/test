@@ -28,8 +28,9 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
   users
 }) => {
   const { 
-    fetchProjectMemberships, 
+    fetchProjectMemberships,
     fetchEpics,
+    createEpic,
     fetchSprints,
     createSprint 
   } = useApi();
@@ -43,11 +44,10 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
     filesize?: number;
     content_url?: string;
   }>>([]);
-  const [epics, setEpics] = useState<string[]>([]);
+  const [allEpics, setAllEpics] = useState<any[]>([]);
+  const [filteredEpics, setFilteredEpics] = useState<any[]>([]);
   const [allSprints, setAllSprints] = useState<any[]>([]);
   const [filteredSprints, setFilteredSprints] = useState<any[]>([]);
-  const [newEpicValue, setNewEpicValue] = useState('');
-  const [isAddingNewEpic, setIsAddingNewEpic] = useState(false);
 
   // When a project is selected, fetch its memberships
   useEffect(() => {
@@ -77,7 +77,7 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
           fetchEpics(),
           fetchSprints()
         ]);
-        setEpics(epicsData || []);
+        setAllEpics(epicsData || []);
         setAllSprints(sprintsData || []);
       } catch (err) {
         console.error('Error loading data:', err);
@@ -86,17 +86,25 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
     loadData();
   }, []);
 
-  // Filter sprints when project changes
+  // Filter epics and sprints when project changes
   useEffect(() => {
-    if (newIssue.project_id && allSprints.length > 0) {
+    if (newIssue.project_id) {
+      // Filter epics for the selected project
+      const projectEpics = allEpics.filter(epic => 
+        epic.project_id === newIssue.project_id
+      );
+      setFilteredEpics(projectEpics);
+
+      // Filter sprints for the selected project
       const projectSprints = allSprints.filter(sprint => 
         sprint.project_id === newIssue.project_id
       );
       setFilteredSprints(projectSprints);
     } else {
+      setFilteredEpics([]);
       setFilteredSprints([]);
     }
-  }, [newIssue.project_id, allSprints]);
+  }, [newIssue.project_id, allEpics, allSprints]);
 
   // Handle file upload completion
   const handleUploadComplete = async (upload: { token: string; filename: string; content_type: string }) => {
@@ -143,37 +151,41 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
 
   // Handle epic selection or new epic creation
   const handleEpicChange = (value: string) => {
-    if (value === 'new') {
-      setIsAddingNewEpic(true);
-    } else {
-      // Update custom fields with the selected epic
-      setNewIssue((prev: any) => ({
-        ...prev,
-        custom_fields: [
-          ...(prev.custom_fields?.filter((field: any) => field.id != import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID) || []),
-          { id: import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID, name: 'Epic', value }
-        ]
-      }));
-    }
+    // Find the epic object to get its ID
+    const selectedEpic = filteredEpics.find(epic => epic.name === value);
+    const epicId = selectedEpic ? selectedEpic.id : '';
+
+    // Update custom fields with the selected epic ID
+    setNewIssue((prev: any) => ({
+      ...prev,
+      custom_fields: [
+        ...(prev.custom_fields?.filter((field: any) => 
+          field.id != import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID && 
+          field.id != import.meta.env.VITE_SPRINT_CUSTOM_FIELD_ID
+        ) || []),
+        { id: import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID, name: 'Epic', value: epicId },
+        { id: import.meta.env.VITE_SPRINT_CUSTOM_FIELD_ID, name: 'Sprint', value: getCurrentSprint() }
+      ]
+    }));
   };
 
   // Handle adding a new epic
-  const handleAddNewEpic = () => {
-    if (newEpicValue.trim()) {
-      // Add the new epic to the dropdown options
-      setEpics(prev => [...prev, newEpicValue.trim()]);
+  const handleAddNewEpic = async (epicData: any) => {
+    try {
+      // Ensure the epic is created for the current project
+      const newEpic = await createEpic({
+        ...epicData,
+        project_id: newIssue.project_id
+      });
       
-      // Update custom fields with the new epic
-      setNewIssue((prev: any) => ({
-        ...prev,
-        custom_fields: [
-          ...(prev.custom_fields?.filter((field: any) => field.id != import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID) || []),
-          { id: import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID, name: 'Epic', value: newEpicValue.trim() }
-        ]
-      }));
+      // Add to both epic lists
+      setAllEpics(prev => [...prev, newEpic]);
+      setFilteredEpics(prev => [...prev, newEpic]);
       
-      setNewEpicValue('');
-      setIsAddingNewEpic(false);
+      handleEpicChange(newEpic.name);
+    } catch (err) {
+      console.error('Error creating epic:', err);
+      alert('Failed to create epic');
     }
   };
 
@@ -220,7 +232,10 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
   // Get current epic value
   const getCurrentEpic = () => {
     const epicField = newIssue.custom_fields?.find((field: any) => field.id == import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID);
-    return epicField?.value || '';
+    const epicId = epicField?.value;
+    // Find epic by ID and return its name
+    const epic = filteredEpics.find(e => e.id === epicId);
+    return epic ? epic.name : '';
   };
 
   // Get current sprint value
@@ -294,24 +309,18 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
                     <label htmlFor="epic" className="block text-sm font-medium text-gray-700 mb-1">
                       Epic
                     </label>
-                    <EpicSelect
-                      epics={epics}
-                      selectedEpic={getCurrentEpic()}
-                      onChange={handleEpicChange}
-                      onAddNewEpic={(value) => {
-                        // Add the new epic to the dropdown options
-                        setEpics(prev => [...prev, value]);
-                        
-                        // Update custom fields with the new epic
-                        setNewIssue((prev: any) => ({
-                          ...prev,
-                          custom_fields: [
-                            ...(prev.custom_fields?.filter((field: any) => field.id != import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID) || []),
-                            { id: import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID, name: 'Epic', value }
-                          ]
-                        }));
-                      }}
-                    />
+                    {newIssue.project_id ? (
+                      <EpicSelect
+                        epics={filteredEpics}
+                        selectedEpic={getCurrentEpic()}
+                        onChange={handleEpicChange}
+                        onAddNewEpic={handleAddNewEpic}
+                      />
+                    ) : (
+                      <div className="text-gray-500 text-sm">
+                        Select a project to choose an epic
+                      </div>
+                    )}
                   </div>
 
                   {/* Sprint Field */}
