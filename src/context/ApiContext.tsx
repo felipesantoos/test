@@ -228,22 +228,19 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [epicsCache]);
 
-  // Fetch sprints with caching
+  // Update the fetchSprints function to set both cache and state
   const fetchSprints = useCallback(async (): Promise<Sprint[]> => {
-    if (sprintsCache.length > 0) {
-      return sprintsCache;
-    }
-
     try {
       const response = await axios.get(`${SERVER_URL}/api/sprints`);
       const sprints = response.data || [];
-      setSprintsCache(sprints);
+      setSprints(sprints); // Set the sprints state
+      setSprintsCache(sprints); // Update the cache
       return sprints;
     } catch (err: any) {
       console.error('Error fetching sprints:', err);
       throw new Error(err.response?.data?.error || 'Failed to fetch sprints');
     }
-  }, [sprintsCache]);
+  }, []); // Remove sprintsCache from dependencies to avoid caching issues
 
   const fetchSprintById = async (id: string): Promise<Sprint | null> => {
     try {

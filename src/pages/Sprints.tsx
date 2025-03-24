@@ -37,7 +37,7 @@ export const Sprints = () => {
       }
     };
     loadData();
-  }, []); // Empty dependency array since we only want to load on mount
+  }, []); // Add dependencies to ensure proper loading
 
   // Filter sprints
   const getFilteredSprints = () => {
