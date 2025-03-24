@@ -370,12 +370,18 @@ export const EditIssueModal: React.FC<EditIssueModalProps> = ({
                     <label htmlFor="sprint" className="block text-sm font-medium text-gray-700 mb-1">
                       Sprint
                     </label>
-                    <SprintSelect
-                      sprints={filteredSprints}
-                      selectedSprint={getCurrentSprint()}
-                      onChange={handleSprintChange}
-                      onAddNewSprint={handleAddNewSprint}
-                    />
+                    {selectedIssue?.project?.id ? (
+                      <SprintSelect
+                        sprints={filteredSprints}
+                        selectedSprint={getCurrentSprint()}
+                        onChange={handleSprintChange}
+                        onAddNewSprint={handleAddNewSprint}
+                      />
+                    ) : (
+                      <div className="text-gray-500 text-sm">
+                        Select a project to choose a sprint
+                      </div>
+                    )}
                   </div>
                   
                   <div>
