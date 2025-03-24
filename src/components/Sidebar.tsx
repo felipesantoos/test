@@ -11,7 +11,8 @@ import {
   UserCog,
   Menu,
   X,
-  CalendarRange
+  CalendarRange,
+  Tag
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -158,6 +159,22 @@ const SidebarContent: React.FC<SidebarContentProps> = ({ username, isAdmin, onIt
             >
               <CalendarRange size={20} />
               <span>Sprints</span>
+            </NavLink>
+          </li>
+          <li>
+            <NavLink 
+              to="/epics" 
+              className={({ isActive }) => 
+                `flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+                  isActive 
+                    ? 'bg-indigo-700 text-white' 
+                    : 'text-indigo-100 hover:bg-indigo-700'
+                }`
+              }
+              onClick={onItemClick}
+            >
+              <Tag size={20} />
+              <span>Epics</span>
             </NavLink>
           </li>
           <li>

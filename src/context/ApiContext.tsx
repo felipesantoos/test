@@ -24,6 +24,15 @@ interface Sprint {
   deleted_at?: string;
 }
 
+interface Epic {
+  id: string;
+  project_id: number;
+  name: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string;
+}
+
 interface ApiContextType {
   isConnected: boolean;
   isLoading: boolean;
@@ -36,6 +45,7 @@ interface ApiContextType {
   priorities: any[];
   roles: any[];
   sprints: Sprint[];
+  epics: Epic[];
   refreshData: () => Promise<void>;
   fetchIssues: (filters?: any) => Promise<any[]>;
   fetchProjects: (filters?: any) => Promise<ProjectsResponse>;
@@ -57,12 +67,16 @@ interface ApiContextType {
   addProjectMember: (projectId: number, memberData: any) => Promise<any>;
   updateMembership: (membershipId: number, membershipData: any) => Promise<boolean>;
   deleteMembership: (membershipId: number) => Promise<boolean>;
-  fetchEpics: () => Promise<any>;
   fetchSprints: () => Promise<Sprint[]>;
   fetchSprintById: (id: string) => Promise<Sprint | null>;
   createSprint: (sprintData: Omit<Sprint, 'id' | 'created_at' | 'updated_at' | 'deleted_at'>) => Promise<Sprint>;
   updateSprint: (id: string, sprintData: Partial<Sprint>) => Promise<Sprint>;
   deleteSprint: (id: string) => Promise<boolean>;
+  fetchEpics: () => Promise<Epic[]>;
+  fetchEpicById: (id: string) => Promise<Epic | null>;
+  createEpic: (epicData: Omit<Epic, 'id' | 'created_at' | 'updated_at' | 'deleted_at'>) => Promise<Epic>;
+  updateEpic: (id: string, epicData: Partial<Epic>) => Promise<Epic>;
+  deleteEpic: (id: string) => Promise<boolean>;
 }
 
 const ApiContext = createContext<ApiContextType | undefined>(undefined);
@@ -80,6 +94,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
   const [priorities, setPriorities] = useState<any[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
   const [sprints, setSprints] = useState<Sprint[]>([]);
+  const [epics, setEpics] = useState<Epic[]>([]);
   
   // Cache refs to prevent unnecessary re-renders
   const epicsCache = useRef<string[]>([]);
@@ -191,29 +206,6 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [isConnected, isAuthenticated, redmineUrl, testConnection, getAuthToken, debouncedSetLoading]);
 
-  // Fetch epics with caching
-  const fetchEpics = useCallback(async (): Promise<any> => {
-    if (epicsCache.current.length > 0 && isCacheValid()) {
-      return epicsCache.current;
-    }
-
-    try {
-      const authToken = getAuthToken();
-      const response = await axios.get(`${SERVER_URL}/api/custom_fields/epics`, {
-        params: { 
-          authToken,
-          redmineUrl 
-        }
-      });
-      const epics = response.data.epics || [];
-      epicsCache.current = epics;
-      return epics;
-    } catch (err: any) {
-      console.error(`Error fetching epics:`, err);
-      throw new Error(err.response?.data?.error || `Failed to fetch epics`);
-    }
-  }, [getAuthToken, isCacheValid]);
-
   // Update the fetchSprints function to use ref-based cache
   const fetchSprints = useCallback(async (): Promise<Sprint[]> => {
     if (sprintsCache.current.length > 0 && isCacheValid()) {
@@ -286,6 +278,70 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     } catch (err: any) {
       console.error(`Error deleting sprint ${id}:`, err);
       throw new Error(err.response?.data?.error || `Failed to delete sprint ${id}`);
+    }
+  };
+
+  const fetchEpics = useCallback(async (): Promise<Epic[]> => {
+    try {
+      const response = await axios.get(`${SERVER_URL}/api/epics`);
+      const epics = response.data || [];
+      setEpics(epics);
+      return epics;
+    } catch (err: any) {
+      console.error('Error fetching epics:', err);
+      throw new Error(err.response?.data?.error || 'Failed to fetch epics');
+    }
+  }, []);
+
+  const fetchEpicById = async (id: string): Promise<Epic | null> => {
+    try {
+      const response = await axios.get(`${SERVER_URL}/api/epics/${id}`);
+      return response.data;
+    } catch (err: any) {
+      console.error(`Error fetching epic ${id}:`, err);
+      throw new Error(err.response?.data?.error || `Failed to fetch epic ${id}`);
+    }
+  };
+
+  const createEpic = async (
+    epicData: Omit<Epic, 'id' | 'created_at' | 'updated_at' | 'deleted_at'>
+  ): Promise<Epic> => {
+    try {
+      const response = await axios.post(`${SERVER_URL}/api/epics`, epicData);
+      const newEpic = response.data;
+      setEpics((prev) => [...prev, newEpic]);
+      return newEpic;
+    } catch (err: any) {
+      console.error('Error creating epic:', err);
+      throw new Error(err.response?.data?.error || 'Failed to create epic');
+    }
+  };
+  
+  const updateEpic = async (
+    id: string,
+    epicData: Partial<Epic>
+  ): Promise<Epic> => {
+    try {
+      const response = await axios.put(`${SERVER_URL}/api/epics/${id}`, epicData);
+      const updatedEpic = response.data;
+      setEpics((prev) =>
+        prev.map((epic) => (epic.id === id ? updatedEpic : epic))
+      );
+      return updatedEpic;
+    } catch (err: any) {
+      console.error(`Error updating epic ${id}:`, err);
+      throw new Error(err.response?.data?.error || `Failed to update epic ${id}`);
+    }
+  };
+
+  const deleteEpic = async (id: string): Promise<boolean> => {
+    try {
+      await axios.delete(`${SERVER_URL}/api/epics/${id}`);
+      setEpics(prev => prev.filter(epic => epic.id !== id));
+      return true;
+    } catch (err: any) {
+      console.error(`Error deleting epic ${id}:`, err);
+      throw new Error(err.response?.data?.error || `Failed to delete epic ${id}`);
     }
   };
 
@@ -797,6 +853,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     priorities,
     roles,
     sprints,
+    epics,
     refreshData,
     fetchIssues,
     fetchProjects,
@@ -818,12 +875,16 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     addProjectMember,
     updateMembership,
     deleteMembership,
-    fetchEpics,
     fetchSprints,
     fetchSprintById,
     createSprint,
     updateSprint,
     deleteSprint,
+    fetchEpics,
+    fetchEpicById,
+    createEpic,
+    updateEpic,
+    deleteEpic,
   };
 
   return <ApiContext.Provider value={value}>{children}</ApiContext.Provider>;
