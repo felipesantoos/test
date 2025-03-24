@@ -1,11 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, Plus, X } from 'lucide-react';
 
+interface Epic {
+  id: string;
+  name: string;
+  project_id: number;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string;
+}
+
 interface EpicSelectProps {
-  epics: string[];
+  epics: Epic[];
   selectedEpic: string;
   onChange: (value: string) => void;
-  onAddNewEpic?: (value: string) => void;
+  onAddNewEpic?: (epicData: { name: string }) => void;
   className?: string;
   error?: boolean;
 }
@@ -32,7 +41,7 @@ export const EpicSelect: React.FC<EpicSelectProps> = ({
   useEffect(() => {
     if (searchQuery) {
       const filtered = epics.filter(epic => 
-        epic.toLowerCase().includes(searchQuery.toLowerCase())
+        epic.name.toLowerCase().includes(searchQuery.toLowerCase())
       );
       setFilteredEpics(filtered);
     } else {
@@ -72,7 +81,7 @@ export const EpicSelect: React.FC<EpicSelectProps> = ({
   // Handle adding new epic
   const handleAddNewEpic = () => {
     if (newEpicValue.trim() && onAddNewEpic) {
-      onAddNewEpic(newEpicValue.trim());
+      onAddNewEpic({ name: newEpicValue.trim() });
       setNewEpicValue('');
       setIsAddingNew(false);
       setIsOpen(false);
@@ -179,21 +188,21 @@ export const EpicSelect: React.FC<EpicSelectProps> = ({
                   >
                     No Epic
                   </button>
-                  {filteredEpics.map((epic, index) => (
+                  {filteredEpics.map((epic) => (
                     <button
-                      key={index}
+                      key={epic.id}
                       className={`w-full text-left px-4 py-2 text-sm ${
-                        selectedEpic === epic 
+                        selectedEpic === epic.name 
                           ? 'bg-indigo-50 text-indigo-900' 
                           : 'text-gray-700 hover:bg-gray-100'
                       }`}
                       onClick={() => {
-                        onChange(epic);
+                        onChange(epic.name);
                         setIsOpen(false);
                         setSearchQuery('');
                       }}
                     >
-                      {epic}
+                      {epic.name}
                     </button>
                   ))}
                 </div>
