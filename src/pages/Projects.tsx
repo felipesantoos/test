@@ -142,7 +142,7 @@ export const Projects = () => {
     };
   
     loadProjects();
-  }, [isConnected, currentPage, projectsPerPage]);  
+  }, [isConnected, currentPage, projectsPerPage, filters.status]);
 
   // Apply filters and sorting when they change
   useEffect(() => {
@@ -313,10 +313,27 @@ export const Projects = () => {
       };
       
       // Create the project
-      await createProject(projectData);
+      const createdProject = await createProject(projectData);
       
-      // Refresh projects list
-      await refreshData();
+      if (createdProject) {
+        // Process the new project with progress and memberships
+        const projectIssues = await fetchIssues({ projectId: createdProject.id });
+        const projectMembershipData = await fetchProjectMemberships(createdProject.id);
+        
+        const enhancedProject = {
+          ...createdProject,
+          issues_count: projectIssues.length,
+          open_issues: projectIssues.length,
+          closed_issues: 0,
+          progress: 0,
+          members_count: projectMembershipData?.length || 0,
+          isCompleted: false
+        };
+        
+        // Update both project lists
+        setProjectsWithProgress(prev => [...prev, enhancedProject]);
+        setFilteredProjects(prev => [...prev, enhancedProject]);
+      }
       
       // Reset form and close modal
       setNewProject({
@@ -578,7 +595,7 @@ export const Projects = () => {
                         id="createdAfter"
                         value={filters.createdAfter}
                         onChange={(e) => setFilters({...filters, createdAfter: e.target.value})}
-                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                       />
                     </div>
                   </div>
@@ -595,7 +612,7 @@ export const Projects = () => {
                         id="createdBefore"
                         value={filters.createdBefore}
                         onChange={(e) => setFilters({...filters, createdBefore: e.target.value})}
-                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                       />
                     </div>
                   </div>
@@ -620,7 +637,7 @@ export const Projects = () => {
                         id="updatedAfter"
                         value={filters.updatedAfter}
                         onChange={(e) => setFilters({...filters, updatedAfter: e.target.value})}
-                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                       />
                     </div>
                   </div>
@@ -637,7 +654,7 @@ export const Projects = () => {
                         id="updatedBefore"
                         value={filters.updatedBefore}
                         onChange={(e) => setFilters({...filters, updatedBefore: e.target.value})}
-                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                       />
                     </div>
                   </div>
@@ -689,7 +706,7 @@ export const Projects = () => {
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                     Visibility: {filters.isPublic === 'public' ? 'Public' : 'Private'}
                     <X 
-                                            size={14} 
+                      size={14} 
                       className="ml-1 cursor-pointer" 
                       onClick={() => setFilters({...filters, isPublic: 'all'})} 
                     />

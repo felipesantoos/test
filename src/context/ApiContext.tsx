@@ -583,7 +583,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
       const connected = await testConnection();
       if (!connected) return null;
     }
-
+  
     try {
       const authToken = getAuthToken();
       
@@ -593,7 +593,14 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
           redmineUrl 
         }
       });
-      return response.data.project || null;
+  
+      // Update local projects state
+      const newProject = response.data.project;
+      if (newProject) {
+        setProjects(prev => [...prev, newProject]);
+      }
+  
+      return newProject || null;
     } catch (err: any) {
       console.error('Error creating project:', err);
       throw new Error(err.response?.data?.error || 'Failed to create project');
