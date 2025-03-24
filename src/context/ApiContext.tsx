@@ -137,10 +137,8 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
 
   // Fetch data from Redmine API with debouncing
   const refreshData = useCallback(async (): Promise<void> => {
-    // Check cache validity
-    if (isCacheValid()) {
-      return;
-    }
+    // Force refresh by resetting cache timestamp
+    lastFetchTimestamp.current = 0;
 
     if (!isConnected && isAuthenticated && redmineUrl) {
       const connected = await testConnection();
@@ -191,7 +189,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
       setError('Failed to fetch data from Redmine API');
       debouncedSetLoading(false);
     }
-  }, [isConnected, isAuthenticated, redmineUrl, testConnection, getAuthToken, debouncedSetLoading, isCacheValid]);
+  }, [isConnected, isAuthenticated, redmineUrl, testConnection, getAuthToken, debouncedSetLoading]);
 
   // Fetch epics with caching
   const fetchEpics = useCallback(async (): Promise<any> => {
