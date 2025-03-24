@@ -44,15 +44,17 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
     content_url?: string;
   }>>([]);
   const [epics, setEpics] = useState<string[]>([]);
-  const [sprints, setSprints] = useState<any[]>([]);
+  const [allSprints, setAllSprints] = useState<any[]>([]);
+  const [filteredSprints, setFilteredSprints] = useState<any[]>([]);
   const [newEpicValue, setNewEpicValue] = useState('');
   const [isAddingNewEpic, setIsAddingNewEpic] = useState(false);
 
-  // In both modals, add proper dependency arrays to useEffect hooks
+  // When a project is selected, fetch its memberships
   useEffect(() => {
     if (newIssue.project_id) {
       fetchProjectMemberships(newIssue.project_id)
         .then((memberships) => {
+          // Only include memberships that have a user object
           const members = memberships
             .filter(m => m.user)
             .map(m => m.user);
@@ -62,10 +64,12 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
           console.error('Error fetching project memberships:', error);
           setProjectMembers([]);
         });
+    } else {
+      setProjectMembers([]);
     }
-  }, [newIssue.project_id, fetchProjectMemberships]); // Add proper dependencies
+  }, [newIssue.project_id, fetchProjectMemberships]);
 
-  // Similarly for epics and sprints loading
+  // Fetch epics and sprints when component mounts
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -74,13 +78,25 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
           fetchSprints()
         ]);
         setEpics(epicsData || []);
-        setSprints(sprintsData || []);
+        setAllSprints(sprintsData || []);
       } catch (err) {
         console.error('Error loading data:', err);
       }
     };
     loadData();
-  }, []); // Empty dependency array since this should only run once
+  }, []);
+
+  // Filter sprints when project changes
+  useEffect(() => {
+    if (newIssue.project_id && allSprints.length > 0) {
+      const projectSprints = allSprints.filter(sprint => 
+        sprint.project_id === newIssue.project_id
+      );
+      setFilteredSprints(projectSprints);
+    } else {
+      setFilteredSprints([]);
+    }
+  }, [newIssue.project_id, allSprints]);
 
   // Handle file upload completion
   const handleUploadComplete = async (upload: { token: string; filename: string; content_type: string }) => {
@@ -164,7 +180,7 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
   // Handle sprint selection or new sprint creation
   const handleSprintChange = (value: string) => {
     // Find the sprint object to get its ID
-    const selectedSprint = sprints.find(sprint => sprint.name === value);
+    const selectedSprint = filteredSprints.find(sprint => sprint.name === value);
     const sprintId = selectedSprint ? selectedSprint.id : '';
 
     // Update custom fields with the selected sprint ID
@@ -184,9 +200,17 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
   // Handle adding a new sprint
   const handleAddNewSprint = async (sprintData: any) => {
     try {
-      const newSprint = await createSprint(sprintData);
-      setSprints(prev => [...prev, newSprint]);
-      handleSprintChange(newSprint.name); // This will now use the ID internally
+      // Ensure the sprint is created for the current project
+      const newSprint = await createSprint({
+        ...sprintData,
+        project_id: newIssue.project_id
+      });
+      
+      // Add to both sprint lists
+      setAllSprints(prev => [...prev, newSprint]);
+      setFilteredSprints(prev => [...prev, newSprint]);
+      
+      handleSprintChange(newSprint.name);
     } catch (err) {
       console.error('Error creating sprint:', err);
       alert('Failed to create sprint');
@@ -204,7 +228,7 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
     const sprintField = newIssue.custom_fields?.find((field: any) => field.id == import.meta.env.VITE_SPRINT_CUSTOM_FIELD_ID);
     const sprintId = sprintField?.value;
     // Find sprint by ID and return its name
-    const sprint = sprints.find(s => s.id === sprintId);
+    const sprint = filteredSprints.find(s => s.id === sprintId);
     return sprint ? sprint.name : '';
   };
 
@@ -296,7 +320,7 @@ export const CreateIssueModal: React.FC<CreateIssueModalProps> = ({
                       Sprint
                     </label>
                     <SprintSelect
-                      sprints={sprints}
+                      sprints={filteredSprints}
                       selectedSprint={getCurrentSprint()}
                       onChange={handleSprintChange}
                       onAddNewSprint={handleAddNewSprint}
