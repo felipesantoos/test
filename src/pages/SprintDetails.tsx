@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useApi } from '../context/ApiContext';
-import { AlertCircle, Calendar, Clock, ArrowUpRight, CheckSquare, Users, Edit2, Trash2 } from 'lucide-react';
+import { AlertCircle, Calendar, Clock, ArrowUpRight, CheckSquare, Users, Edit2, Trash2, FolderKanban } from 'lucide-react';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { EditSprintModal } from '../components/sprint/EditSprintModal';
 import { DeleteSprintModal } from '../components/sprint/DeleteSprintModal';
@@ -14,18 +14,20 @@ export const SprintDetails = () => {
     fetchSprintById, 
     updateSprint, 
     deleteSprint,
-    fetchIssues 
+    fetchIssues,
+    fetchProjectDetails
   } = useApi();
 
   // State
   const [sprint, setSprint] = useState<any>(null);
+  const [project, setProject] = useState<any>(null);
   const [issues, setIssues] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingAction, setLoadingAction] = useState(false);
   const [selectedSprint, setSelectedSprint] = useState<any>(null);
   const [sprintToDelete, setSprintToDelete] = useState<any>(null);
 
-  // Inside the useEffect where we load sprint data, update the fetchIssues call:
+  // Load sprint data and project details
   useEffect(() => {
     const loadSprintData = async () => {
       if (!id) return;
@@ -39,6 +41,12 @@ export const SprintDetails = () => {
           throw new Error('Sprint not found');
         }
         setSprint(sprintData);
+        
+        // Fetch project details
+        if (sprintData.project_id) {
+          const projectData = await fetchProjectDetails(sprintData.project_id);
+          setProject(projectData);
+        }
         
         // Fetch all issues
         const allIssues = await fetchIssues();
@@ -60,7 +68,7 @@ export const SprintDetails = () => {
     };
     
     loadSprintData();
-  }, [id, fetchSprintById, fetchIssues]);
+  }, [id, fetchSprintById, fetchIssues, fetchProjectDetails]);
 
   // Format date for display
   const formatDate = (dateString: string) => {
@@ -120,6 +128,13 @@ export const SprintDetails = () => {
     try {
       const updatedSprint = await updateSprint(sprint.id, sprintData);
       setSprint(updatedSprint);
+      
+      // Fetch updated project details if project changed
+      if (updatedSprint.project_id !== sprint.project_id) {
+        const projectData = await fetchProjectDetails(updatedSprint.project_id);
+        setProject(projectData);
+      }
+      
       setSelectedSprint(null);
     } catch (err: any) {
       console.error('Error updating sprint:', err);
@@ -187,6 +202,16 @@ export const SprintDetails = () => {
               )}
             </div>
             <div className="flex flex-wrap gap-4 text-sm text-gray-500">
+              <div className="flex items-center">
+                <FolderKanban size={16} className="mr-2" />
+                {project ? (
+                  <Link to={`/projects/${project.id}`} className="text-indigo-600 hover:text-indigo-800">
+                    {project.name}
+                  </Link>
+                ) : (
+                  'Unknown Project'
+                )}
+              </div>
               <div className="flex items-center">
                 <Calendar size={16} className="mr-2" />
                 {formatDate(sprint.start_date)} - {formatDate(sprint.end_date)}

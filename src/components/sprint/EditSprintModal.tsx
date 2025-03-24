@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
+import { useApi } from '../../context/ApiContext';
 
 interface EditSprintModalProps {
   sprint: any;
@@ -15,18 +16,41 @@ export const EditSprintModal: React.FC<EditSprintModalProps> = ({
   onClose,
   loading
 }) => {
+  const { fetchProjects } = useApi();
+  
   // Initialize state with current sprint data
   const [sprintData, setSprintData] = useState({
     name: sprint.name,
     start_date: format(new Date(sprint.start_date), 'yyyy-MM-dd'),
-    end_date: format(new Date(sprint.end_date), 'yyyy-MM-dd')
+    end_date: format(new Date(sprint.end_date), 'yyyy-MM-dd'),
+    project_id: sprint.project_id?.toString() || ''
   });
   
   const [error, setError] = useState<string | null>(null);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [loadingProjects, setLoadingProjects] = useState(false);
+
+  // Load projects when component mounts
+  useEffect(() => {
+    const loadProjects = async () => {
+      setLoadingProjects(true);
+      try {
+        const response = await fetchProjects();
+        setProjects(response.projects || []);
+      } catch (err) {
+        console.error('Error loading projects:', err);
+        setError('Failed to load projects');
+      } finally {
+        setLoadingProjects(false);
+      }
+    };
+
+    loadProjects();
+  }, [fetchProjects]);
 
   const handleSubmit = async () => {
     // Validate form
-    if (!sprintData.name || !sprintData.start_date || !sprintData.end_date) {
+    if (!sprintData.name || !sprintData.start_date || !sprintData.end_date || !sprintData.project_id) {
       setError('All fields are required');
       return;
     }
@@ -38,7 +62,10 @@ export const EditSprintModal: React.FC<EditSprintModalProps> = ({
     }
 
     try {
-      await onSubmit(sprintData);
+      await onSubmit({
+        ...sprintData,
+        project_id: parseInt(sprintData.project_id)
+      });
     } catch (err: any) {
       setError(err.message || 'Failed to update sprint');
     }
@@ -75,6 +102,27 @@ export const EditSprintModal: React.FC<EditSprintModalProps> = ({
                 )}
                 
                 <div className="space-y-4">
+                  <div>
+                    <label htmlFor="project" className="block text-sm font-medium text-gray-700 mb-1">
+                      Project *
+                    </label>
+                    <select
+                      id="project"
+                      className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      value={sprintData.project_id}
+                      onChange={(e) => setSprintData({ ...sprintData, project_id: e.target.value })}
+                      required
+                      disabled={loadingProjects}
+                    >
+                      <option value="">Select a project</option>
+                      {projects.map(project => (
+                        <option key={project.id} value={project.id}>
+                          {project.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
                   <div>
                     <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
                       Sprint Name *
@@ -127,7 +175,7 @@ export const EditSprintModal: React.FC<EditSprintModalProps> = ({
             <button
               type="button"
               onClick={handleSubmit}
-              disabled={loading}
+              disabled={loading || loadingProjects}
               className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm disabled:bg-indigo-400"
             >
               {loading ? 'Updating...' : 'Update Sprint'}

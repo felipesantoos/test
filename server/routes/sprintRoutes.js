@@ -49,16 +49,16 @@ router.get('/:id', async (req, res) => {
 // Create new sprint
 router.post('/', async (req, res) => {
   try {
-    const { name, start_date, end_date } = req.body;
+    const { name, start_date, end_date, project_id } = req.body;
     
     // Validate required fields
-    if (!name || !start_date || !end_date) {
-      return res.status(400).json({ error: 'Name, start date, and end date are required' });
+    if (!name || !start_date || !end_date || project_id === undefined) {
+      return res.status(400).json({ error: 'Name, start date, end date, and project_id are required' });
     }
     
     const result = await pool.query(
-      'INSERT INTO sprints (name, start_date, end_date) VALUES ($1, $2, $3) RETURNING *',
-      [name, start_date, end_date]
+      'INSERT INTO sprints (name, start_date, end_date, project_id) VALUES ($1, $2, $3, $4) RETURNING *',
+      [name, start_date, end_date, project_id]
     );
     
     res.status(201).json(result.rows[0]);
@@ -72,16 +72,16 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, start_date, end_date } = req.body;
+    const { name, start_date, end_date, project_id } = req.body;
     
     // Validate required fields
-    if (!name || !start_date || !end_date) {
-      return res.status(400).json({ error: 'Name, start date, and end date are required' });
+    if (!name || !start_date || !end_date || project_id === undefined) {
+      return res.status(400).json({ error: 'Name, start date, end date, and project_id are required' });
     }
     
     const result = await pool.query(
-      'UPDATE sprints SET name = $1, start_date = $2, end_date = $3 WHERE id = $4 AND deleted_at IS NULL RETURNING *',
-      [name, start_date, end_date, id]
+      'UPDATE sprints SET name = $1, start_date = $2, end_date = $3, project_id = $4 WHERE id = $5 AND deleted_at IS NULL RETURNING *',
+      [name, start_date, end_date, project_id, id]
     );
     
     if (result.rows.length === 0) {

@@ -14,6 +14,7 @@ interface ProjectsResponse {
 
 interface Sprint {
   id: string;
+  project_id: number;
   name: string;
   start_date: string;
   end_date: string;
@@ -254,25 +255,34 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const createSprint = async (sprintData: Omit<Sprint, 'id' | 'created_at' | 'updated_at' | 'deleted_at'>): Promise<Sprint> => {
+  const createSprint = async (
+    sprintData: Omit<Sprint, 'id' | 'created_at' | 'updated_at' | 'deleted_at'>
+  ): Promise<Sprint> => {
     try {
       const response = await axios.post(`${SERVER_URL}/api/sprints`, sprintData);
       const newSprint = response.data;
-      setSprints(prev => [...prev, newSprint]);
-      setSprintsCache(prev => [...prev, newSprint]);
+      setSprints((prev) => [...prev, newSprint]);
+      setSprintsCache((prev) => [...prev, newSprint]);
       return newSprint;
     } catch (err: any) {
       console.error('Error creating sprint:', err);
       throw new Error(err.response?.data?.error || 'Failed to create sprint');
     }
   };
-
-  const updateSprint = async (id: string, sprintData: Partial<Sprint>): Promise<Sprint> => {
+  
+  const updateSprint = async (
+    id: string,
+    sprintData: Partial<Sprint>
+  ): Promise<Sprint> => {
     try {
       const response = await axios.put(`${SERVER_URL}/api/sprints/${id}`, sprintData);
       const updatedSprint = response.data;
-      setSprints(prev => prev.map(sprint => sprint.id === id ? updatedSprint : sprint));
-      setSprintsCache(prev => prev.map(sprint => sprint.id === id ? updatedSprint : sprint));
+      setSprints((prev) =>
+        prev.map((sprint) => (sprint.id === id ? updatedSprint : sprint))
+      );
+      setSprintsCache((prev) =>
+        prev.map((sprint) => (sprint.id === id ? updatedSprint : sprint))
+      );
       return updatedSprint;
     } catch (err: any) {
       console.error(`Error updating sprint ${id}:`, err);

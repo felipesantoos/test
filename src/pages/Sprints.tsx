@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useApi } from '../context/ApiContext';
-import { AlertCircle, Plus, Search, Filter, RefreshCw, Calendar, Edit2, Trash2, X, Clock, CalendarRange } from 'lucide-react';
+import { AlertCircle, Plus, Search, Filter, RefreshCw, Calendar, Edit2, Trash2, X, Clock, CalendarRange, FolderKanban } from 'lucide-react';
 import { format, isAfter, isBefore, parseISO } from 'date-fns';
 import { CreateSprintModal } from '../components/sprint/CreateSprintModal';
 import { EditSprintModal } from '../components/sprint/EditSprintModal';
 import { DeleteSprintModal } from '../components/sprint/DeleteSprintModal';
 
 export const Sprints = () => {
-  const { sprints, isLoading, error, fetchSprints, createSprint, updateSprint, deleteSprint } = useApi();
+  const { sprints, projects, isLoading, error, fetchSprints, fetchProjects, createSprint, updateSprint, deleteSprint } = useApi();
   const [searchQuery, setSearchQuery] = useState('');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [filters, setFilters] = useState({
     status: 'all', // 'all', 'active', 'completed', 'upcoming'
+    projectId: 'all',
     dateFrom: '',
     dateTo: ''
   });
@@ -23,11 +24,19 @@ export const Sprints = () => {
   const [sprintToDelete, setSprintToDelete] = useState<any>(null);
   const [loadingAction, setLoadingAction] = useState(false);
 
-  // Load sprints on component mount only
+  // Load sprints and projects on component mount
   useEffect(() => {
-    fetchSprints().catch(err => {
-      console.error('Error loading sprints:', err);
-    });
+    const loadData = async () => {
+      try {
+        await Promise.all([
+          fetchSprints(),
+          fetchProjects()
+        ]);
+      } catch (err) {
+        console.error('Error loading data:', err);
+      }
+    };
+    loadData();
   }, []); // Empty dependency array since we only want to load on mount
 
   // Filter sprints
@@ -35,6 +44,11 @@ export const Sprints = () => {
     return sprints.filter(sprint => {
       // Apply search filter
       if (searchQuery && !sprint.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+        return false;
+      }
+      
+      // Apply project filter
+      if (filters.projectId !== 'all' && sprint.project_id.toString() !== filters.projectId) {
         return false;
       }
       
@@ -87,6 +101,7 @@ export const Sprints = () => {
     setSearchQuery('');
     setFilters({
       status: 'all',
+      projectId: 'all',
       dateFrom: '',
       dateTo: ''
     });
@@ -110,6 +125,12 @@ export const Sprints = () => {
     } else {
       return { label: 'Upcoming', color: 'bg-yellow-100 text-yellow-800' };
     }
+  };
+
+  // Get project name by ID
+  const getProjectName = (projectId: number) => {
+    const project = projects.find(p => p.id === projectId);
+    return project ? project.name : 'Unknown Project';
   };
 
   // Handle creating a new sprint
@@ -216,6 +237,19 @@ export const Sprints = () => {
               <option value="upcoming">Upcoming</option>
             </select>
 
+            <select
+              value={filters.projectId}
+              onChange={(e) => setFilters(prev => ({ ...prev, projectId: e.target.value }))}
+              className="border border-gray-300 rounded-md text-sm text-gray-700 py-2 pl-3 pr-8 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+            >
+              <option value="all">All Projects</option>
+              {projects.map(project => (
+                <option key={project.id} value={project.id}>
+                  {project.name}
+                </option>
+              ))}
+            </select>
+
             <button
               className="flex items-center space-x-1 px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50"
               onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
@@ -224,7 +258,7 @@ export const Sprints = () => {
               <span>{showAdvancedFilters ? 'Hide Filters' : 'Show Filters'}</span>
             </button>
 
-            {(filters.status !== 'all' || filters.dateFrom || filters.dateTo || searchQuery) && (
+            {(filters.status !== 'all' || filters.projectId !== 'all' || filters.dateFrom || filters.dateTo || searchQuery) && (
               <button
                 className="flex items-center space-x-1 px-3 py-2 border border-red-300 rounded-md text-sm text-red-700 hover:bg-red-50"
                 onClick={resetFilters}
@@ -326,6 +360,10 @@ export const Sprints = () => {
                   </div>
                   
                   <div className="space-y-3">
+                    <div className="flex items-center text-sm text-gray-600">
+                      <FolderKanban size={16} className="mr-2" />
+                      <span>{getProjectName(sprint.project_id)}</span>
+                    </div>
                     <div className="flex items-center text-sm text-gray-600">
                       <Calendar size={16} className="mr-2" />
                       <span>
