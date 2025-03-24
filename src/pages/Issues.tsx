@@ -24,6 +24,7 @@ export const Issues = () => {
     sprints,
     refreshData, 
     fetchIssues,
+    fetchEpics,
     updateIssue,
     deleteIssue,
     createIssue
@@ -69,6 +70,27 @@ export const Issues = () => {
 
   // Add new state for success notification
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Load initial data
+  useEffect(() => {
+    const loadInitialData = async () => {
+      if (isConnected) {
+        setLoading(true);
+        try {
+          await Promise.all([
+            refreshData(),
+            fetchEpics()
+          ]);
+        } catch (err) {
+          console.error('Error loading initial data:', err);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+    
+    loadInitialData();
+  }, [isConnected]);
 
   // Save filter values to localStorage whenever they change
   useEffect(() => {
@@ -163,13 +185,6 @@ export const Issues = () => {
       setLoadingAction(false);
     }
   };
-
-  // Load issues on initial render
-  useEffect(() => {
-    if (isConnected && issues.length === 0) {
-      refreshData();
-    }
-  }, [isConnected]);
 
   // Filter issues when filters or issues change
   useEffect(() => {
@@ -359,16 +374,16 @@ export const Issues = () => {
 
   // Get unique epics from issues
   const getUniqueEpics = () => {
-    const epics = new Set<string>();
+    const uniqueEpics = new Set<string>();
     
     issues.forEach(issue => {
       const epicValue = getEpicValue(issue);
       if (epicValue !== '-') {
-        epics.add(epicValue);
+        uniqueEpics.add(epicValue);
       }
     });
     
-    return Array.from(epics).sort();
+    return Array.from(uniqueEpics).sort();
   };
 
   // Get sprint value from custom fields
