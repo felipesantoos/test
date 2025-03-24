@@ -56,7 +56,7 @@ export const EpicDetails = () => {
           const epicField = issue.custom_fields?.find(
             (field: any) => field.id == import.meta.env.VITE_EPIC_CUSTOM_FIELD_ID
           );
-          return epicField?.value === epicData.name;
+          return epicField?.value === id; // Compare with epic ID instead of name
         });
         
         setIssues(epicIssues);
