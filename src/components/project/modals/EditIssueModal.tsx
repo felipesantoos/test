@@ -87,18 +87,20 @@ export const EditIssueModal: React.FC<EditIssueModalProps> = ({
     content_url?: string;
   }>>([]);
   const [epics, setEpics] = useState<string[]>([]);
-  const [sprints, setSprints] = useState<any[]>([]);
+  const [allSprints, setAllSprints] = useState<any[]>([]);
+  const [filteredSprints, setFilteredSprints] = useState<any[]>([]);
   const [newEpicValue, setNewEpicValue] = useState('');
   const [isAddingNewEpic, setIsAddingNewEpic] = useState(false);
 
   // Get Redmine URL from localStorage
   const redmineUrl = localStorage.getItem('redmine_url') || '';
 
-  // In both modals, add proper dependency arrays to useEffect hooks
+  // When the issue has a project, fetch its memberships
   useEffect(() => {
     if (selectedIssue?.project?.id) {
-      fetchProjectMemberships(selectedIssue?.project?.id)
+      fetchProjectMemberships(selectedIssue.project.id)
         .then((memberships) => {
+          // Only include memberships that have a user object
           const members = memberships
             .filter(m => m.user)
             .map(m => m.user);
@@ -108,10 +110,19 @@ export const EditIssueModal: React.FC<EditIssueModalProps> = ({
           console.error('Error fetching project memberships:', error);
           setProjectMembers([]);
         });
+    } else {
+      setProjectMembers([]);
     }
-  }, [selectedIssue?.project?.id, fetchProjectMemberships]); // Add proper dependencies
+  }, [selectedIssue?.project?.id, fetchProjectMemberships]);
 
-  // Similarly for epics and sprints loading
+  // Initialize uploads from existing attachments
+  useEffect(() => {
+    if (selectedIssue?.uploads) {
+      setUploads(selectedIssue.uploads);
+    }
+  }, [selectedIssue?.uploads]);
+
+  // Fetch epics and sprints when component mounts
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -120,20 +131,25 @@ export const EditIssueModal: React.FC<EditIssueModalProps> = ({
           fetchSprints()
         ]);
         setEpics(epicsData || []);
-        setSprints(sprintsData || []);
+        setAllSprints(sprintsData || []);
       } catch (err) {
         console.error('Error loading data:', err);
       }
     };
     loadData();
-  }, []); // Empty dependency array since this should only run once
+  }, []);
 
-  // Initialize uploads from existing attachments
+  // Filter sprints when project changes
   useEffect(() => {
-    if (selectedIssue?.uploads) {
-      setUploads(selectedIssue.uploads);
+    if (selectedIssue?.project?.id && allSprints.length > 0) {
+      const projectSprints = allSprints.filter(sprint => 
+        sprint.project_id === selectedIssue.project?.id
+      );
+      setFilteredSprints(projectSprints);
+    } else {
+      setFilteredSprints([]);
     }
-  }, [selectedIssue?.uploads]);
+  }, [selectedIssue?.project?.id, allSprints]);
 
   // Handle file upload completion
   const handleUploadComplete = async (upload: { token: string; filename: string; content_type: string }) => {
@@ -218,7 +234,7 @@ export const EditIssueModal: React.FC<EditIssueModalProps> = ({
   // Handle sprint selection or new sprint creation
   const handleSprintChange = (value: string) => {
     // Find the sprint object to get its ID
-    const selectedSprint = sprints.find(sprint => sprint.name === value);
+    const selectedSprint = filteredSprints.find(sprint => sprint.name === value);
     const sprintId = selectedSprint ? selectedSprint.id : '';
 
     // Update custom fields with the selected sprint ID
@@ -238,9 +254,17 @@ export const EditIssueModal: React.FC<EditIssueModalProps> = ({
   // Handle adding a new sprint
   const handleAddNewSprint = async (sprintData: any) => {
     try {
-      const newSprint = await createSprint(sprintData);
-      setSprints(prev => [...prev, newSprint]);
-      handleSprintChange(newSprint.name); // This will now use the ID internally
+      // Ensure the sprint is created for the current project
+      const newSprint = await createSprint({
+        ...sprintData,
+        project_id: selectedIssue.project?.id
+      });
+      
+      // Add to both sprint lists
+      setAllSprints(prev => [...prev, newSprint]);
+      setFilteredSprints(prev => [...prev, newSprint]);
+      
+      handleSprintChange(newSprint.name);
     } catch (err) {
       console.error('Error creating sprint:', err);
       alert('Failed to create sprint');
@@ -258,7 +282,7 @@ export const EditIssueModal: React.FC<EditIssueModalProps> = ({
     const sprintField = selectedIssue.custom_fields?.find((field: any) => field.id == import.meta.env.VITE_SPRINT_CUSTOM_FIELD_ID);
     const sprintId = sprintField?.value;
     // Find sprint by ID and return its name
-    const sprint = sprints.find(s => s.id === sprintId);
+    const sprint = filteredSprints.find(s => s.id === sprintId);
     return sprint ? sprint.name : '';
   };
 
@@ -347,7 +371,7 @@ export const EditIssueModal: React.FC<EditIssueModalProps> = ({
                       Sprint
                     </label>
                     <SprintSelect
-                      sprints={sprints}
+                      sprints={filteredSprints}
                       selectedSprint={getCurrentSprint()}
                       onChange={handleSprintChange}
                       onAddNewSprint={handleAddNewSprint}
