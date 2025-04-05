@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Bell, Search, RefreshCw, LogOut, User } from 'lucide-react';
+import { Bell, Search, RefreshCw, LogOut, User, Settings } from 'lucide-react';
 import { useApi } from '../context/ApiContext';
 import { useAuth } from '../context/AuthContext';
+import { Link } from 'react-router-dom';
 
 export const Header = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -67,6 +68,26 @@ export const Header = () => {
             
             {showDropdown && (
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10">
+                <Link
+                  to="/profile"
+                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  onClick={() => setShowDropdown(false)}
+                >
+                  <div className="flex items-center">
+                    <User size={16} className="mr-2" />
+                    <span>My Profile</span>
+                  </div>
+                </Link>
+                <Link
+                  to="/settings"
+                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  onClick={() => setShowDropdown(false)}
+                >
+                  <div className="flex items-center">
+                    <Settings size={16} className="mr-2" />
+                    <span>Settings</span>
+                  </div>
+                </Link>
                 <button
                   onClick={() => {
                     logout();

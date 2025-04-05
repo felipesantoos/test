@@ -12,7 +12,8 @@ import {
   Menu,
   X,
   CalendarRange,
-  Tag
+  Tag,
+  User
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -213,6 +214,24 @@ const SidebarContent: React.FC<SidebarContentProps> = ({ username, isAdmin, onIt
               </NavLink>
             </li>
           )}
+          
+          {/* Profile Link */}
+          <li>
+            <NavLink 
+              to="/profile" 
+              className={({ isActive }) => 
+                `flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+                  isActive 
+                    ? 'bg-indigo-700 text-white' 
+                    : 'text-indigo-100 hover:bg-indigo-700'
+                }`
+              }
+              onClick={onItemClick}
+            >
+              <User size={20} />
+              <span>My Profile</span>
+            </NavLink>
+          </li>
           
           <li>
             <NavLink 

@@ -18,6 +18,7 @@ import { Sprints } from './pages/Sprints';
 import { SprintDetails } from './pages/SprintDetails';
 import { Epics } from './pages/Epics';
 import { EpicDetails } from './pages/EpicDetails';
+import { Profile } from './pages/Profile';
 import { ApiProvider } from './context/ApiContext';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -226,6 +227,20 @@ function App() {
                   </div>
                 </div>
               </AdminRoute>
+            } />
+            
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <div className="flex h-screen bg-gray-100">
+                  <Sidebar />
+                  <div className="flex-1 flex flex-col overflow-hidden">
+                    <Header />
+                    <main className="flex-1 overflow-y-auto p-4">
+                      <Profile />
+                    </main>
+                  </div>
+                </div>
+              </ProtectedRoute>
             } />
             
             <Route path="/settings" element={
